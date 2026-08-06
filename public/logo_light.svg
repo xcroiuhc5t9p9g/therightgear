@@ -1,0 +1,25 @@
+<svg viewBox="0 0 380 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gearRedGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EE1C25" />
+      <stop offset="40%" stop-color="#C90C14" />
+      <stop offset="100%" stop-color="#7F0208" />
+    </linearGradient>
+  </defs>
+
+  <!-- Red Rounded Square Badge -->
+  <rect x="2" y="2" width="56" height="56" rx="14" fill="url(#gearRedGradient)" />
+
+  <!-- Manual Transmission H-Shifter Gate -->
+  <g fill="#FFFFFF">
+    <rect x="15" y="14" width="5" height="32" rx="2.5" />
+    <rect x="27.5" y="14" width="5" height="32" rx="2.5" />
+    <rect x="40" y="14" width="5" height="32" rx="2.5" />
+    <rect x="15" y="27.5" width="30" height="5.5" rx="1.5" />
+  </g>
+
+  <!-- Logotype "The Right Gear" (Dark Charcoal for Light Theme) -->
+  <text x="74" y="41" fill="#0A0E1A" font-size="34" font-weight="900" font-style="italic" font-family="system-ui, -apple-system, sans-serif" letter-spacing="-1" transform="skewX(-10)">
+    The Right Gear
+  </text>
+</svg>

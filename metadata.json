@@ -1,0 +1,6 @@
+{
+  "name": "The Right Gear",
+  "description": "The Right Gear - Automotive Intelligence Platform for collector cars, youngtimers, hypercars, supercar market analytics, and knowledge graph.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
