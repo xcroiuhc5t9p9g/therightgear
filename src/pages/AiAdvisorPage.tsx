@@ -25,7 +25,7 @@ export const AiAdvisorPage: React.FC<AiAdvisorPageProps> = ({ locale, onNavigate
       sender: 'ai',
       text: locale === 'it' 
         ? 'Benvenuto nell’AI Strategic Advisor del settore Automotive Intelligence. Posso analizzare le tendenze di mercato d’asta, i costi di restauro, la liquidità e consigliare allocazioni di portafoglio su 300 modelli storici europei. Come posso assisterti oggi?'
-        : 'Welcome to the AI Strategic Automotive Advisor. I can synthesize auction market dynamics, maintenance budgets, and portfolio allocation strategies across 300 European iconic cars. How can I assist your collection strategy today?',
+        : 'Welcome to the AI Strategic Automotive Advisor. I can synthesize auction market dynamics, maintenance budgets, and portfolio allocation strategies across 300 iconic cars. How can I assist your collection strategy today?',
       referencedSlugs: ['ferrari-f40', 'porsche-959-komfort'],
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }

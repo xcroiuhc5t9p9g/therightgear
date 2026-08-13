@@ -1,25 +1,45 @@
-<svg viewBox="0 0 380 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 540 66" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="gearRedGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#EE1C25" />
-      <stop offset="40%" stop-color="#C90C14" />
-      <stop offset="100%" stop-color="#7F0208" />
+    <linearGradient id="redApexGradDark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#E30613" />
+      <stop offset="100%" stop-color="#FF2E36" />
     </linearGradient>
   </defs>
 
-  <!-- Red Rounded Square Badge -->
-  <rect x="2" y="2" width="56" height="56" rx="14" fill="url(#gearRedGradient)" />
+  <!-- Outer Apex Swoop (Red Curve) -->
+  <path 
+    d="M 10,54 C 35,54 110,30 185,6 C 120,20 70,38 45,50 C 35,54 20,54 10,54 Z" 
+    fill="url(#redApexGradDark)" 
+  />
 
-  <!-- Manual Transmission H-Shifter Gate -->
-  <g fill="#FFFFFF">
-    <rect x="15" y="14" width="5" height="32" rx="2.5" />
-    <rect x="27.5" y="14" width="5" height="32" rx="2.5" />
-    <rect x="40" y="14" width="5" height="32" rx="2.5" />
-    <rect x="15" y="27.5" width="30" height="5.5" rx="1.5" />
-  </g>
+  <!-- Inner Apex Swoop (Red Curve) -->
+  <path 
+    d="M 70,54 C 92,54 132,32 158,16 C 126,25 100,40 84,50 C 80,53 75,54 70,54 Z" 
+    fill="url(#redApexGradDark)" 
+  />
 
-  <!-- Logotype "The Right Gear" (White for Dark Theme) -->
-  <text x="74" y="41" fill="#FFFFFF" font-size="34" font-weight="900" font-style="italic" font-family="system-ui, -apple-system, sans-serif" letter-spacing="-1" transform="skewX(-10)">
+  <!-- Red Continuous Underline (Under "The Right") -->
+  <rect x="65" y="54" width="300" height="4" rx="1.5" fill="#E30613" />
+
+  <!-- Red Dashed Underline (Telemetry stripes under "Gear") -->
+  <rect x="375" y="54" width="16" height="4" rx="1" fill="#E30613" transform="skewX(-15)" />
+  <rect x="397" y="54" width="16" height="4" rx="1" fill="#E30613" transform="skewX(-15)" />
+  <rect x="419" y="54" width="16" height="4" rx="1" fill="#E30613" transform="skewX(-15)" />
+  <rect x="441" y="54" width="16" height="4" rx="1" fill="#E30613" transform="skewX(-15)" />
+  <rect x="463" y="54" width="16" height="4" rx="1" fill="#E30613" transform="skewX(-15)" />
+
+  <!-- Branding Logotype Text "The Right Gear" (Pure White for Dark Backgrounds) -->
+  <text 
+    x="160" 
+    y="44" 
+    fill="#FFFFFF" 
+    font-size="41" 
+    font-weight="900" 
+    font-style="italic" 
+    font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" 
+    letter-spacing="-0.5" 
+    transform="skewX(-10)"
+  >
     The Right Gear
   </text>
 </svg>

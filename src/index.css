@@ -1,333 +1,49 @@
 @import "tailwindcss";
 
+@theme {
+  --color-trg-carbon: #0B0D10;
+  --color-trg-graphite: #171A1F;
+  --color-trg-red: #D71920;
+  --color-trg-red-dark-ui: #E63B44;
+  --color-trg-white: #FFFFFF;
+  --color-trg-warm-white: #F7F7F5;
+  --color-trg-gray-100: #EEEEEC;
+  --color-trg-gray-200: #E4E5E7;
+  --color-trg-gray-300: #D1D4D8;
+  --color-trg-gray-400: #A3A8B0;
+  --color-trg-gray-500: #6B7280;
+  --color-trg-gray-700: #41464F;
+  --radius-trg-sm: 6px;
+  --radius-trg-md: 8px;
+  --radius-trg-lg: 12px;
+}
+
 @layer base {
   body {
-    background-color: #0c0e12;
-    color: #e2e8f0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: var(--color-trg-warm-white);
+    color: var(--color-trg-carbon);
+    font-family: "Geist", "Geist Sans", system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
-    transition: background-color 0.25s ease, color 0.25s ease;
   }
 }
 
-/* Custom scrollbars for dense financial tables & cards */
+/* Base utility overrides */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f1117;
+  background: var(--color-trg-gray-100);
 }
 ::-webkit-scrollbar-thumb {
-  background: #272d3b;
+  background: var(--color-trg-gray-300);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3b4254;
+  background: var(--color-trg-gray-400);
 }
 
-/* Tabular numbers for financial metrics */
 .font-mono-numbers {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: "Geist Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
-}
-
-/* Gold Accent glow */
-.gold-glow {
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
-}
-
-.gold-gradient-text {
-  background: linear-gradient(135deg, #d4af37 0%, #aa820a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* ==========================================
-   LIGHT THEME ARCHITECTURE (Activated via html.light)
-   ========================================== */
-
-/* 1. Base Canvas Surface */
-html.light body {
-  background-color: #f1f5f9 !important; /* Slate 100 */
-  color: #0f172a !important; /* Slate 900 */
-}
-
-/* 2. Main Containers, Cards, Sections & Hero Surfaces */
-html.light section,
-html.light header,
-html.light nav,
-html.light main,
-html.light [class*="bg-[#0"],
-html.light [class*="bg-[#1"],
-html.light [class*="bg-[#20"],
-html.light [class*="bg-[#21"],
-html.light [class*="bg-[#22"],
-html.light [class*="bg-[#23"],
-html.light [class*="bg-[#24"],
-html.light [class*="bg-[#25"],
-html.light [class*="bg-[#28"],
-html.light [class*="bg-[#2a"],
-html.light .bg-slate-950,
-html.light .bg-slate-900,
-html.light .bg-slate-850 {
-  background-color: #ffffff !important;
-}
-
-/* 3. Sub-containers & Inner Nested Cards */
-html.light div[class*="bg-[#1c2232]"],
-html.light div[class*="bg-[#161a29]"],
-html.light div[class*="bg-[#171b2b]"],
-html.light div[class*="bg-[#181d2c]"],
-html.light div[class*="bg-[#151924]"],
-html.light div[class*="bg-[#131722]"],
-html.light div[class*="bg-[#141826]"],
-html.light div[class*="bg-[#181c2a]"] {
-  background-color: #f8fafc !important; /* Slate 50 */
-}
-
-/* 4. Non-absolute Gradient Surfaces (e.g. Hero Section Banner) */
-html.light section[class*="bg-gradient-to"],
-html.light div.rounded-3xl[class*="bg-gradient-to"],
-html.light div.rounded-2xl[class*="bg-gradient-to"]:not([class*="absolute"]) {
-  background-image: linear-gradient(to right, #ffffff, #f8fafc) !important;
-}
-
-/* 5. IMAGE OVERLAYS MUST REMAIN SEMI-TRANSPARENT DARK GRADIENTS!
-   Do NOT convert image overlay divs to solid white or white gradients! */
-html.light div.absolute[class*="bg-gradient-to"] {
-  background-image: linear-gradient(to top, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.25) 65%, transparent 100%) !important;
-}
-
-html.light div.absolute[class*="bg-black"],
-html.light div.absolute[class*="bg-slate-950"] {
-  background-color: rgba(15, 23, 42, 0.65) !important;
-}
-
-/* Ensure images in light mode stay crisp and 100% visible */
-html.light img {
-  opacity: 1 !important;
-  filter: none !important;
-}
-
-/* 6. GENERAL TEXT CONTRAST ON WHITE / LIGHT SURFACES */
-html.light .text-white,
-html.light .text-slate-50,
-html.light .text-slate-100,
-html.light .text-slate-200 {
-  color: #0f172a !important; /* Slate 900 for dark readable headings */
-}
-
-html.light .text-slate-300 {
-  color: #1e293b !important; /* Slate 800 */
-}
-
-html.light .text-slate-400 {
-  color: #334155 !important; /* Slate 700 */
-}
-
-html.light .text-slate-500 {
-  color: #475569 !important; /* Slate 600 */
-}
-
-/* CRITICAL EXCEPTION: TEXT OVER IMAGES & INSIDE ABSOLUTE OVERLAY DIVS MUST REMAIN WHITE! */
-html.light div.absolute .text-white,
-html.light div.absolute h1.text-white,
-html.light div.absolute h2.text-white,
-html.light div.absolute h3.text-white,
-html.light div.absolute span.text-white,
-html.light div.absolute p.text-white,
-html.light div.absolute div.text-white {
-  color: #ffffff !important;
-}
-
-html.light div.absolute .text-slate-300,
-html.light div.absolute .text-slate-200,
-html.light div.absolute .text-slate-400 {
-  color: #cbd5e1 !important;
-}
-
-/* 7. ACCENT TEXT COLORS WITH HIGH CONTRAST ON LIGHT SURFACES */
-html.light .text-amber-400,
-html.light .text-amber-300,
-html.light .text-red-500,
-html.light .text-red-400 {
-  color: #dc2626 !important; /* Red 600 */
-}
-
-html.light .text-emerald-400,
-html.light .text-emerald-300 {
-  color: #059669 !important; /* Emerald 600 */
-}
-
-html.light .text-purple-400,
-html.light .text-purple-300 {
-  color: #7c3aed !important; /* Purple 600 */
-}
-
-html.light .text-indigo-400,
-html.light .text-indigo-300 {
-  color: #4f46e5 !important; /* Indigo 600 */
-}
-
-html.light .text-blue-400,
-html.light .text-blue-300 {
-  color: #2563eb !important; /* Blue 600 */
-}
-
-html.light .text-rose-400,
-html.light .text-rose-300 {
-  color: #e11d48 !important; /* Rose 600 */
-}
-
-/* 8. BUTTONS & BADGES CONTRAST IN LIGHT MODE */
-
-/* Solid Red / Accent Buttons / Badges -> White text on Red */
-html.light .bg-amber-500,
-html.light .bg-amber-400,
-html.light .bg-red-600,
-html.light .bg-red-500,
-html.light [class*="from-amber-500"],
-html.light [class*="from-red-600"] {
-  background-color: #dc2626 !important;
-  color: #ffffff !important;
-}
-
-html.light .bg-amber-500 *,
-html.light .bg-amber-400 *,
-html.light .bg-red-600 *,
-html.light .bg-red-500 *,
-html.light [class*="from-amber-500"] *,
-html.light [class*="from-red-600"] * {
-  color: #ffffff !important;
-}
-
-/* Secondary dark action buttons -> Light grey buttons with dark text */
-html.light button[class*="bg-[#1d2230]"],
-html.light button[class*="bg-[#161a26]"],
-html.light button[class*="bg-[#151924]"],
-html.light button[class*="bg-[#181c2a]"] {
-  background-color: #e2e8f0 !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-}
-
-html.light button[class*="bg-[#1d2230]"]:hover,
-html.light button[class*="bg-[#161a26]"]:hover,
-html.light button[class*="bg-[#151924]"]:hover {
-  background-color: #cbd5e1 !important;
-  color: #0f172a !important;
-}
-
-/* Tinted Badges (Light Pastel Backgrounds + Dark Rich Text) */
-html.light .bg-amber-500\/10,
-html.light .bg-amber-500\/20,
-html.light .bg-red-500\/10,
-html.light .bg-red-500\/20 {
-  background-color: #fee2e2 !important; /* Red 100 */
-  color: #991b1b !important; /* Red 800 */
-}
-html.light .bg-amber-500\/10 *,
-html.light .bg-amber-500\/20 *,
-html.light .bg-red-500\/10 *,
-html.light .bg-red-500\/20 * {
-  color: #991b1b !important;
-}
-
-html.light .bg-purple-500\/10,
-html.light .bg-purple-500\/20 {
-  background-color: #f3e8ff !important; /* Purple 100 */
-  color: #6b21a8 !important; /* Purple 800 */
-}
-html.light .bg-purple-500\/10 *,
-html.light .bg-purple-500\/20 * {
-  color: #6b21a8 !important;
-}
-
-html.light .bg-emerald-500\/10,
-html.light .bg-emerald-500\/20 {
-  background-color: #d1fae5 !important; /* Emerald 100 */
-  color: #065f46 !important; /* Emerald 800 */
-}
-html.light .bg-emerald-500\/10 *,
-html.light .bg-emerald-500\/20 * {
-  color: #065f46 !important;
-}
-
-html.light .bg-blue-500\/10,
-html.light .bg-blue-500\/20 {
-  background-color: #dbeafe !important; /* Blue 100 */
-  color: #1e40af !important; /* Blue 800 */
-}
-html.light .bg-blue-500\/10 *,
-html.light .bg-blue-500\/20 * {
-  color: #1e40af !important;
-}
-
-html.light .bg-indigo-500\/10,
-html.light .bg-indigo-500\/20 {
-  background-color: #e0e7ff !important; /* Indigo 100 */
-  color: #3730a3 !important; /* Indigo 800 */
-}
-html.light .bg-indigo-500\/10 *,
-html.light .bg-indigo-500\/20 * {
-  color: #3730a3 !important;
-}
-
-/* 9. BORDERS IN LIGHT MODE */
-html.light [class*="border-[#"] {
-  border-color: #e2e8f0 !important;
-}
-
-html.light .border-slate-800,
-html.light .border-slate-700 {
-  border-color: #cbd5e1 !important;
-}
-
-/* 10. FORM INPUTS & SELECTS */
-html.light input,
-html.light select,
-html.light textarea {
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-}
-
-html.light input::placeholder,
-html.light textarea::placeholder {
-  color: #94a3b8 !important;
-}
-
-/* 11. TABLES IN LIGHT MODE */
-html.light table {
-  background-color: #ffffff !important;
-}
-
-html.light table th {
-  background-color: #f1f5f9 !important;
-  color: #1e293b !important;
-  border-color: #e2e8f0 !important;
-}
-
-html.light table td {
-  border-color: #e2e8f0 !important;
-  color: #0f172a !important;
-}
-
-html.light table tr:hover {
-  background-color: #f8fafc !important;
-}
-
-/* 12. MODALS & OVERLAYS */
-html.light .bg-black\/80,
-html.light .bg-black\/70,
-html.light .bg-slate-950\/80 {
-  background-color: rgba(15, 23, 42, 0.6) !important;
-}
-
-/* 13. CODE & MONOSPACE BLOCKS */
-html.light pre,
-html.light code {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
 }

@@ -12,8 +12,8 @@ import {
   CheckCircle2,
   SlidersHorizontal
 } from 'lucide-react';
-import { GRAPH_ENTITIES, GRAPH_RELATIONSHIPS } from '../data/catalogData';
 import { GraphEntity, GraphRelationship } from '../types';
+import { catalogueRepository } from '../services/catalogueRepository';
 import { Locale, translations } from '../data/translations';
 import { generateKnowledgeGraphJsonLd, injectSeoGeoMetadata, getAbsolutePageUrl } from '../services/seoGeoService';
 
@@ -24,7 +24,32 @@ interface KnowledgeGraphPageProps {
 
 export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({ locale, onNavigate }) => {
   const t = translations[locale];
-  const [selectedEntityId, setSelectedEntityId] = useState<string>('g-f40');
+
+  const { GRAPH_ENTITIES, GRAPH_RELATIONSHIPS } = React.useMemo(() => {
+    const entities: GraphEntity[] = [];
+    const relationships: GraphRelationship[] = [];
+    const hierarchy = catalogueRepository.getHierarchy();
+    
+    hierarchy.makers.forEach(maker => {
+      entities.push({ id: maker.id, name: maker.canonical_name || maker.official_name || maker.slug, type: 'MANUFACTURER', slug: maker.slug, attributes: { Country: maker.country_code || '' } });
+    });
+    hierarchy.models.forEach(model => {
+      entities.push({ id: model.id, name: model.canonical_name || (model as any).model_name || model.slug, type: 'MODEL', slug: model.slug, attributes: { Maker: model.maker_id } });
+      relationships.push({ id: `rel-${model.id}-${model.maker_id}`, subject_entity_id: model.id, predicate: 'MANUFACTURED_BY', object_entity_id: model.maker_id, confidence_score: 1.0 });
+    });
+    hierarchy.generations.forEach(gen => {
+      entities.push({ id: gen.id, name: gen.canonical_name || (gen as any).generation_name || gen.slug, type: 'GENERATION', slug: gen.slug, attributes: { Model: gen.model_id } });
+      relationships.push({ id: `rel-${gen.id}-${gen.model_id}`, subject_entity_id: gen.id, predicate: 'PART_OF_MODEL', object_entity_id: gen.model_id, confidence_score: 1.0 });
+    });
+    hierarchy.variants.forEach(v => {
+      entities.push({ id: v.id, name: `${v.manufacturer_name} ${v.variant_name}`, type: 'VARIANT', slug: v.slug, attributes: { Year: String(v.model_year_from || '') } });
+      relationships.push({ id: `rel-${v.id}-${v.generation_id}`, subject_entity_id: v.id, predicate: 'PART_OF_GENERATION', object_entity_id: v.generation_id, confidence_score: 1.0 });
+    });
+
+    return { GRAPH_ENTITIES: entities, GRAPH_RELATIONSHIPS: relationships };
+  }, []);
+
+  const [selectedEntityId, setSelectedEntityId] = useState<string>(GRAPH_ENTITIES[0]?.id || 'bmw');
   const [entityFilter, setEntityFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 

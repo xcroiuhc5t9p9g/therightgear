@@ -14,7 +14,7 @@ import {
   ShieldAlert,
   ArrowUpRight
 } from 'lucide-react';
-import { HERO_VEHICLES } from '../data/catalogData';
+import { catalogueRepository } from '../services/catalogueRepository';
 import { VehicleVariant } from '../types';
 import { VehicleCard } from './VehicleCard';
 
@@ -45,7 +45,7 @@ export const ModelTemplatesShowcase: React.FC<ModelTemplatesShowcaseProps> = ({
     { id: 'Youngtimer', label: 'Youngtimer Legends', icon: Gauge },
   ];
 
-  const filteredVehicles = HERO_VEHICLES.filter(v => {
+  const filteredVehicles = catalogueRepository.getAllVariants().vehicles.filter(v => {
     if (selectedCategory === 'All') return true;
     return v.category === selectedCategory;
   });

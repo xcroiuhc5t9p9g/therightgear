@@ -23,6 +23,7 @@ import {
   Tag,
   ShieldCheck,
   Zap,
+  AlertTriangle,
   SlidersHorizontal,
   RotateCcw,
   Eye,
@@ -34,10 +35,11 @@ import { VehicleVariant, SearchFilters, UserRole } from '../types';
 import { SlideshowBlock } from '../components/SlideshowBlock';
 import { Locale, translations } from '../data/translations';
 import { unifiedVehicleStore } from '../services/unifiedVehicleStore';
-import { HERO_VEHICLES, MANUFACTURERS } from '../data/catalogData';
+import { catalogueRepository } from '../services/catalogueRepository';
 import { UPCOMING_AUCTIONS } from '../data/entitiesData';
 import { VehicleCard } from '../components/VehicleCard';
 import { AuthPromptReason } from '../components/AuthPromptModal';
+import { injectSeoGeoMetadata, getAbsolutePageUrl } from '../services/seoGeoService';
 
 interface MarketPageProps {
   locale: Locale;
@@ -54,7 +56,7 @@ interface MarketPageProps {
 
 export const MarketPage: React.FC<MarketPageProps> = ({
   locale,
-  activeRole = 'public',
+  activeRole = 'visitor',
   onSelectVehicle,
   onNavigate,
   onToggleWatchlist,
@@ -92,9 +94,27 @@ export const MarketPage: React.FC<MarketPageProps> = ({
     return unsubscribe;
   }, []);
 
-  // Reset pagination when search or filters change
+  // Reset pagination & inject SEO/GEO Metadata when search or filters change
   useEffect(() => {
     setPage(1);
+
+    const catText = selectedCategory !== 'All' ? selectedCategory : '';
+    const mfrText = selectedManufacturer !== 'All' ? selectedManufacturer : '';
+    const queryText = searchQuery ? `"${searchQuery}"` : '';
+
+    const subtitle = [catText, mfrText, queryText].filter(Boolean).join(' • ') || 'Verified Catalog';
+    const canonicalPath = selectedCategory !== 'All' 
+      ? `/category/${selectedCategory.toLowerCase().replace(/\s+/g, '-')}`
+      : selectedManufacturer !== 'All'
+      ? `/manufacturer/${selectedManufacturer.toLowerCase().replace(/\s+/g, '-')}`
+      : '/explore';
+
+    injectSeoGeoMetadata({
+      title: `${subtitle} - Automotive Intelligence Platform (therightgear.app)`,
+      description: `Explore and compare verified OEM technical specifications, market valuations, and Knowledge Graph relations for iconic sports cars.`,
+      canonicalUrl: getAbsolutePageUrl(canonicalPath),
+      keywords: ['Automotive Intelligence', 'Car Catalog', 'Youngtimer', 'Supercar', 'Hypercar', 'Car Valuations', 'OEM Tech Sheets', 'AIO', 'GEO']
+    });
   }, [searchQuery, selectedCategory, selectedManufacturer, viewMode, itemsPerPage]);
 
   // Categories list
@@ -118,9 +138,12 @@ export const MarketPage: React.FC<MarketPageProps> = ({
   const paginatedVehicles = filteredVehicles.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   // Market Intelligence Data
+  const allIntelVehicles = catalogueRepository.getAllVariants().vehicles;
+  const intelMakers = catalogueRepository.getMakers();
+
   const filteredIntelVehicles = selectedBrandIntelligence === 'all'
-    ? HERO_VEHICLES
-    : HERO_VEHICLES.filter(v => v.manufacturer_name.toLowerCase() === selectedBrandIntelligence.toLowerCase());
+    ? allIntelVehicles
+    : allIntelVehicles.filter(v => v.manufacturer_name.toLowerCase() === selectedBrandIntelligence.toLowerCase());
 
   const topGainers = [...filteredIntelVehicles].sort((a, b) => b.price_change_1y_pct - a.price_change_1y_pct);
   const topLosers = [...filteredIntelVehicles].sort((a, b) => a.price_change_1y_pct - b.price_change_1y_pct);
@@ -209,8 +232,8 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                 className="bg-[#171b28] text-xs text-slate-200 font-bold px-3 py-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 cursor-pointer"
               >
                 <option value="All">All Manufacturers</option>
-                {MANUFACTURERS.map((m) => (
-                  <option key={m.id} value={m.official_name}>{m.official_name}</option>
+                {intelMakers.map((m) => (
+                  <option key={m.id} value={m.canonical_name || m.official_name || m.slug}>{m.canonical_name || m.official_name || m.slug}</option>
                 ))}
               </select>
 
@@ -222,7 +245,7 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                   setPage(1);
                 }}
                 className="bg-[#171b28] text-xs text-amber-300 font-bold px-3 py-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 cursor-pointer"
-                title="Results per page / Risultati per pagina"
+                title="Results per page"
               >
                 <option value={25}>25 results / pag</option>
                 <option value={50}>50 results / pag</option>
@@ -297,7 +320,7 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                         <td className="p-3.5 font-mono text-slate-300">{v.model_year_from}</td>
                         <td className="p-3.5 font-mono text-slate-300">{v.production_total ? `${v.production_total} units` : 'N/A'}</td>
                         <td className="p-3.5 font-mono font-bold text-emerald-400 text-sm">
-                          {activeRole === 'public' ? (
+                          {activeRole === 'visitor' ? (
                             <button
                               onClick={() => {
                                 if (onOpenAuthModal) onOpenAuthModal('valuation');
@@ -375,193 +398,19 @@ export const MarketPage: React.FC<MarketPageProps> = ({
       {/* TAB 2: MARKET INTELLIGENCE & TRENDS */}
       {activeMarketTab === 'intelligence' && (
         <div className="space-y-6">
-          
-          {/* Top Gainers & Losers Controls */}
-          <div className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#222838] pb-4">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-red-400" />
-                  <span>Appreciation & Trend Rankings (Gainers / Losers)</span>
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">
-                  Percentage price variation analysis over the last 12 months by brand and model.
-                </p>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-slate-400">Manufacturer:</span>
-                <select
-                  value={selectedBrandIntelligence}
-                  onChange={(e) => setSelectedBrandIntelligence(e.target.value)}
-                  className="bg-[#171a26] text-xs text-red-300 font-bold px-3 py-2 rounded-xl border border-[#283248] focus:outline-none focus:border-red-500 cursor-pointer"
-                >
-                  <option value="all">All Brands ({HERO_VEHICLES.length} Vehicles)</option>
-                  {MANUFACTURERS.map((m) => (
-                    <option key={m.id} value={m.official_name}>{m.official_name}</option>
-                  ))}
-                </select>
-              </div>
+          <div className="bg-[#121520] p-8 rounded-2xl border border-[#23293a] text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 mb-1">
+              <AlertTriangle className="w-6 h-6" />
             </div>
-
-            {/* Gainers vs Losers Tabs */}
-            <div className="flex space-x-2 border-b border-[#222838]">
-              <button
-                onClick={() => setIntelTab('gainers')}
-                className={`pb-3 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
-                  intelTab === 'gainers'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <ArrowUpRight className="w-4 h-4" />
-                <span>Top Gainers (+ Appreciation)</span>
-              </button>
-
-              <button
-                onClick={() => setIntelTab('losers')}
-                className={`pb-3 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
-                  intelTab === 'losers'
-                    ? 'border-rose-500 text-rose-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <ArrowDownRight className="w-4 h-4" />
-                <span>Top Losers (- Decline)</span>
-              </button>
-            </div>
-
-            {/* Vehicle Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(intelTab === 'gainers' ? topGainers : topLosers).map((car) => {
-                const isGainer = car.price_change_1y_pct >= 0;
-                return (
-                  <div
-                    key={car.id}
-                    onClick={() => {
-                      onSelectVehicle(car.slug);
-                      onNavigate('detail', car.slug);
-                    }}
-                    className="p-4 rounded-xl bg-[#161a26] hover:bg-[#1f2536] border border-[#242c3f] transition-all cursor-pointer group space-y-3"
-                  >
-                    <div className="relative h-40 rounded-lg overflow-hidden bg-slate-800">
-                      <img
-                        src={car.hero_image_url}
-                        alt={car.variant_name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-mono font-bold border backdrop-blur-md ${
-                        isGainer
-                          ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/30'
-                          : 'bg-rose-950/80 text-rose-400 border-rose-500/30'
-                      }`}>
-                        {isGainer ? '+' : ''}{car.price_change_1y_pct}%
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-extrabold text-white group-hover:text-red-400 transition-colors">
-                        {car.manufacturer_name} {car.model_name}
-                      </div>
-                      <div className="text-[11px] text-slate-400 truncate">
-                        {car.variant_name} ({car.model_year_from})
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-[#23293b] flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400">Median Value</span>
-                      <span className="text-red-400 font-mono font-bold text-xs">
-                        €{(car.current_median_price_eur / 1000).toFixed(0)}k
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+            <h2 className="text-xl font-bold text-white tracking-wide">INSUFFICIENT DATA</h2>
+            <p className="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
+              There are currently 0 verified Market Price Observations, Transactions, Listings, Snapshots, or Indices in the canonical database.
+              Market metrics and valuation trends require verified transaction evidence and are never simulated or fabricated.
+            </p>
+            <div className="pt-2 text-[11px] font-mono text-slate-500 border-t border-[#1f2638] max-w-md mx-auto">
+              MarketPriceObservations: 0 | MarketTransactions: 0 | MarketListings: 0 | MarketSnapshots: 0 | MarketIndices: 0
             </div>
           </div>
-
-          {/* Recharts Indices & Auctions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <div className="lg:col-span-2 bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-4">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-red-400" />
-                <span>Median Market Index Trend (2021-2025)</span>
-              </h2>
-
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={marketTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#222838" />
-                    <XAxis dataKey="year" stroke="#64748b" fontSize={11} />
-                    <YAxis stroke="#64748b" fontSize={11} />
-                    <Tooltip contentStyle={{ backgroundColor: '#171a26', borderColor: '#2d3548', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
-                    <Area type="monotone" dataKey="indexValue" stroke="#d4af37" fill="#d4af3722" strokeWidth={3} name="Base Index 100" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            <div className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-4">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <PieIcon className="w-4 h-4 text-red-400" />
-                <span>Asset Category Breakdown</span>
-              </h2>
-
-              <div className="h-48 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={categoryData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label>
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: '#171a26', borderColor: '#2d3548', fontSize: '12px' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="space-y-1 text-xs">
-                {categoryData.map((c) => (
-                  <div key={c.name} className="flex justify-between items-center text-slate-300">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
-                      <span>{c.name}</span>
-                    </span>
-                    <span className="font-bold font-mono">{c.value}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-
-          {/* Upcoming Global Auctions */}
-          <div className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-4">
-            <div className="flex items-center space-x-2 text-red-400">
-              <Calendar className="w-5 h-5" />
-              <h2 className="text-lg font-bold text-white">International Collector Auctions Calendar</h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {UPCOMING_AUCTIONS.map((auction) => (
-                <div key={auction.id} className="p-4 rounded-xl bg-[#161a26] border border-[#242c3f] space-y-2">
-                  <div className="flex items-center justify-between text-[10px] font-mono text-red-400 font-bold">
-                    <span>{auction.startDate} - {auction.endDate}</span>
-                    <span className="px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20">{auction.estimatedLotsCount} LOTS</span>
-                  </div>
-
-                  <h3 className="text-sm font-bold text-white">{auction.title}</h3>
-
-                  <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                    <span>{auction.location} ({auction.organizer})</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </div>
       )}
 

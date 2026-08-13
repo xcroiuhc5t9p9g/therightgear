@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Scale, X, Plus, Sparkles, Bot, ArrowRight } from 'lucide-react';
 import { VehicleVariant } from '../types';
 import { fetchCompareVehicles, askAiAdvisor } from '../services/api';
-import { HERO_VEHICLES } from '../data/catalogData';
+import { catalogueRepository } from '../services/catalogueRepository';
 import { Locale, translations } from '../data/translations';
 import { generateCompareJsonLd, injectSeoGeoMetadata, getAbsolutePageUrl } from '../services/seoGeoService';
 
@@ -30,7 +30,8 @@ export const ComparePage: React.FC<ComparePageProps> = ({
       let loadedVehicles: VehicleVariant[] = [];
       if (compareIds.length === 0) {
         // Fallback default cars for initial demo if empty
-        loadedVehicles = [HERO_VEHICLES[0], HERO_VEHICLES[1]];
+        const allVars = catalogueRepository.getAllVariants().vehicles;
+        loadedVehicles = allVars.slice(0, 2);
       } else {
         setLoading(true);
         loadedVehicles = await fetchCompareVehicles(compareIds);
@@ -39,24 +40,25 @@ export const ComparePage: React.FC<ComparePageProps> = ({
       setLoading(false);
 
       // Inject SEO / GEO Metadata for Compare Page
+      const safeLoaded = loadedVehicles || [];
       const pageCanonicalUrl = getAbsolutePageUrl('/compare');
-      const carNames = loadedVehicles.map(v => `${v.manufacturer_name} ${v.variant_name}`).join(' vs ');
-      const schemas = generateCompareJsonLd(loadedVehicles, pageCanonicalUrl);
+      const carNames = safeLoaded.map(v => `${v?.manufacturer_name || ''} ${v?.variant_name || ''}`).join(' vs ');
+      const schemas = generateCompareJsonLd(safeLoaded, pageCanonicalUrl);
       injectSeoGeoMetadata({
         title: `Confronto Prestazioni e Valore: ${carNames} | AIP`,
         description: `Confronto tecnico, accelerazione, potenza, quotazioni di mercato e collector score tra ${carNames}.`,
         canonicalUrl: pageCanonicalUrl,
         ogType: 'website',
-        keywords: ['Confronto Vetture', 'Specifiche Tecniche', 'Quotazioni', ...loadedVehicles.map(v => v.manufacturer_name)]
+        keywords: ['Confronto Vetture', 'Specifiche Tecniche', 'Quotazioni', ...safeLoaded.map(v => v?.manufacturer_name || '')]
       }, schemas);
     }
     loadData();
   }, [compareIds]);
 
   const handleRunAiHeadToHead = async () => {
-    if (vehicles.length < 2) return;
+    if (!vehicles || vehicles.length < 2) return;
     setAiLoading(true);
-    const carNames = vehicles.map(v => `${v.manufacturer_name} ${v.model_name}`).join(' vs ');
+    const carNames = (vehicles || []).map(v => `${v?.manufacturer_name || ''} ${v?.model_name || ''}`).join(' vs ');
     const prompt = locale === 'it'
       ? `Esegui un confronto diretto collezionistico e di investimento tra: ${carNames}. Valuta liquida d'asta, mantenimento del valore e prospettiva a 5 anni.`
       : `Provide a head-to-head collector and investment comparison between: ${carNames}. Analyze auction liquidity, value retention, and 5-year outlook.`;
@@ -143,7 +145,7 @@ export const ComparePage: React.FC<ComparePageProps> = ({
               <td className="p-4 font-bold text-slate-400 bg-[#161a28]">{t.median_price}</td>
               {vehicles.map(c => (
                 <td key={c.id} className="p-4 font-bold text-white font-mono-numbers text-sm">
-                  €{c.current_median_price_eur.toLocaleString()}
+                  €{c.current_median_price_eur ? c.current_median_price_eur.toLocaleString() : 'N/A'}
                 </td>
               ))}
             </tr>
@@ -223,7 +225,7 @@ export const ComparePage: React.FC<ComparePageProps> = ({
               <td className="p-4 font-bold text-slate-400 bg-[#161a28]">Est. Annual Maintenance</td>
               {vehicles.map(c => (
                 <td key={c.id} className="p-4 font-mono-numbers font-medium text-red-300">
-                  €{c.annual_est_maintenance_eur.toLocaleString()} / yr
+                  €{c.annual_est_maintenance_eur ? c.annual_est_maintenance_eur.toLocaleString() : 'N/A'} / yr
                 </td>
               ))}
             </tr>

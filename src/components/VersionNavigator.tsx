@@ -112,12 +112,12 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
       {/* ------------------------------------------------------------------- */}
       <div className="hidden lg:flex items-center justify-between gap-4">
         
-        {/* Unified Navigable Breadcrumb Sequence: Casa Costruttrice > Modello > Generazioni > Varianti */}
+        {/* Unified Navigable Breadcrumb Sequence: Casa Costruttrice > Modello > Generazioni > Variants */}
         <div className="flex items-center gap-2 text-xs font-medium">
           
           {/* 1. Casa Costruttrice */}
           <div className="flex items-center gap-1.5 bg-[#171d2b] px-3 py-2 rounded-xl border border-[#2b354d]">
-            <span className="text-slate-400 font-normal">Casa costruttrice:</span>
+            <span className="text-slate-400 font-normal">Manufacturer:</span>
             <button 
               onClick={() => onSelectLevel('model')}
               className="font-extrabold text-white hover:text-red-400 transition-colors"
@@ -130,7 +130,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
 
           {/* 2. Modello */}
           <div className="flex items-center gap-1.5 bg-[#171d2b] px-3 py-2 rounded-xl border border-[#2b354d]">
-            <span className="text-slate-400 font-normal">Modello:</span>
+            <span className="text-slate-400 font-normal">Model:</span>
             <button 
               onClick={() => onSelectLevel('model')}
               className="font-extrabold text-red-400 hover:underline transition-colors"
@@ -161,7 +161,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
             {generationDropdownOpen && (
               <div className="absolute left-0 mt-2 w-72 bg-[#141926] border border-[#2b354d] rounded-2xl shadow-2xl z-50 p-2 space-y-1">
                 <div className="text-[10px] uppercase tracking-wider font-extrabold text-red-400 px-2.5 py-1.5 flex items-center justify-between border-b border-[#20283b]">
-                  <span>Generazioni Disponibili</span>
+                  <span>Available Generations</span>
                   <span className="text-slate-500 font-mono">{navigationData.generations.length} totali</span>
                 </div>
                 {navigationData.generations.map(gen => (
@@ -213,7 +213,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
             {variantDropdownOpen && (
               <div className="absolute left-0 mt-2 w-80 bg-[#141926] border border-[#2b354d] rounded-2xl shadow-2xl z-50 p-2 max-h-80 overflow-y-auto space-y-1 custom-scrollbar">
                 <div className="text-[10px] uppercase tracking-wider font-extrabold text-red-400 px-2.5 py-1.5 flex items-center justify-between border-b border-[#20283b]">
-                  <span>Varianti {activeGen?.code}</span>
+                  <span>Variants {activeGen?.code}</span>
                   <span className="text-slate-500 font-mono">{activeGen?.variants.length} versioni</span>
                 </div>
                 {activeGen?.variants.map(varItem => (
@@ -256,7 +256,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
               className="px-3 py-2 rounded-xl bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Confronta versioni</span>
+              <span>Compare versions</span>
             </button>
           )}
 
@@ -386,7 +386,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
                     : 'bg-[#18202e] text-slate-200 border-[#2b364e] hover:bg-[#20293b]'
                 }`}
               >
-                🏛️ {isIt ? 'Pagina Principale Modello (Famiglia completa)' : 'Main Model Family Overview'}
+                🏛️ {isIt ? 'Main Model Family Overview' : 'Main Model Family Overview'}
               </button>
             </div>
 

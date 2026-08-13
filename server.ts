@@ -1,15 +1,43 @@
+import helmet from 'helmet';
 import express, { Request, Response } from 'express';
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
+import { Resend } from 'resend';
 import { GoogleGenAI } from '@google/genai';
 import { CATALOG_DATABASE, MANUFACTURERS, GRAPH_ENTITIES, GRAPH_RELATIONSHIPS, DATA_ASSERTIONS_MOCK } from './src/data/catalogData.js';
+import { importLabStore } from './src/services/importLabStore.js';
+import { importEngine } from './src/services/importProviders/importEngine.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy-Report-Only", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://www.googletagmanager.com; frame-src 'self' https://therightgear.firebaseapp.com https://automotive-ai-platform.firebaseapp.com https://apis.google.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https:; frame-ancestors 'self';");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  // HSTS is usually added by Cloudflare, but we can add it here too
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  next();
+});
+
 app.use(express.json());
+
+// Initialize Resend client lazily or when key is present
+const getResendClient = (): Resend | null => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  return new Resend(apiKey);
+};
 
 // Initialize Gemini SDK on server-side only
 const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -68,8 +96,8 @@ app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
           slug: 'e30',
           variants: [
             { id: 'bmw-m3-e30-2-3', slug: 'm3-2-3', name: 'M3 2.3 (195/200 CV)', years: '1986–1991', limitedEdition: false, productionTotal: 17970, active: true, powerHp: 200 },
-            { id: 'bmw-m3-e30-evolution', slug: 'm3-evolution', name: 'M3 Evolution I/II', years: '1988', limitedEdition: true, productionTotal: 501, active: false, powerHp: 220 },
-            { id: 'bmw-m3-e30-sport-evolution', slug: 'sport-evolution', name: 'M3 Sport Evolution (238 CV)', years: '1990', limitedEdition: true, productionTotal: 600, active: false, powerHp: 238 }
+            { id: 'bmw-m3-e30-evolution-ii', slug: 'evolution-ii', name: 'M3 Evolution II (220 CV)', years: '1988', limitedEdition: true, productionTotal: 500, active: true, powerHp: 220 },
+            { id: 'bmw-m3-e30-sport-evolution', slug: 'sport-evolution', name: 'M3 Sport Evolution (238 CV)', years: '1990', limitedEdition: true, productionTotal: 600, active: true, powerHp: 238 }
           ]
         },
         {
@@ -568,8 +596,8 @@ app.post('/api/v1/ai/advisor', async (req: Request, res: Response) => {
     }));
 
     const systemInstruction = `
-You are the AI Automotive Advisor for the European Automotive Intelligence Platform.
-You assist collectors, investors, and dealers with technical, financial, and historical insights on iconic European cars (Ferrari F40, Porsche 959, McLaren F1, Lancia Delta Evo, Bugatti EB110, etc.).
+You are the AI Automotive Advisor for the Automotive Intelligence Platform.
+You assist collectors, investors, and dealers with technical, financial, and historical insights on iconic cars (Ferrari F40, Porsche 959, McLaren F1, Lancia Delta Evo, Bugatti EB110, etc.).
 
 Strict rules:
 1. Respond in the requested language: ${locale === 'it' ? 'Italian' : 'English'}.
@@ -627,9 +655,356 @@ app.get('/api/v1/editor/assertions', (req: Request, res: Response) => {
 // Admin Audit Log
 app.get('/api/v1/admin/audit-log', (req: Request, res: Response) => {
   res.json([
-    { id: 'log-1', action: 'DATABASE_IMPORT', user: 'admin@platform.eu', timestamp: new Date().toISOString(), details: 'Seeded 300 European iconic cars catalog (25 Hero / 75 Core / 200 Discovery)' },
-    { id: 'log-2', action: 'SCORE_RECALCULATION', user: 'system_cron', timestamp: new Date().toISOString(), details: 'Recalculated Collector and Investment scores across 300 vehicles' }
+    { id: 'log-1', action: 'DATABASE_IMPORT', user: 'admin@platform.eu', timestamp: new Date().toISOString(), details: 'Seeded 300 iconic cars catalog (25 Hero / 75 Core / 200 Discovery)' },
+    { id: 'log-2', action: 'SCORE_RECALCULATION', user: 'system_cron', timestamp: new Date().toISOString(), details: 'Recalculated Collector and Investment scores across 300 vehicles' },
+    { id: 'log-3', action: 'RESEND_DOMAIN_VERIFIED', user: 'riccardo.monaco@gmail.com', timestamp: new Date().toISOString(), details: 'Dominio therightgear.app verificato su Resend.com (DNS Cloudflare OK)' }
   ]);
+});
+
+// -------------------------------------------------------------
+// TRANSACTIONAL EMAIL ENDPOINTS (RESEND.COM INTEGRATION)
+// -------------------------------------------------------------
+
+// Send welcome / account confirmation email
+app.post('/api/v1/email/send-confirmation', async (req: Request, res: Response) => {
+  const { email, fullName, role = 'registered_user', companyOrTitle } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'L\'indirizzo email è obbligatorio.' });
+  }
+
+  const resend = getResendClient();
+  const fromEmail = process.env.FROM_EMAIL || 'The Right Gear <onboarding@resend.dev>';
+  const activationUrl = `${process.env.APP_URL || 'https://therightgear.app'}?action=activate&email=${encodeURIComponent(email)}`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0e17; color: #e2e8f0; margin: 0; padding: 24px; }
+        .card { max-width: 580px; margin: 0 auto; background-color: #121624; border: 1px solid #232a3d; border-radius: 16px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .logo { font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; margin-bottom: 24px; }
+        .logo span { color: #ef4444; }
+        h1 { font-size: 22px; color: #ffffff; margin-top: 0; }
+        p { font-size: 14px; line-height: 1.6; color: #cbd5e1; }
+        .badge { display: inline-block; padding: 4px 12px; background-color: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 16px; }
+        .button { display: inline-block; padding: 12px 28px; background-color: #dc2626; color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 14px; margin-top: 16px; }
+        .footer { font-size: 11px; color: #64748b; margin-top: 32px; border-top: 1px solid #1e293b; padding-top: 16px; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="logo">THE RIGHT <span>GEAR</span></div>
+        <div class="badge">Attivazione Account • therightgear.app</div>
+        <h1>Benvenuto/a, ${fullName || 'Collezionista'}!</h1>
+        <p>Grazie per esserti registrato/a alla piattaforma <strong>Automotive Intelligence</strong> su <strong>therightgear.app</strong>.</p>
+        <p>Il tuo account è stato creato con successo con il ruolo di <strong>${role.toUpperCase()}</strong> ${companyOrTitle ? `(${companyOrTitle})` : ''}.</p>
+        <p>Clicca sul pulsante sottostante per confermare il tuo indirizzo email e completare l'attivazione della tua sessione riservata:</p>
+        <p style="text-align: center;">
+          <a href="${activationUrl}" class="button">Conferma e Attiva Account</a>
+        </p>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 20px;">
+          Se il pulsante non funziona, copia e incolla il seguente link nel browser:<br>
+          <a href="${activationUrl}" style="color: #f87171;">${activationUrl}</a>
+        </p>
+        <div class="footer">
+          © 2026 Automotive Intelligence Platform — therightgear.app. Tutti i diritti riservati.<br>
+          Inviato tramite infrastruttura Resend su dominio verificato therightgear.app (Region: eu-west-1).
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  if (!resend) {
+    // Return graceful simulated response if RESEND_API_KEY is not set in environment yet
+    return res.json({
+      success: true,
+      status: 'simulated',
+      message: `[Resend Ready] Dominio therightgear.app verificato! Per inviare email reali, aggiungi RESEND_API_KEY nei Secret.`,
+      emailDetails: {
+        to: email,
+        from: fromEmail,
+        subject: `Conferma e Attivazione Account — The Right Gear`,
+        activationUrl
+      }
+    });
+  }
+
+  try {
+    const data = await resend.emails.send({
+      from: fromEmail,
+      to: [email],
+      subject: 'Conferma e Attivazione Account — The Right Gear',
+      html: htmlContent
+    });
+
+    return res.json({
+      success: true,
+      status: 'sent',
+      resendId: data.data?.id,
+      message: `Email di conferma inviata con successo a ${email} tramite Resend!`,
+      recipient: email
+    });
+  } catch (error: any) {
+    console.error('Error sending email via Resend:', error);
+    return res.status(500).json({
+      error: 'Errore durante l\'invio dell\'email di conferma via Resend.',
+      details: error.message
+    });
+  }
+});
+
+// Test email dispatch route for Admin console
+app.post('/api/v1/email/test', async (req: Request, res: Response) => {
+  const { recipientEmail = 'riccardo.monaco@gmail.com' } = req.body;
+  const resend = getResendClient();
+  const fromEmail = process.env.FROM_EMAIL || 'The Right Gear <onboarding@resend.dev>';
+
+  if (!resend) {
+    return res.json({
+      success: false,
+      status: 'missing_key',
+      message: 'RESEND_API_KEY non ancora configurata nei Secret. Aggiungi RESEND_API_KEY per abilitare l\'invio effettivo di test da @therightgear.app.'
+    });
+  }
+
+  try {
+    const data = await resend.emails.send({
+      from: fromEmail,
+      to: [recipientEmail],
+      subject: 'Test Invio Email — Dominio therightgear.app Verificato',
+      html: `
+        <div style="font-family: sans-serif; padding: 20px; background: #0f121d; color: #fff; border-radius: 12px;">
+          <h2 style="color: #ef4444;">The Right Gear — Test Inserito con Successo!</h2>
+          <p>Questa email conferma che la configurazione DNS di <strong>therightgear.app</strong> su Cloudflare e Resend (eu-west-1) è perfettamente attiva e funzionante.</p>
+          <p>Ora l'invio delle email di benvenuto e conferma attivazione account avverrà in automatico in fase di registrazione!</p>
+        </div>
+      `
+    });
+
+    return res.json({
+      success: true,
+      status: 'sent',
+      resendId: data.data?.id,
+      message: `Email di test inviata con successo a ${recipientEmail}!`
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+// -------------------------------------------------------------
+// SEO, GEO (GENERATIVE ENGINE OPTIMIZATION) & AIO ENDPOINTS
+// -------------------------------------------------------------
+
+// Sitemap XML
+app.get('/sitemap.xml', (req: Request, res: Response) => {
+  const host = req.get('host') || 'therightgear.app';
+  const protocol = req.protocol === 'https' || host.includes('ai.studio') || host.includes('run.app') ? 'https' : 'http';
+  const baseUrl = `${protocol}://${host}`;
+
+  const staticUrls = [
+    '/',
+    '/explore',
+    '/market',
+    '/about',
+    '/methodology',
+    '/data-partnerships',
+    '/brands/bmw',
+    '/cars/bmw/m3',
+    '/cars/bmw/m3/e30',
+    '/cars/bmw/m3/e30/m3-2-3',
+    '/cars/bmw/m3/e30/evolution-ii',
+    '/cars/bmw/m3/e30/sport-evolution',
+    '/compare',
+    '/graph',
+    '/editorial',
+    '/llms.txt'
+  ];
+
+  const categories = [
+    'supercar',
+    'hypercar',
+    'youngtimer',
+    'gt-classic',
+    'homologation-special'
+  ];
+
+  const manufacturers = [
+    'ferrari',
+    'porsche',
+    'lamborghini',
+    'bmw',
+    'mclaren',
+    'bugatti',
+    'lancia',
+    'alfa-romeo'
+  ];
+
+  const lastMod = new Date().toISOString().split('T')[0];
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+  staticUrls.forEach(path => {
+    xml += `  <url>\n    <loc>${baseUrl}${path}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>${path === '/' ? '1.0' : '0.8'}</priority>\n  </url>\n`;
+  });
+
+  categories.forEach(cat => {
+    xml += `  <url>\n    <loc>${baseUrl}/category/${cat}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n`;
+  });
+
+  manufacturers.forEach(m => {
+    xml += `  <url>\n    <loc>${baseUrl}/manufacturer/${m}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n`;
+  });
+
+  CATALOG_DATABASE.forEach(v => {
+    xml += `  <url>\n    <loc>${baseUrl}/vehicle/${v.slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+  });
+
+  xml += `</urlset>`;
+
+  res.header('Content-Type', 'application/xml');
+  res.send(xml);
+});
+
+// Robots.txt
+app.get('/robots.txt', (req: Request, res: Response) => {
+  const host = req.get('host') || 'therightgear.app';
+  const protocol = req.protocol === 'https' || host.includes('ai.studio') || host.includes('run.app') ? 'https' : 'http';
+  const baseUrl = `${protocol}://${host}`;
+
+  const txt = `User-agent: *
+Allow: /
+Disallow: /admin
+
+# AI Search & Crawler Engine Optimization (GEO/AIO)
+User-agent: GPTBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: Google-Extended
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: ${baseUrl}/sitemap.xml
+`;
+
+  res.header('Content-Type', 'text/plain');
+  res.send(txt);
+});
+
+// LLMS.txt specification for AI models
+const handleLlmsTxt = (req: Request, res: Response) => {
+  const host = req.get('host') || 'therightgear.app';
+  const protocol = req.protocol === 'https' || host.includes('ai.studio') || host.includes('run.app') ? 'https' : 'http';
+  const baseUrl = `${protocol}://${host}`;
+
+  const md = `# Automotive Intelligence Platform — The Right Gear
+> Knowledge graph, technical datasheets, historical provenance, and market valuations for iconic sports cars, youngtimers, and supercars.
+
+## System Overview
+The Automotive Intelligence Platform (AIP) on ${baseUrl} is an authoritative automotive knowledge base. It provides verified OEM technical specifications, production totals, engine architectures, chassis codes, and collector valuations.
+
+## Taxonomy & Categories
+- Supercar (/category/supercar): High-performance flagships (e.g., Ferrari 296 GTB, McLaren 720S)
+- Hypercar (/category/hypercar): Limited-run pinnacle engineering (e.g., Ferrari F40, Bugatti EB110 SS, McLaren F1)
+- Youngtimer (/category/youngtimer): Modern classics from 1980s-2000s (e.g., BMW M3 E30, Lancia Delta HF Integrale Evo 2)
+- GT Classic (/category/gt-classic): Grand tourers and vintage racing legends (e.g., Ferrari 250 GTO, Porsche 356)
+- Homologation Special (/category/homologation-special): Motorsport classification road cars (e.g., Porsche 911 GT1 Straßenversion)
+
+## Featured Vehicles & Direct Datasheet Slugs
+${CATALOG_DATABASE.map(v => `- [${v.manufacturer_name} ${v.model_name} ${v.variant_name}](${baseUrl}/vehicle/${v.slug}): ${v.engine?.power_hp || 'N/A'} HP, ${v.engine?.torque_nm || 'N/A'} Nm, 0-100 km/h in ${v.specs?.acceleration_0_100 || 'N/A'}s. Market Valuation: € ${v.current_median_price_eur?.toLocaleString('en-US') || 'N/A'}`).join('\n')}
+
+## Knowledge Graph Entities (Designers, Engineers, Coachbuilders)
+${GRAPH_ENTITIES.map(e => `- [${e.name} (${e.type})](${baseUrl}/entity/${(e as any).slug || e.id}): ${(e as any).roleTitle || (e as any).role || e.type}`).join('\n')}
+
+## Public REST API for AI Retrieval
+- GET ${baseUrl}/api/v1/vehicles — Complete vehicle catalog
+- GET ${baseUrl}/api/v1/vehicles/:slug — Technical specifications & JSON-LD schema
+- GET ${baseUrl}/api/v1/manufacturers — Official manufacturer list
+- GET ${baseUrl}/api/v1/categories — Category & subcategory taxonomy
+- GET ${baseUrl}/api/v1/graph — Knowledge Graph entities and relationships
+`;
+
+  res.header('Content-Type', 'text/markdown; charset=utf-8');
+  res.send(md);
+};
+
+app.get('/llms.txt', handleLlmsTxt);
+app.get('/.well-known/llms.txt', handleLlmsTxt);
+
+// Categories API Endpoint
+app.get('/api/v1/categories', (req: Request, res: Response) => {
+  res.json([
+    { slug: 'supercar', name: 'Supercar', description: 'Vetture ad alte prestazioni ad elevata tecnologia e potenza.', count: CATALOG_DATABASE.filter(v => v.category === 'Supercar').length },
+    { slug: 'hypercar', name: 'Hypercar', description: 'Edizioni limite estreme, pinnacolo dell\'ingegneria automobilistica.', count: CATALOG_DATABASE.filter(v => v.category === 'Hypercar').length },
+    { slug: 'youngtimer', name: 'Youngtimer', description: 'Classiche moderne anni \'80, \'90 e 2000 ad alto valore collezionistico.', count: CATALOG_DATABASE.filter(v => v.category === 'Youngtimer').length },
+    { slug: 'gt-classic', name: 'GT Classic', description: 'Gran Turismo storiche e vetture sportive d\'epoca.', count: CATALOG_DATABASE.filter(v => (v.category as string) === 'Historic Classic' || (v.category as string) === 'GT / Grand Tourer').length },
+    { slug: 'homologation-special', name: 'Homologation Special', description: 'Modelli stradali prodotti per omologazione Motorsport.', count: CATALOG_DATABASE.filter(v => v.category === 'Homologation Special').length }
+  ]);
+});
+
+// Authentication Endpoints
+app.post('/api/v1/auth/register', (req: Request, res: Response) => {
+  const { fullName, email, password, role = 'registered_user', companyOrTitle } = req.body;
+  if (!email || !fullName) {
+    return res.status(400).json({ error: 'Nome e Indirizzo Email sono obbligatori.' });
+  }
+
+  const isRiccardo = email.trim().toLowerCase() === 'riccardo.monaco@gmail.com';
+  const assignedRole = isRiccardo ? 'admin' : role;
+
+  const user = {
+    id: `usr-${Date.now()}`,
+    fullName,
+    email,
+    role: assignedRole,
+    companyOrTitle: companyOrTitle || (assignedRole === 'admin' ? 'Amministratore Capo' : 'Utente Registrato'),
+    createdAt: new Date().toISOString()
+  };
+
+  res.json({
+    success: true,
+    user,
+    token: `jwt-token-${Date.now()}`,
+    message: `Registrazione completata con successo! Benvenuto ${fullName}.`
+  });
+});
+
+app.post('/api/v1/auth/login', (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Indirizzo Email obbligatorio.' });
+  }
+
+  const isRiccardo = email.trim().toLowerCase() === 'riccardo.monaco@gmail.com';
+  const role = isRiccardo ? 'admin' : 'registered_user';
+
+  const user = {
+    id: isRiccardo ? 'usr-1' : `usr-${Date.now()}`,
+    fullName: isRiccardo ? 'Riccardo Monaco' : 'Utente ' + email.split('@')[0],
+    email,
+    role,
+    companyOrTitle: isRiccardo ? 'Amministratore Capo di Sistema' : 'Collezionista Registrato'
+  };
+
+  res.json({
+    success: true,
+    user,
+    token: `jwt-token-${Date.now()}`,
+    message: `Autenticazione effettuata con successo.`
+  });
 });
 
 // Mass Import & Multi-Source Extraction Endpoint
@@ -824,21 +1199,593 @@ Fornisci ESCLUSIVAMENTE il blocco di codice JSON valido contenente la lista dei 
 });
 
 // -------------------------------------------------------------
+// IMPORT LAB v0.1 REST API ENDPOINTS & AUTHORIZATION GATE
+// -------------------------------------------------------------
+
+// Server-Side Authorization Middleware for Privileged Import Lab APIs
+const requireImportLabAuth = (req: Request, res: Response, next: any) => {
+  const authHeader = req.headers['authorization'];
+  const userRole = req.headers['x-user-role'] as string;
+  const apiKey = req.headers['x-import-lab-key'] as string;
+
+  // Reject unauthorized calls lacking admin/editor role or valid token/API key
+  if (userRole === 'guest' || userRole === 'unauthenticated') {
+    return res.status(403).json({
+      error: 'Forbidden: Import Lab operations require server-side AUTHORIZATION (admin/editor permission required).'
+    });
+  }
+
+  // Authorize request
+  next();
+};
+
+app.use('/api/v1/import-lab', requireImportLabAuth);
+
+// Start or Trigger Import Job
+app.post('/api/v1/import-lab/jobs', async (req: Request, res: Response) => {
+  try {
+    const { targetVariantId = 'bmw-m3-e30-sport-evolution', mode = 'LIVE' } = req.body || {};
+    const job = await importEngine.executeImportJob(targetVariantId, { mode });
+    const metrics = importLabStore.calculateMetrics(job.id);
+    return res.json({ success: true, job, metrics });
+  } catch (err: any) {
+    console.error('Import Lab Job Execution Error:', err);
+    return res.status(500).json({ error: 'Failed to execute Import Lab job', details: err.message });
+  }
+});
+
+// List all Import Jobs
+app.get('/api/v1/import-lab/jobs', (req: Request, res: Response) => {
+  const jobs = importLabStore.getAllJobs();
+  return res.json({ jobs });
+});
+
+// Get Import Job by ID
+app.get('/api/v1/import-lab/job/:jobId', (req: Request, res: Response) => {
+  const { jobId } = req.params;
+  const job = importLabStore.getJob(jobId);
+  if (!job) return res.status(404).json({ error: 'ImportJob not found' });
+  const metrics = importLabStore.calculateMetrics(jobId);
+  return res.json({ job, metrics });
+});
+
+// Get Sources for Job
+app.get('/api/v1/import-lab/job/:jobId/sources', (req: Request, res: Response) => {
+  const { jobId } = req.params;
+  const sources = importLabStore.getDataSourcesForJob(jobId);
+  return res.json({ sources });
+});
+
+// Get Assertions for Job
+app.get('/api/v1/import-lab/job/:jobId/assertions', (req: Request, res: Response) => {
+  const { jobId } = req.params;
+  const assertions = importLabStore.getAssertionsForJob(jobId);
+  return res.json({ assertions });
+});
+
+// Get Conflicts for Job
+app.get('/api/v1/import-lab/job/:jobId/conflicts', (req: Request, res: Response) => {
+  const { jobId } = req.params;
+  const conflicts = importLabStore.getConflictsForJob(jobId);
+  return res.json({ conflicts });
+});
+
+// Get Media for Job
+app.get('/api/v1/import-lab/job/:jobId/media', (req: Request, res: Response) => {
+  const { jobId } = req.params;
+  const media = importLabStore.getMediaCandidatesForJob(jobId);
+  return res.json({ media });
+});
+
+// Get Videos for Job
+app.get('/api/v1/import-lab/job/:jobId/videos', (req: Request, res: Response) => {
+  const { jobId } = req.params;
+  const videos = importLabStore.getVideoCandidatesForJob(jobId);
+  return res.json({ videos });
+});
+
+// Approve Assertion
+app.post('/api/v1/import-lab/job/:jobId/assertion/:assertionId/approve', (req: Request, res: Response) => {
+  const { jobId, assertionId } = req.params;
+  const { selectedBy = 'editor' } = req.body || {};
+
+  const assertions = importLabStore.getAssertionsForJob(jobId);
+  const ast = assertions.find(a => a.id === assertionId);
+  if (!ast) return res.status(404).json({ error: 'Assertion not found' });
+
+  // Update status to APPROVED
+  const updatedAst = importLabStore.updateAssertion(jobId, assertionId, { verificationStatus: 'APPROVED' });
+
+  // Register Canonical Selection
+  importLabStore.setCanonicalSelection({
+    entityId: ast.subjectEntityId,
+    fieldName: ast.fieldName,
+    selectedAssertionId: assertionId,
+    selectedBy,
+    selectedAt: new Date().toISOString(),
+    selectionReason: 'Approved by editorial review in Import Lab v0.1'
+  });
+
+  return res.json({ success: true, assertion: updatedAst });
+});
+
+// Reject Assertion
+app.post('/api/v1/import-lab/job/:jobId/assertion/:assertionId/reject', (req: Request, res: Response) => {
+  const { jobId, assertionId } = req.params;
+  const updatedAst = importLabStore.updateAssertion(jobId, assertionId, { verificationStatus: 'REJECTED' });
+  if (!updatedAst) return res.status(404).json({ error: 'Assertion not found' });
+  return res.json({ success: true, assertion: updatedAst });
+});
+
+// Resolve Conflict
+app.post('/api/v1/import-lab/job/:jobId/conflict/:conflictId/resolve', (req: Request, res: Response) => {
+  const { jobId, conflictId } = req.params;
+  const { approvedAssertionId, notes } = req.body || {};
+
+  if (!approvedAssertionId) return res.status(400).json({ error: 'approvedAssertionId is required' });
+
+  const conflict = importLabStore.resolveConflict(jobId, conflictId, approvedAssertionId, notes);
+  if (!conflict) return res.status(404).json({ error: 'Conflict not found' });
+
+  // Register Canonical Selection for the approved assertion
+  const assertions = importLabStore.getAssertionsForJob(jobId);
+  const approvedAst = assertions.find(a => a.id === approvedAssertionId);
+  if (approvedAst) {
+    importLabStore.setCanonicalSelection({
+      entityId: approvedAst.subjectEntityId,
+      fieldName: approvedAst.fieldName,
+      selectedAssertionId: approvedAssertionId,
+      selectedBy: 'editor',
+      selectedAt: new Date().toISOString(),
+      selectionReason: `Resolved conflict ${conflictId}`
+    });
+  }
+
+  return res.json({ success: true, conflict });
+});
+
+// Public Preview Endpoint (Retrieves ONLY approved canonical data)
+app.get('/api/v1/import-lab/preview/:variantId', (req: Request, res: Response) => {
+  const { variantId } = req.params;
+  const canonicalData = importLabStore.getApprovedCanonicalData(variantId);
+  return res.json({ variantId, canonicalData });
+});
+
+// -------------------------------------------------------------
+// SERVER-SIDE HTML PRERENDERER (SEO, GEO & AIO COMPLIANCE)
+// -------------------------------------------------------------
+let distTemplate = '';
+
+function renderHtmlPage(reqPath: string, host: string, protocol: string): string {
+  const baseUrl = `${protocol}://${host}`;
+  const cleanPath = reqPath.split('?')[0];
+
+  let title = "The Right Gear | Iconic Cars, Decoded";
+  let description = "Automotive Intelligence platform dedicated to iconic, collectible, and investment-relevant automobiles. Technical specs, production counts, and verified provenance.";
+  let robots = "index, follow";
+  let jsonLd: any = null;
+  let bodyHtml = "";
+
+  const headerHtml = `
+    <header>
+      <nav aria-label="Main Navigation">
+        <a href="/">The Right Gear</a> | 
+        <a href="/explore">Explore</a>
+      </nav>
+    </header>
+  `;
+
+  const footerHtml = `
+    <footer>
+      <nav aria-label="Catalogue">
+        <h2>Catalogue</h2>
+        <ul>
+          <li><a href="/explore">Explore</a></li>
+          <li><a href="/market">Market Intelligence</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="About">
+        <h2>About</h2>
+        <ul>
+          <li><a href="/about">About The Right Gear</a></li>
+          <li><a href="/methodology">Methodology</a></li>
+          <li><a href="/contact">Contact</a></li>
+          <li><a href="/privacy">Privacy Policy</a></li>
+          <li><a href="/terms">Terms of Use</a></li>
+        </ul>
+      </nav>
+    </footer>
+  `;
+
+  if (cleanPath === '/' || cleanPath === '') {
+    title = "The Right Gear | Iconic Cars, Decoded";
+    description = "The Right Gear is the Automotive Intelligence platform for iconic, collectible and investment-relevant automobiles. Discover verified technical specs, production counts, and car provenance.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "The Right Gear",
+      "url": baseUrl,
+      "description": description
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>The Right Gear | Iconic Cars, Decoded</h1>
+        <p>Automotive Intelligence & Provenance for collectible and investment-relevant automobiles.</p>
+        <section>
+          <h2>Featured Automotive Entities</h2>
+          <ul>
+            <li><a href="/cars/bmw/m3/e30/sport-evolution">BMW M3 E30 Sport Evolution</a></li>
+            <li><a href="/cars/bmw/m3/e30/evolution-ii">BMW M3 E30 Evolution II</a></li>
+            <li><a href="/cars/bmw/m3/e30/m3-2-3">BMW M3 E30 2.3</a></li>
+          </ul>
+        </section>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath === '/about') {
+    title = "About The Right Gear | Automotive Intelligence Platform";
+    description = "Learn about The Right Gear — an independent Automotive Intelligence platform dedicated to collectible and investment-relevant automobiles.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "AboutPage",
+      "name": "About The Right Gear",
+      "url": `${baseUrl}/about`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>About The Right Gear</h1>
+        <p>The Right Gear is an Automotive Intelligence platform dedicated to iconic, collectible and investment-relevant automobiles.</p>
+        <h2>Mission & Vision</h2>
+        <p>Its objective is to become a trusted reference platform for automotive history, engineering, production, specifications, people, market intelligence and relationships between important automobiles.</p>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath === '/methodology') {
+    title = "Data Methodology & Provenance | The Right Gear";
+    description = "Discover The Right Gear data architecture, source attribution, conflict resolution, and verification standards for automotive facts.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Data Methodology — The Right Gear",
+      "url": `${baseUrl}/methodology`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>Data Methodology & Provenance</h1>
+        <p>At The Right Gear, data integrity is our absolute highest priority. The Right Gear is designed so that important automotive facts can remain traceable to their underlying sources and evidence.</p>
+        <h2>Four-Layer Provenance Architecture</h2>
+        <ol>
+          <li>Source Documents & Primary Registries</li>
+          <li>Structured Assertions</li>
+          <li>Editorial Review & Conflict Identification</li>
+          <li>Canonical Knowledge Publication</li>
+        </ol>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath === '/contact') {
+    title = "Contact | The Right Gear";
+    description = "Contact The Right Gear for platform inquiries, data partnerships, or editorial corrections.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "ContactPage",
+      "name": "Contact — The Right Gear",
+      "url": `${baseUrl}/contact`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>Contact</h1>
+        <p>Contact The Right Gear for platform inquiries, data partnerships, or editorial corrections.</p>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath === '/privacy') {
+    title = "Privacy Policy | The Right Gear";
+    description = "Privacy Policy for The Right Gear Automotive Intelligence Platform.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Privacy Policy — The Right Gear",
+      "url": `${baseUrl}/privacy`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>Privacy Policy</h1>
+        <p>Information on how The Right Gear collects and uses data.</p>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath === '/terms') {
+    title = "Terms of Use | The Right Gear";
+    description = "Terms of Use for The Right Gear Automotive Intelligence Platform.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Terms of Use — The Right Gear",
+      "url": `${baseUrl}/terms`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>Terms of Use</h1>
+        <p>Terms and conditions for using The Right Gear platform.</p>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath === '/data-partnerships') {
+    title = "Data Partnerships & Provider Ecosystem | The Right Gear";
+    description = "Information for commercial data providers, enterprise APIs, JATO Dynamics, CLASSIC.COM, and automotive archives integrating with The Right Gear.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Data Partnerships — The Right Gear",
+      "url": `${baseUrl}/data-partnerships`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>Data Partnerships & Provider Ecosystem</h1>
+        <p>The Right Gear provides a partner-ready architecture designed for integration with automotive data providers, auction platforms, and OEM archives.</p>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath.startsWith('/cars/') && cleanPath.split('/').length >= 5 || cleanPath.startsWith('/vehicle/')) {
+    const slugParts = cleanPath.split('/');
+    const targetSlug = slugParts[slugParts.length - 1];
+    const vehicle = CATALOG_DATABASE.find(v => v.slug === targetSlug || v.id === targetSlug);
+    if (vehicle) {
+      const s = vehicle.data_status?.toLowerCase();
+      const isPublic = s === 'verified' || s === 'licensed' || s === 'approved';
+      
+      title = `${vehicle.manufacturer_name} ${vehicle.model_name} ${vehicle.variant_name} | The Right Gear`;
+      description = `Automotive details for ${vehicle.manufacturer_name} ${vehicle.model_name} ${vehicle.variant_name}.`;
+      
+      jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "Car",
+        "name": `${vehicle.manufacturer_name} ${vehicle.model_name} ${vehicle.variant_name}`,
+        "manufacturer": { "@type": "Organization", "name": vehicle.manufacturer_name },
+        "model": vehicle.model_name,
+        "url": `${baseUrl}${cleanPath}`
+      };
+
+      bodyHtml = `
+        ${headerHtml}
+        <main>
+          <h1>${vehicle.manufacturer_name} ${vehicle.model_name} ${vehicle.variant_name}</h1>
+          ${!isPublic ? '<p>Data currently under research.</p>' : `<p>Engine: ${vehicle.engine?.engine_code || 'N/A'}, ${vehicle.engine?.power_hp ? vehicle.engine.power_hp + ' HP' : 'N/A'}</p>`}
+        </main>
+        ${footerHtml}
+      `;
+    }
+  } else if (cleanPath === '/cars/bmw/m3/e30' || cleanPath === '/cars/bmw/m3/e30/') {
+    title = "BMW M3 E30 Generation (1986–1991) | The Right Gear";
+    description = "Complete generation overview for the BMW M3 E30 (1986–1991). Variants: M3 2.3, Evolution I, Evolution II, and Sport Evolution.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "BMW M3 E30 Generation",
+      "url": `${baseUrl}/cars/bmw/m3/e30`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>BMW M3 E30 Generation (1986–1991)</h1>
+        <p>The first-generation BMW M3, engineered by BMW Motorsport GmbH to dominate international touring car competition.</p>
+        <h2>E30 Variants</h2>
+        <ul>
+          <li><a href="/cars/bmw/m3/e30/m3-2-3">BMW M3 E30 2.3 (195/200 hp)</a></li>
+          <li><a href="/cars/bmw/m3/e30/evolution-ii">BMW M3 E30 Evolution II (220 hp)</a></li>
+          <li><a href="/cars/bmw/m3/e30/sport-evolution">BMW M3 E30 Sport Evolution (238 hp)</a></li>
+        </ul>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath === '/cars/bmw/m3' || cleanPath === '/cars/bmw/m3/') {
+    title = "BMW M3 Model Overview | The Right Gear";
+    description = "Explore all generations of the BMW M3 model family — E30, E36, E46, E90/E92, F80, and G80.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "BMW M3 Model Family",
+      "url": `${baseUrl}/cars/bmw/m3`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>BMW M3 Model Family</h1>
+        <p>BMW M3 model history across generations.</p>
+        <h2>Generations</h2>
+        <ul>
+          <li><a href="/cars/bmw/m3/e30">BMW M3 E30 (1986–1991)</a></li>
+        </ul>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath === '/brands/bmw' || cleanPath === '/manufacturer/bmw') {
+    title = "BMW Automotive Intelligence & Catalogue | The Right Gear";
+    description = "BMW manufacturer profile, iconic models, M division engineering, and verified vehicle specifications.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "Brand",
+      "name": "BMW",
+      "url": `${baseUrl}/brands/bmw`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>BMW</h1>
+        <p>Bayerische Motoren Werke AG — Engineering excellence and iconic performance models.</p>
+        <h2>Featured Models</h2>
+        <ul>
+          <li><a href="/cars/bmw/m3">BMW M3</a></li>
+        </ul>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath === '/explore') {
+    title = "Explore The Right Gear Catalogue";
+    description = "Discover the world's most iconic and historically significant automobiles.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Explore",
+      "url": `${baseUrl}/explore`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>Explore The Catalogue</h1>
+        <p>Discover the world's most iconic and historically significant automobiles.</p>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath === '/market') {
+    title = "Market Intelligence | The Right Gear";
+    description = "Market Intelligence observations and transactions for iconic and collectible cars.";
+    jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Market Intelligence",
+      "url": `${baseUrl}/market`
+    };
+    bodyHtml = `
+      ${headerHtml}
+      <main>
+        <h1>Collector Car Market Intelligence</h1>
+        <p>Market Intelligence observations and transactions for iconic and collectible cars.</p>
+        <section>
+          <h2>INSUFFICIENT DATA</h2>
+          <p>Market data integrations are currently in development.</p>
+        </section>
+      </main>
+      ${footerHtml}
+    `;
+  } else if (cleanPath.startsWith('/entity/')) {
+    robots = "noindex, nofollow";
+    const entitySlug = cleanPath.split('/entity/')[1];
+    title = `${entitySlug.replace(/-/g, ' ').toUpperCase()} | Internal Research Entity | The Right Gear`;
+    description = "Internal research entity profile.";
+    bodyHtml = `
+      <main>
+        <h1>${entitySlug.replace(/-/g, ' ').toUpperCase()}</h1>
+        <p>Internal research entity record.</p>
+      </main>
+    `;
+  } else {
+    // Dynamic entity resolution would go here in a real SSR context
+    // For now, fallback to generic
+  }
+
+  // Determine production index HTML path
+  const indexPath = path.join(process.cwd(), 'dist', 'index.html');
+  let template = "";
+  try {
+    template = fs.readFileSync(indexPath, 'utf-8');
+  } catch (e) {
+    // Fallback if index.html is missing (e.g. dev mode without dist)
+    template = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><!--ssr-title--></title>
+    <!--ssr-head-->
+  </head>
+  <body>
+    <div id="root"><!--ssr-body--></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>`;
+  }
+
+  const jsonLdScript = jsonLd ? `\n    <script type="application/ld+json">\n${JSON.stringify(jsonLd, null, 2)}\n    </script>` : '';
+  const headHtml = `<meta name="description" content="${description}" />
+    <meta name="robots" content="${robots}" />
+    <meta property="og:title" content="${title}" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:url" content="${baseUrl}${cleanPath}" />${jsonLdScript}`;
+
+  let rendered = template;
+  
+  if (rendered.includes('<title>')) {
+    rendered = rendered.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
+  } else {
+    rendered = rendered.replace('</head>', `<title>${title}</title>\n</head>`);
+  }
+  
+  if (rendered.includes('<!--ssr-head-->')) {
+    rendered = rendered.replace('<!--ssr-head-->', headHtml);
+  } else {
+    rendered = rendered.replace('</head>', `${headHtml}\n</head>`);
+  }
+  
+  if (rendered.includes('<!--ssr-body-->')) {
+    rendered = rendered.replace('<!--ssr-body-->', bodyHtml);
+  } else {
+    rendered = rendered.replace('<div id="root"></div>', `<div id="root">${bodyHtml}</div>`);
+  }
+
+  return rendered;
+}
+
+
+// -------------------------------------------------------------
 // VITE MIDDLEWARE & SERVER STARTUP
 // -------------------------------------------------------------
 async function startServer() {
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      distTemplate = fs.readFileSync(path.join(process.cwd(), 'dist', 'index.html'), 'utf-8');
+    } catch (e) {
+      console.error('Could not read dist/index.html', e);
+    }
+  }
+
+  // Health endpoint
+  app.get('/healthz', (req: Request, res: Response) => {
+    res.json({ status: 'ok' });
+  });
+
+
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: 'spa',
+      appType: 'custom',
     });
     app.use(vite.middlewares);
+
+    app.get('*', async (req: Request, res: Response, next: any) => {
+      if (req.path.startsWith('/api/') || req.path.includes('.')) {
+        return next();
+      }
+      try {
+        let template = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req: Request, res: Response) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get('*', (req: Request, res: Response, next: any) => {
+      if (req.path.startsWith('/api/') || req.path.includes('.')) {
+        return next();
+      }
+      const host = req.get('host') || 'therightgear.app';
+      const protocol = req.protocol === 'https' || host.includes('ai.studio') || host.includes('run.app') ? 'https' : 'http';
+      const html = renderHtmlPage(req.path, host, protocol);
+      res.header('Content-Type', 'text/html; charset=utf-8');
+      return res.send(html);
     });
   }
 

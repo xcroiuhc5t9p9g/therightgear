@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Store, Building2, ShieldCheck, Mail, Phone, MapPin, ExternalLink, Plus, CheckCircle } from 'lucide-react';
-import { CATALOG_DATABASE } from '../data/catalogData';
+import { catalogueRepository } from '../services/catalogueRepository';
 import { DealerListing, UserRole } from '../types';
 import { Locale, translations } from '../data/translations';
 
@@ -17,8 +17,8 @@ export const DealerMarketplacePage: React.FC<DealerMarketplacePageProps> = ({
 }) => {
   const t = translations[locale];
   
-  // Extract all dealer listings from hero cars
-  const allListings: DealerListing[] = CATALOG_DATABASE.flatMap(v => v.listings || []);
+  // Extract all dealer listings from cars
+  const allListings: DealerListing[] = catalogueRepository.getAllVariants().vehicles.flatMap(v => v.listings || []);
 
   const [contactModalListing, setContactModalListing] = useState<DealerListing | null>(null);
   const [inquirySent, setInquirySent] = useState(false);
@@ -30,7 +30,7 @@ export const DealerMarketplacePage: React.FC<DealerMarketplacePageProps> = ({
         <div>
           <div className="flex items-center space-x-2 text-blue-400 mb-1">
             <Store className="w-5 h-5" />
-            <span className="text-xs font-bold uppercase tracking-wider">European Dealer Network</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Global Dealer Network</span>
           </div>
           <h1 className="text-2xl font-extrabold text-white">{t.dealer_listings_title}</h1>
           <p className="text-xs text-slate-400">
@@ -38,7 +38,7 @@ export const DealerMarketplacePage: React.FC<DealerMarketplacePageProps> = ({
           </p>
         </div>
 
-        {(activeRole === 'dealer' || activeRole === 'admin') && (
+        {(activeRole === 'corporate_user' || activeRole === 'super_admin') && (
           <button className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center space-x-2 shadow-lg shadow-blue-600/20 cursor-pointer">
             <Plus className="w-4 h-4" />
             <span>List Vehicle in Network</span>

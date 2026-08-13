@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, SlidersHorizontal, Check, Shield, Zap, Gauge, Award, DollarSign, Wrench } from 'lucide-react';
 import { VehicleFamilyNavigation, VariantNavigationItem } from '../types';
 import { Locale } from '../data/translations';
-import { CATALOG_DATABASE } from '../data/catalogData';
+import { catalogueRepository } from '../services/catalogueRepository';
 
 interface VariantCompareModalProps {
   navigationData: VehicleFamilyNavigation;
@@ -50,7 +50,7 @@ export const VariantCompareModal: React.FC<VariantCompareModalProps> = ({
 
   // Helper to fetch full or mock specs for variant
   const getVariantDetails = (vItem: VariantNavigationItem) => {
-    const catalogMatch = CATALOG_DATABASE.find(x => x.id === vItem.id || x.slug === vItem.slug);
+    const catalogMatch = catalogueRepository.getVariantBySlug(vItem.slug) || catalogueRepository.getAllVariants().vehicles.find(x => x.id === vItem.id);
     if (catalogMatch) return catalogMatch;
 
     // Fallback benchmark for demo variants

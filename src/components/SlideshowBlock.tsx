@@ -42,11 +42,11 @@ const PRESET_IMAGES = [
 ];
 
 export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
-  activeRole = 'public',
+  activeRole = 'visitor',
   onNavigate,
   className = ''
 }) => {
-  const canManage = activeRole === 'admin' || activeRole === 'editor';
+  const canManage = activeRole === 'super_admin' || activeRole === 'editor';
 
   // Store state for slides
   const [slides, setSlides] = useState<HomeSlide[]>(unifiedVehicleStore.getHomeSlides());
@@ -92,10 +92,10 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
     } else {
       setEditingIndex(null);
       setSlideFormData({
-        badge: 'In Primo Piano',
-        title: 'Nuova Iniziativa Automotive',
-        subtitle: 'Inserisci qui la descrizione ed i dettagli della slide.',
-        ctaText: 'Esplora Sezione',
+        badge: 'Featured',
+        title: 'New Automotive Highlight',
+        subtitle: 'Enter description and details of the slide here.',
+        ctaText: 'Explore Section',
         ctaPage: 'market',
         bgImage: PRESET_IMAGES[0].url,
         accentColor: PRESET_GRADIENTS[0].value
@@ -109,7 +109,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        alert('Seleziona un file immagine valido (PNG, JPG, WebP, GIF).');
+        alert('Please select a valid image file (PNG, JPG, WebP, GIF).');
         return;
       }
       const reader = new FileReader();
@@ -117,7 +117,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
         const result = event.target?.result as string;
         if (result) {
           setSlideFormData(prev => ({ ...prev, bgImage: result }));
-          showNotification('Immagine caricata dal PC con successo!');
+          showNotification('Image uploaded successfully!');
         }
       };
       reader.readAsDataURL(file);
@@ -128,16 +128,16 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
   const handleSaveSlide = (e: React.FormEvent) => {
     e.preventDefault();
     if (!slideFormData.title || !slideFormData.bgImage) {
-      alert('Inserisci almeno un titolo ed una URL di sfondo valida.');
+      alert('Please enter at least a title and a valid background URL.');
       return;
     }
 
     if (editingIndex !== null) {
       unifiedVehicleStore.updateHomeSlide(editingIndex, slideFormData);
-      showNotification(`Slide ${editingIndex + 1} aggiornata con successo!`);
+      showNotification(`Slide ${editingIndex + 1} updated successfully!`);
     } else {
       unifiedVehicleStore.addHomeSlide(slideFormData as any);
-      showNotification('Nuova slide creata e aggiunta allo slideshow!');
+      showNotification('New slide created and added to slideshow!');
     }
 
     setIsEditModalOpen(false);
@@ -146,15 +146,15 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
   // Delete Slide
   const handleDeleteSlide = (index: number) => {
     if (slides.length <= 1) {
-      alert('Impossibile eliminare l\'unica slide rimasta nello slideshow.');
+      alert('Cannot delete the last remaining slide in the slideshow.');
       return;
     }
-    if (window.confirm(`Sei sicuro di voler eliminare la Slide ${index + 1}?`)) {
+    if (window.confirm(`Are you sure you want to delete Slide ${index + 1}?`)) {
       unifiedVehicleStore.deleteHomeSlide(index);
       if (currentSlide >= slides.length - 1) {
         setCurrentSlide(Math.max(0, slides.length - 2));
       }
-      showNotification(`Slide ${index + 1} eliminata.`);
+      showNotification(`Slide ${index + 1} deleted.`);
     }
   };
 
@@ -198,16 +198,16 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
           <div className="absolute top-4 right-4 z-30 flex flex-wrap items-center gap-2 bg-slate-950/90 backdrop-blur-md p-1.5 px-3 rounded-2xl border border-red-500/40 shadow-xl">
             <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-lg border border-red-500/30 uppercase">
               <ShieldCheck className="w-3 h-3" />
-              <span>Gestione {activeRole.toUpperCase()}</span>
+              <span>{activeRole.toUpperCase()} Management</span>
             </span>
 
             <button
               onClick={() => handleOpenEditor(activeSlideIndex)}
               className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-red-300 text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Modifica velocemente la slide visibile"
+              title="Quick edit visible slide"
             >
               <Edit3 className="w-3.5 h-3.5" />
-              <span>Modifica Slide</span>
+              <span>Edit Slide</span>
             </button>
 
             <button
@@ -215,7 +215,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
               className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-red-600/20 uppercase tracking-wider"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Gestisci Slideshow</span>
+              <span>Manage Slideshow</span>
             </button>
           </div>
         )}
@@ -242,7 +242,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
               onClick={() => onNavigate(activeSlide.ctaPage || 'market')}
               className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-red-600/20 transition-all cursor-pointer uppercase tracking-wider"
             >
-              <span>{activeSlide.ctaText || 'Esplora'}</span>
+              <span>{activeSlide.ctaText || 'Explore'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -253,7 +253,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
           <button
             onClick={() => setCurrentSlide((currentSlide - 1 + slides.length) % slides.length)}
             className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            aria-label="Slide precedente"
+            aria-label="Previous slide"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -274,7 +274,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
           <button
             onClick={() => setCurrentSlide((currentSlide + 1) % slides.length)}
             className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            aria-label="Slide successiva"
+            aria-label="Next slide"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -292,11 +292,11 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
               <div>
                 <div className="flex items-center space-x-2 text-red-400 mb-1">
                   <ShieldCheck className="w-5 h-5" />
-                  <span className="text-xs font-bold uppercase tracking-wider">Gestione Slideshow Homepage & Market</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">Homepage & Market Slideshow Manager</span>
                 </div>
-                <h3 className="text-xl font-black text-white">Pannello Editor Slideshow ({slides.length} Slide)</h3>
+                <h3 className="text-xl font-black text-white">Slideshow Editor Panel ({slides.length} Slides)</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Gli Amministratori ed Editori possono modificare, aggiungere, ordinare ed eliminare le slide in tempo reale.
+                  Administrators and Editors can edit, add, reorder, and remove slides in real-time.
                 </p>
               </div>
 
@@ -311,7 +311,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
             {/* Slide Action Toolbar */}
             <div className="flex justify-between items-center">
               <span className="text-xs text-slate-400 font-mono">
-                Slide attive nello store: <strong className="text-red-400">{slides.length}</strong>
+                Active slides in store: <strong className="text-red-400">{slides.length}</strong>
               </span>
 
               <button
@@ -319,7 +319,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
                 className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer uppercase tracking-wider shadow-lg shadow-red-600/20"
               >
                 <Plus className="w-4 h-4" />
-                <span>Aggiungi Nuova Slide</span>
+                <span>Add New Slide</span>
               </button>
             </div>
 
@@ -366,7 +366,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
                         onClick={() => handleMoveSlide(idx, 'up')}
                         disabled={idx === 0}
                         className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 cursor-pointer"
-                        title="Sposta prima"
+                        title="Move up"
                       >
                         <ArrowUp className="w-3.5 h-3.5" />
                       </button>
@@ -374,7 +374,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
                         onClick={() => handleMoveSlide(idx, 'down')}
                         disabled={idx === slides.length - 1}
                         className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 cursor-pointer"
-                        title="Sposta dopo"
+                        title="Move down"
                       >
                         <ArrowDown className="w-3.5 h-3.5" />
                       </button>
@@ -386,14 +386,14 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
                         className="px-2.5 py-1.5 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
-                        <span>Modifica</span>
+                        <span>Edit</span>
                       </button>
 
                       <button
                         onClick={() => handleDeleteSlide(idx)}
                         disabled={slides.length <= 1}
                         className="p-1.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 disabled:opacity-30 cursor-pointer transition-all"
-                        title="Elimina Slide"
+                        title="Delete Slide"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -409,7 +409,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
                 onClick={() => setIsManagerOpen(false)}
                 className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider cursor-pointer"
               >
-                Chiudi Gestione
+                Close Manager
               </button>
             </div>
 
@@ -426,7 +426,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
               <div className="flex items-center space-x-2 text-red-400">
                 <Edit3 className="w-5 h-5" />
                 <h3 className="text-lg font-extrabold text-white">
-                  {editingIndex !== null ? `Modifica Slide #${editingIndex + 1}` : 'Crea Nuova Slide'}
+                  {editingIndex !== null ? `Edit Slide #${editingIndex + 1}` : 'Create New Slide'}
                 </h3>
               </div>
               <button
@@ -446,12 +446,12 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-2">
                     <ImageIcon className="w-8 h-8" />
-                    <span>Nessuna immagine selezionata</span>
+                    <span>No image selected</span>
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent p-3 flex flex-col justify-end">
                   <span className="text-[10px] text-red-300 font-bold uppercase">{slideFormData.badge || 'BADGE PREVIEW'}</span>
-                  <h4 className="text-sm font-extrabold text-white truncate">{slideFormData.title || 'Titolo della Slide'}</h4>
+                  <h4 className="text-sm font-extrabold text-white truncate">{slideFormData.title || 'Slide Title'}</h4>
                 </div>
               </div>
 
@@ -460,9 +460,9 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#222a3d] pb-2">
                   <label className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
                     <Upload className="w-4 h-4 text-red-400" />
-                    <span>Carica Immagine da PC (Desktop/Laptop)</span>
+                    <span>Upload Image from PC (Desktop/Laptop)</span>
                   </label>
-                  <span className="text-[10px] text-slate-400">Accetta PNG, JPG, WEBP, GIF</span>
+                  <span className="text-[10px] text-slate-400">Accepts PNG, JPG, WEBP, GIF</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -477,7 +477,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
                 <div className="pt-1">
                   <label className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mb-1.5">
                     <ImageIcon className="w-3.5 h-3.5 text-red-400" />
-                    <span>Oppure Seleziona un Preset Immagine HD:</span>
+                    <span>Or Select an HD Preset Image:</span>
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {PRESET_IMAGES.map((img, i) => (
@@ -501,76 +501,76 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
               {/* Badge & Title Row */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300">Etichetta Badge (Top)</label>
+                  <label className="text-[11px] font-bold text-slate-300">Badge Label (Top)</label>
                   <input
                     type="text"
                     required
                     value={slideFormData.badge || ''}
                     onChange={e => setSlideFormData(prev => ({ ...prev, badge: e.target.value }))}
                     className="w-full bg-[#171b28] text-white p-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 font-mono text-xs"
-                    placeholder="Es. Dynamic Registration"
+                    placeholder="e.g. Dynamic Registration"
                   />
                 </div>
 
                 <div className="sm:col-span-2 space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300">Titolo Principale</label>
+                  <label className="text-[11px] font-bold text-slate-300">Main Title</label>
                   <input
                     type="text"
                     required
                     value={slideFormData.title || ''}
                     onChange={e => setSlideFormData(prev => ({ ...prev, title: e.target.value }))}
                     className="w-full bg-[#171b28] text-white p-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 text-xs font-bold"
-                    placeholder="Es. Automotive Passion & Intelligence"
+                    placeholder="e.g. Automotive Passion & Intelligence"
                   />
                 </div>
               </div>
 
               {/* Subtitle */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-300">Sottotitolo / Descrizione</label>
+                <label className="text-[11px] font-bold text-slate-300">Subtitle / Description</label>
                 <textarea
                   rows={2}
                   value={slideFormData.subtitle || ''}
                   onChange={e => setSlideFormData(prev => ({ ...prev, subtitle: e.target.value }))}
                   className="w-full bg-[#171b28] text-slate-200 p-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 text-xs leading-relaxed"
-                  placeholder="Descrizione sintetica degli incentivi o delle funzionalità..."
+                  placeholder="Brief description of features or highlights..."
                 />
               </div>
 
               {/* CTA Text & Destination Link */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300">Testo Pulsante CTA</label>
+                  <label className="text-[11px] font-bold text-slate-300">CTA Button Text</label>
                   <input
                     type="text"
                     required
                     value={slideFormData.ctaText || ''}
                     onChange={e => setSlideFormData(prev => ({ ...prev, ctaText: e.target.value }))}
                     className="w-full bg-[#171b28] text-white p-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 text-xs"
-                    placeholder="Es. Crea Account"
+                    placeholder="e.g. Create Account"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300">Sezione Sito di Destinazione</label>
+                  <label className="text-[11px] font-bold text-slate-300">Destination Page Section</label>
                   <select
                     value={slideFormData.ctaPage || 'market'}
                     onChange={e => setSlideFormData(prev => ({ ...prev, ctaPage: e.target.value }))}
                     className="w-full bg-[#171b28] text-red-300 font-bold p-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 text-xs cursor-pointer"
                   >
-                    <option value="market">Market & Banca Dati</option>
-                    <option value="register">Registrazione Utente (Privato o Dealer)</option>
-                    <option value="graph">Knowledge Graph Storico</option>
-                    <option value="catalog">Catalogo Modelli</option>
-                    <option value="dealer_marketplace">Marketplace Dealer & Aste</option>
-                    <option value="ai_advisor">Consulente AI Advisor</option>
+                    <option value="market">Market & Database</option>
+                    <option value="register">User Registration (Private or Dealer)</option>
+                    <option value="graph">Historical Knowledge Graph</option>
+                    <option value="catalog">Model Catalog</option>
+                    <option value="dealer_marketplace">Dealer & Auction Marketplace</option>
+                    <option value="ai_advisor">AI Advisor Consultant</option>
                   </select>
                 </div>
               </div>
 
               {/* Background Image Custom URL */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-300">URL Immagine Personale (Sfondo HD)</label>
+                <label className="text-[11px] font-bold text-slate-300">Custom Image URL (HD Background)</label>
                 <input
                   type="url"
                   required
@@ -583,7 +583,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
 
               {/* Accent Color Gradient */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-300">Tonalità Gradiente di Sovrapposizione</label>
+                <label className="text-[11px] font-bold text-slate-300">Overlay Gradient Shade</label>
                 <select
                   value={slideFormData.accentColor || PRESET_GRADIENTS[0].value}
                   onChange={e => setSlideFormData(prev => ({ ...prev, accentColor: e.target.value }))}
@@ -602,7 +602,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
                   onClick={() => setIsEditModalOpen(false)}
                   className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider cursor-pointer"
                 >
-                  Annulla
+                  Cancel
                 </button>
 
                 <button
@@ -610,7 +610,7 @@ export const SlideshowBlock: React.FC<SlideshowBlockProps> = ({
                   className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-lg shadow-red-600/20"
                 >
                   <Check className="w-4 h-4" />
-                  <span>{editingIndex !== null ? 'Salva Modifiche' : 'Crea Slide'}</span>
+                  <span>{editingIndex !== null ? 'Save Changes' : 'Create Slide'}</span>
                 </button>
               </div>
 

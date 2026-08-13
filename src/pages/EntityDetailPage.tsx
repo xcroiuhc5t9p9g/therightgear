@@ -14,7 +14,7 @@ import {
   Globe
 } from 'lucide-react';
 import { KEY_ENTITIES, KeyEntity } from '../data/entitiesData';
-import { HERO_VEHICLES } from '../data/catalogData';
+import { catalogueRepository } from '../services/catalogueRepository';
 import { Locale, translations } from '../data/translations';
 import { generatePersonJsonLd, injectSeoGeoMetadata, getAbsolutePageUrl } from '../services/seoGeoService';
 
@@ -55,7 +55,8 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
   }, [entity, locale]);
 
   // Find vehicles linked to this entity
-  const associatedVehicles = HERO_VEHICLES.filter(v => 
+  const allVars = catalogueRepository.getAllVariants().vehicles;
+  const associatedVehicles = allVars.filter(v => 
     entity.associatedVehicleSlugs.includes(v.slug) ||
     v.designers.some(d => d.full_name.toLowerCase().includes(entity.name.toLowerCase()) || entity.name.toLowerCase().includes(d.full_name.toLowerCase())) ||
     v.engineers.some(e => e.full_name.toLowerCase().includes(entity.name.toLowerCase()) || entity.name.toLowerCase().includes(e.full_name.toLowerCase()))
@@ -67,36 +68,36 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
       <div className="flex items-center justify-between">
         <button
           onClick={() => onNavigate('home')}
-          className="inline-flex items-center space-x-2 text-xs font-bold text-slate-300 hover:text-red-400 bg-[#141824] px-3.5 py-2 rounded-xl border border-[#232a3d] transition-colors cursor-pointer"
+          className="inline-flex items-center space-x-2 text-xs font-bold text-slate-300 hover:text-[#D71920] bg-[#141824] px-3.5 py-2 rounded-xl border border-[#2B303B] transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Home</span>
         </button>
 
-        <div className="flex items-center space-x-2 text-xs text-slate-400 bg-[#121520] px-3 py-1.5 rounded-lg border border-[#222838]">
-          <Globe className="w-3.5 h-3.5 text-red-400" />
+        <div className="flex items-center space-x-2 text-xs text-slate-400 bg-[#171A1F] px-3 py-1.5 rounded-lg border border-[#2B303B]">
+          <Globe className="w-3.5 h-3.5 text-[#D71920]" />
           <span>Knowledge Graph Certified Entity</span>
         </div>
       </div>
 
       {/* Main Banner Hero */}
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#111420] via-[#171b29] to-[#0d101a] border border-[#232a3d] p-6 lg:p-8">
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#111420] via-[#171b29] to-[#0d101a] border border-[#2B303B] p-6 lg:p-8">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
           <img
             src={entity.avatarUrl}
             alt={entity.name}
-            className="w-28 h-28 lg:w-36 lg:h-36 rounded-2xl object-cover border-2 border-red-500/40 shadow-xl shadow-red-600/10 shrink-0"
+            className="w-28 h-28 lg:w-36 lg:h-36 rounded-2xl object-cover border-2 border-[#D71920]/40 shadow-xl shadow-[#D71920]/10 shrink-0"
           />
 
           <div className="space-y-2 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-1 rounded-md bg-red-500/15 border border-red-500/30 text-red-300 text-[11px] font-bold uppercase tracking-wider">
+              <span className="px-2.5 py-1 rounded-md bg-[#D71920]/15 border border-[#D71920]/30 text-[#D71920] text-[11px] font-bold uppercase tracking-wider">
                 {entity.type}
               </span>
-              <span className="px-2.5 py-1 rounded-md bg-[#1a2030] text-slate-300 text-[11px] font-medium border border-[#283248]">
+              <span className="px-2.5 py-1 rounded-md bg-[#0B0D10] text-slate-300 text-[11px] font-medium border border-[#2B303B]">
                 {entity.nationality} ({entity.countryCode})
               </span>
-              <span className="px-2.5 py-1 rounded-md bg-[#1a2030] text-red-400 text-[11px] font-mono font-bold border border-[#283248]">
+              <span className="px-2.5 py-1 rounded-md bg-[#0B0D10] text-[#D71920] text-[11px] font-mono font-bold border border-[#2B303B]">
                 {entity.yearsActive}
               </span>
             </div>
@@ -105,14 +106,14 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
               {entity.name}
             </h1>
 
-            <p className="text-red-400/90 text-sm font-semibold">
+            <p className="text-[#D71920]/90 text-sm font-semibold">
               {entity.roleTitle}
             </p>
 
             <div className="pt-2 flex flex-wrap gap-2">
               <button
                 onClick={() => onNavigate('ai-advisor')}
-                className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-[#D71920] hover:bg-[#D71920] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
               >
                 <Bot className="w-4 h-4" />
                 <span>Ask AI Advisor about {entity.name}</span>
@@ -120,7 +121,7 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
 
               <button
                 onClick={() => onNavigate('graph')}
-                className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-[#1d2232] hover:bg-[#252c42] text-slate-200 font-semibold text-xs border border-[#303950] transition-all cursor-pointer"
+                className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-[#171A1F] hover:bg-[#1C2029] text-slate-200 font-semibold text-xs border border-[#2B303B] transition-all cursor-pointer"
               >
                 <Network className="w-4 h-4 text-blue-400" />
                 <span>View Relationship Graph</span>
@@ -134,8 +135,8 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Main Biography Column */}
-        <div className="lg:col-span-2 bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-4">
-          <div className="flex items-center space-x-2 text-red-400 border-b border-[#222838] pb-3">
+        <div className="lg:col-span-2 bg-[#171A1F] p-6 rounded-2xl border border-[#2B303B] space-y-4">
+          <div className="flex items-center space-x-2 text-[#D71920] border-b border-[#2B303B] pb-3">
             <User className="w-5 h-5" />
             <h2 className="text-lg font-bold text-white">Historical Biography & Technical Profile</h2>
           </div>
@@ -146,8 +147,8 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
             </p>
 
             {(entity.companyInfoEn || entity.companyInfoIt) && (
-              <div className="mt-4 p-4 rounded-xl bg-[#171b28] border border-[#252e42] space-y-1">
-                <div className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="mt-4 p-4 rounded-xl bg-[#0B0D10] border border-[#2B303B] space-y-1">
+                <div className="text-xs font-bold text-[#D71920] uppercase tracking-wider flex items-center gap-1.5">
                   <Building2 className="w-4 h-4" />
                   <span>Corporate Roles & Operations</span>
                 </div>
@@ -160,14 +161,14 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
         </div>
 
         {/* Key Achievements & Innovations Sidebar */}
-        <div className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-4">
-          <div className="flex items-center space-x-2 text-purple-400 border-b border-[#222838] pb-3">
+        <div className="bg-[#171A1F] p-6 rounded-2xl border border-[#2B303B] space-y-4">
+          <div className="flex items-center space-x-2 text-purple-400 border-b border-[#2B303B] pb-3">
             <Award className="w-5 h-5" />
             <h2 className="text-base font-bold text-white">Key Contributions & Innovations</h2>
           </div>
 
           <ul className="space-y-3">
-            {(entity.keyAchievementsEn || entity.keyAchievementsIt).map((ach, i) => (
+            {(entity.keyAchievementsEn || entity.keyAchievementsIt || []).map((ach, i) => (
               <li key={i} className="flex items-start space-x-2.5 text-xs text-slate-300">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <span>{ach}</span>
@@ -179,10 +180,10 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
       </div>
 
       {/* Associated Cars & Projects Section */}
-      <section className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-5">
+      <section className="bg-[#171A1F] p-6 rounded-2xl border border-[#2B303B] space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Car className="w-5 h-5 text-red-400" />
+            <Car className="w-5 h-5 text-[#D71920]" />
             <h2 className="text-lg font-bold text-white">
               Associated Vehicles & Projects ({associatedVehicles.length})
             </h2>
@@ -200,21 +201,21 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
                 onSelectVehicle(car.slug);
                 onNavigate('detail', car.slug);
               }}
-              className="p-4 rounded-xl bg-[#161a26] hover:bg-[#1f2536] border border-[#242c3f] transition-all cursor-pointer group space-y-3"
+              className="p-4 rounded-xl bg-[#0B0D10] hover:bg-[#1C2029] border border-[#2B303B] transition-all cursor-pointer group space-y-3"
             >
               <div className="relative h-40 rounded-lg overflow-hidden bg-slate-800">
                 <img
                   src={car.hero_image_url}
                   alt={car.variant_name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover motion-safe:group-hover:scale-105 transition-transform duration-300"
                 />
-                <div className="absolute top-2 right-2 bg-slate-950/80 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono font-bold text-red-400 border border-red-500/30">
-                  €{(car.current_median_price_eur / 1000).toFixed(0)}k
+                <div className="absolute top-2 right-2 bg-slate-950/80 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono font-bold text-[#D71920] border border-[#D71920]/30">
+                  €{car.current_median_price_eur ? `${(car.current_median_price_eur / 1000).toFixed(0)}k` : 'N/A'}
                 </div>
               </div>
 
               <div>
-                <div className="text-xs font-extrabold text-white group-hover:text-red-400 transition-colors">
+                <div className="text-xs font-extrabold text-white group-hover:text-[#D71920] transition-colors">
                   {car.manufacturer_name} {car.model_name}
                 </div>
                 <div className="text-[11px] text-slate-400 truncate">
@@ -224,7 +225,7 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
 
               <div className="pt-2 border-t border-[#23293b] flex items-center justify-between text-[11px] text-slate-400">
                 <span>{car.engine.architecture} • {car.engine.power_hp} HP</span>
-                <span className="text-red-400 font-bold flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
+                <span className="text-[#D71920] font-bold flex items-center gap-0.5 motion-safe:group-hover:translate-x-1 transition-transform">
                   View File <ChevronRight className="w-3 h-3" />
                 </span>
               </div>

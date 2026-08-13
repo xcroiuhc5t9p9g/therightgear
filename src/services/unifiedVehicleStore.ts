@@ -1,7 +1,7 @@
 import { VehicleVariant, HomeSlide } from '../types';
-import { CATALOG_DATABASE } from '../data/catalogData';
+import { catalogueRepository } from './catalogueRepository';
 
-const STORAGE_KEY = 'unified_vehicle_repository_v1';
+const STORAGE_KEY = 'unified_vehicle_repository_v2';
 const SLIDES_STORAGE_KEY = 'unified_home_slides_v1';
 
 export const DEFAULT_SLIDES: HomeSlide[] = [
@@ -27,10 +27,10 @@ export const DEFAULT_SLIDES: HomeSlide[] = [
   },
   {
     id: 'slide-3',
-    badge: 'Knowledge Graph & Design',
+    badge: 'Car DNA & Historical Network',
     title: 'Engineers, Designers & Coachbuilders',
     subtitle: 'Discover the network of historical relationships connecting Nicola Materazzi, Pininfarina, Gordon Murray, and automotive icons.',
-    ctaText: 'Open Knowledge Graph',
+    ctaText: 'Explore its DNA',
     ctaPage: 'graph',
     bgImage: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1600&auto=format&fit=crop',
     accentColor: 'from-blue-500/20 to-purple-950/60'
@@ -67,7 +67,7 @@ function loadInitialVehicles(): VehicleVariant[] {
     console.error('Error loading vehicles from localStorage:', e);
   }
   if (!list || list.length === 0) {
-    list = CATALOG_DATABASE;
+    list = catalogueRepository.getAllVariants().vehicles;
   }
 
   // Ensure default in_primo_piano values exist if none were explicitly set
@@ -368,7 +368,7 @@ class UnifiedVehicleStore {
   }
 
   public resetToDefault() {
-    this.vehicles = CATALOG_DATABASE;
+    this.vehicles = catalogueRepository.getAllVariants().vehicles;
     this.save();
   }
 }

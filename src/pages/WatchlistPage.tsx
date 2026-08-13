@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bookmark, Trash2, ArrowUpRight, DollarSign, Award, ChevronRight } from 'lucide-react';
-import { CATALOG_DATABASE } from '../data/catalogData';
+import { catalogueRepository } from '../services/catalogueRepository';
 import { VehicleVariant } from '../types';
 import { Locale, translations } from '../data/translations';
 
@@ -21,11 +21,12 @@ export const WatchlistPage: React.FC<WatchlistPageProps> = ({
 }) => {
   const t = translations[locale];
 
-  const savedVehicles: VehicleVariant[] = CATALOG_DATABASE.filter(v => watchlistIds.includes(v.id));
+  const savedVehicles: VehicleVariant[] = catalogueRepository.getAllVariants().vehicles.filter(v => watchlistIds.includes(v.id));
 
-  const totalPortfolioValue = savedVehicles.reduce((acc, curr) => acc + curr.current_median_price_eur, 0);
-  const avgCollectorScore = savedVehicles.length > 0
-    ? Math.round(savedVehicles.reduce((acc, curr) => acc + curr.scores.collector_score.overall_score, 0) / savedVehicles.length)
+  const totalPortfolioValue = savedVehicles.reduce((acc, curr) => acc + (curr.current_median_price_eur || 0), 0);
+  const scoredVehicles = savedVehicles.filter(v => v.scores?.collector_score?.overall_score != null);
+  const avgCollectorScore = scoredVehicles.length > 0
+    ? Math.round(scoredVehicles.reduce((acc, curr) => acc + (curr.scores?.collector_score?.overall_score || 0), 0) / scoredVehicles.length)
     : 0;
 
   return (
@@ -111,7 +112,7 @@ export const WatchlistPage: React.FC<WatchlistPageProps> = ({
                 <div className="flex justify-between items-center bg-[#171b28] p-2.5 rounded-lg border border-[#252c3f]">
                   <span className="text-xs text-slate-400">Median Price</span>
                   <span className="text-sm font-bold text-white font-mono-numbers">
-                    €{(car.current_median_price_eur / 1000).toLocaleString()}k
+                    €{car.current_median_price_eur ? `${(car.current_median_price_eur / 1000).toLocaleString()}k` : 'N/A'}
                   </span>
                 </div>
               </div>

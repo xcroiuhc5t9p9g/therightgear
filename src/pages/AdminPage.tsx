@@ -3,13 +3,15 @@ import {
   ShieldCheck, Activity, Users, Database, FileText, CheckCircle, RefreshCw, Key, FileCheck, 
   ExternalLink, Zap, AlertTriangle, Plus, Upload, Search, Edit3, Trash2, Eye, Check, X, 
   Download, Tag, ArrowRight, Star, Sliders, Image as ImageIcon, Globe, Sparkles, Layers, 
-  CheckCircle2, Server, Lock, UserPlus, Shield, UserCheck, ShieldAlert, Settings
+  CheckCircle2, Server, Lock, UserPlus, Shield, UserCheck, ShieldAlert, Settings, Mail,
+  LayoutList, ArrowUp, ArrowDown, RotateCcw, Link2
 } from 'lucide-react';
 import { UserRole, VehicleVariant, HomeSlide } from '../types';
 import { fetchHealth, extractVehicleDataFromWeb } from '../services/api';
 import { Locale, translations } from '../data/translations';
 import { unifiedVehicleStore } from '../services/unifiedVehicleStore';
 import { userManagementStore, AppUser } from '../services/userManagementStore';
+import { footerStore, FooterSection, FooterLink } from '../services/footerStore';
 
 interface AdminPageProps {
   locale: Locale;
@@ -24,11 +26,34 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
   const [actionStatus, setActionStatus] = useState<string | null>(null);
 
   // Role Capabilities Logic
-  const isAdmin = activeRole === 'admin';
-  const isEditor = activeRole === 'editor' || activeRole === 'data_manager' || isAdmin;
+  const isAdmin = activeRole === 'super_admin';
+  const isEditor = activeRole === 'editor' || activeRole === 'editor' || isAdmin;
 
   // Active Admin Console Sub-Navigation
-  const [activeTab, setActiveTab] = useState<'database' | 'users' | 'slideshow' | 'system'>('database');
+  const [activeTab, setActiveTab] = useState<'database' | 'users' | 'slideshow' | 'footer' | 'system'>('database');
+
+  // Footer Store State & Management
+  const [footerSections, setFooterSections] = useState<FooterSection[]>(footerStore.getSections());
+  const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
+  const [newSectionTitle, setNewSectionTitle] = useState('');
+  
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editingSectionTitle, setEditingSectionTitle] = useState('');
+
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [targetSectionIdForLink, setTargetSectionIdForLink] = useState<string | null>(null);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [linkFormData, setLinkFormData] = useState<{
+    label: string;
+    pageKey: string;
+    url: string;
+    isExternal: boolean;
+  }>({
+    label: '',
+    pageKey: 'market',
+    url: '',
+    isExternal: false
+  });
 
   // Unified Store state
   const [vehicles, setVehicles] = useState<VehicleVariant[]>(unifiedVehicleStore.getAll());
@@ -65,6 +90,35 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
   const [importError, setImportError] = useState<string | null>(null);
   const [importPreview, setImportPreview] = useState<any[]>([]);
 
+  // Email Test Dispatch State
+  const [testEmailRecipient, setTestEmailRecipient] = useState('riccardo.monaco@gmail.com');
+  const [testEmailResult, setTestEmailResult] = useState<{ status: string; message: string } | null>(null);
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+
+  const handleSendTestEmail = async () => {
+    setIsSendingTestEmail(true);
+    setTestEmailResult(null);
+    try {
+      const res = await fetch('/api/v1/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientEmail: testEmailRecipient })
+      });
+      const data = await res.json();
+      setTestEmailResult({
+        status: data.success ? 'success' : 'info',
+        message: data.message || data.error || 'Risposta ricevuta dal server.'
+      });
+    } catch (err: any) {
+      setTestEmailResult({
+        status: 'error',
+        message: err.message
+      });
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
+
   useEffect(() => {
     async function loadHealth() {
       const data = await fetchHealth();
@@ -82,15 +136,108 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
       setManagedUsers(userManagementStore.getAll());
     });
 
+    const unsubscribeFooter = footerStore.subscribe(() => {
+      setFooterSections([...footerStore.getSections()]);
+    });
+
     return () => {
       unsubscribeVehicles();
       unsubscribeUsers();
+      unsubscribeFooter();
     };
   }, []);
 
   const showNotification = (msg: string) => {
     setActionStatus(msg);
     setTimeout(() => setActionStatus(null), 4000);
+  };
+
+  // Footer CRUD Handlers
+  const handleCreateFooterSection = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSectionTitle.trim()) return;
+    footerStore.addSection(newSectionTitle.trim());
+    showNotification(`New footer section "${newSectionTitle}" added!`);
+    setNewSectionTitle('');
+    setIsAddSectionOpen(false);
+  };
+
+  const handleUpdateSectionTitleSave = (sectionId: string) => {
+    if (!editingSectionTitle.trim()) return;
+    footerStore.updateSectionTitle(sectionId, editingSectionTitle.trim());
+    showNotification(`Footer section updated to "${editingSectionTitle}"!`);
+    setEditingSectionId(null);
+  };
+
+  const handleDeleteFooterSection = (sectionId: string, title: string) => {
+    if (window.confirm(`Are you sure you want to delete section "${title}" and all its links?`)) {
+      footerStore.deleteSection(sectionId);
+      showNotification(`Section "${title}" deleted.`);
+    }
+  };
+
+  const handleOpenAddLinkModal = (sectionId: string) => {
+    setTargetSectionIdForLink(sectionId);
+    setEditingLinkId(null);
+    setLinkFormData({
+      label: 'New Page Link',
+      pageKey: 'market',
+      url: '',
+      isExternal: false
+    });
+    setIsLinkModalOpen(true);
+  };
+
+  const handleOpenEditLinkModal = (sectionId: string, link: FooterLink) => {
+    setTargetSectionIdForLink(sectionId);
+    setEditingLinkId(link.id);
+    setLinkFormData({
+      label: link.label,
+      pageKey: link.pageKey || 'custom',
+      url: link.url || '',
+      isExternal: !!link.isExternal
+    });
+    setIsLinkModalOpen(true);
+  };
+
+  const handleSaveFooterLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetSectionIdForLink || !linkFormData.label.trim()) {
+      alert('Please provide a valid link label.');
+      return;
+    }
+
+    if (editingLinkId) {
+      footerStore.updateLink(targetSectionIdForLink, editingLinkId, {
+        label: linkFormData.label,
+        pageKey: linkFormData.pageKey !== 'custom' ? linkFormData.pageKey : undefined,
+        url: linkFormData.pageKey === 'custom' ? linkFormData.url : undefined,
+        isExternal: linkFormData.isExternal
+      });
+      showNotification(`Link "${linkFormData.label}" updated!`);
+    } else {
+      footerStore.addLink(targetSectionIdForLink, {
+        label: linkFormData.label,
+        pageKey: linkFormData.pageKey !== 'custom' ? linkFormData.pageKey : undefined,
+        url: linkFormData.pageKey === 'custom' ? linkFormData.url : undefined,
+        isExternal: linkFormData.isExternal
+      });
+      showNotification(`Link "${linkFormData.label}" added to footer!`);
+    }
+
+    setIsLinkModalOpen(false);
+  };
+
+  const handleDeleteFooterLink = (sectionId: string, linkId: string, label: string) => {
+    footerStore.deleteLink(sectionId, linkId);
+    showNotification(`Link "${label}" removed.`);
+  };
+
+  const handleResetFooterToDefaults = () => {
+    if (window.confirm('Reset all footer links to original default structure?')) {
+      footerStore.resetToDefault();
+      showNotification('Footer links restored to defaults!');
+    }
   };
 
   // Action: Toggle "In Primo Piano" for a vehicle
@@ -383,10 +530,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
       role: newUser.role,
       companyOrTitle: newUser.companyOrTitle || 'Membro Staff',
       status: 'active',
-      canPublish: newUser.role === 'admin' || newUser.role === 'editor',
-      canDelete: newUser.role === 'admin',
-      canImportMassive: newUser.role === 'admin' || newUser.role === 'editor',
-      canManageUsers: newUser.role === 'admin'
+      canPublish: newUser.role === 'super_admin' || newUser.role === 'editor',
+      canDelete: newUser.role === 'super_admin',
+      canImportMassive: newUser.role === 'super_admin' || newUser.role === 'editor',
+      canManageUsers: newUser.role === 'super_admin'
     });
     showNotification(`Nuovo utente "${newUser.fullName}" aggiunto con ruolo ${newUser.role.toUpperCase()}!`);
     setIsAddUserModalOpen(false);
@@ -402,6 +549,55 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
     return u.role === userRoleFilter;
   });
 
+  // Access Control Guard for non-admin / non-editor users
+  if (!isAdmin && !isEditor) {
+    return (
+      <div className="max-w-2xl mx-auto my-12 p-8 bg-[#121520] rounded-2xl border border-red-500/40 text-center space-y-6 shadow-2xl">
+        <div className="w-16 h-16 bg-red-500/20 border border-red-500/40 rounded-full flex items-center justify-center text-red-400 mx-auto">
+          <Lock className="w-8 h-8 text-rose-400" />
+        </div>
+        
+        <div className="space-y-2">
+          <h2 className="text-2xl font-extrabold text-white tracking-tight">Restricted Administrator Access</h2>
+          <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
+            The Administration Console and Database Management Operations (CRUD) are protected and restricted to authorized administrators.
+          </p>
+        </div>
+
+        <div className="p-4 bg-[#171b28] rounded-xl border border-[#252d42] text-xs text-left space-y-2 max-w-md mx-auto">
+          <div className="text-red-400 font-bold uppercase text-[10px] tracking-wider">Current Session</div>
+          <div className="flex justify-between text-slate-300">
+            <span>Active Role:</span>
+            <span className="font-bold uppercase text-amber-400">{activeRole === 'visitor' ? 'Guest / Unregistered' : activeRole}</span>
+          </div>
+          <div className="flex justify-between text-slate-300">
+            <span>CRUD Privileges:</span>
+            <span className="font-bold text-rose-400">DISABLED (Protected)</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-3 pt-2">
+          
+
+          <button
+            onClick={() => onNavigate('register')}
+            className="px-5 py-2.5 rounded-xl bg-[#1c2232] hover:bg-[#283248] text-slate-200 font-bold text-xs border border-[#2d3852] transition-all cursor-pointer flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4 text-sky-400" />
+            <span>Sign In / Register</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('market')}
+            className="px-5 py-2.5 rounded-xl bg-[#171b28] hover:bg-[#20273a] text-slate-300 font-bold text-xs border border-[#252d42] transition-all cursor-pointer"
+          >
+            Return to Public Catalog
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-12">
       
@@ -413,7 +609,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-300">Ruolo Attivo Sessione:</span>
+              <span className="text-xs font-bold text-slate-300">Active Session Role:</span>
               <span className={`text-xs font-black uppercase font-mono px-2.5 py-0.5 rounded-full border ${
                 isAdmin 
                   ? 'bg-rose-950/80 border-rose-500/50 text-rose-300' 
@@ -421,13 +617,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
                   ? 'bg-purple-950/80 border-purple-500/50 text-purple-300' 
                   : 'bg-slate-800 text-slate-300'
               }`}>
-                {activeRole === 'admin' ? 'Amministratore (Admin)' : activeRole === 'editor' ? 'Redattore (Editor)' : activeRole.toUpperCase()}
+                {activeRole === 'super_admin' ? 'Administrator (Admin)' : activeRole === 'editor' ? 'Editor' : activeRole.toUpperCase()}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {isAdmin 
-                ? 'Privilegi completi abilitati: gestione RBAC utenti, eliminazione record, configurazione API e pubblicazione live.' 
-                : 'Privilegi Redazione: modifica schede auto e importazione dati. Cancellazione definitiva e gestione ruoli disabilitate.'}
+                ? 'Full privileges enabled: user RBAC management, record deletion, API configuration, and live publishing.' 
+                : 'Editorial privileges: edit vehicle sheets and import data. Deletion and role management disabled.'}
             </p>
           </div>
         </div>
@@ -435,17 +631,17 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
         {/* Quick Role Toggle Switcher */}
         {setActiveRole && (
           <div className="flex items-center space-x-1.5 bg-[#171b28] p-1.5 rounded-xl border border-[#262f44]">
-            <span className="text-[10px] font-bold text-slate-400 px-2 uppercase font-mono">Test Ruolo:</span>
+            <span className="text-[10px] font-bold text-slate-400 px-2 uppercase font-mono">Test Role:</span>
             <button
-              onClick={() => { setActiveRole('admin'); showNotification('Attivato Ruolo: AMMINISTRATORE (Admin)'); }}
+              onClick={() => { setActiveRole('super_admin'); showNotification('Activated Role: ADMINISTRATOR (Admin)'); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeRole === 'admin' ? 'bg-red-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                activeRole === 'super_admin' ? 'bg-red-600 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
               Admin
             </button>
             <button
-              onClick={() => { setActiveRole('editor'); showNotification('Attivato Ruolo: REDATTORE (Editor)'); }}
+              onClick={() => { setActiveRole('editor'); showNotification('Activated Role: EDITOR'); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 activeRole === 'editor' ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
@@ -453,9 +649,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
               Editor
             </button>
             <button
-              onClick={() => { setActiveRole('dealer'); showNotification('Attivato Ruolo: CONCESSIONARIO (Dealer)'); }}
+              onClick={() => { setActiveRole('corporate_user'); showNotification('Activated Role: DEALER'); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeRole === 'dealer' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                activeRole === 'corporate_user' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
               Dealer
@@ -508,10 +704,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
       {/* Main Administration Navigation Menu / Tabs */}
       <div className="bg-[#121520] p-2 rounded-2xl border border-[#23293a] flex items-center space-x-2 overflow-x-auto no-scrollbar">
         {[
-          { id: 'database', label: `Banca Dati & Veicoli (${vehicles.length})`, icon: Database, badge: 'CRUD' },
-          { id: 'users', label: `Gestione Utenti & RBAC (${managedUsers.length})`, icon: Users, badge: isAdmin ? 'ADMIN AREA' : 'READ ONLY' },
-          { id: 'slideshow', label: 'Contenuti & Slideshow Homepage', icon: Sliders, badge: 'MEDIA' },
-          { id: 'system', label: 'Sistema & Logs', icon: Server, badge: 'CONFIG' },
+          { id: 'database', label: `Database & Vehicles (${vehicles.length})`, icon: Database, badge: 'CRUD' },
+          { id: 'users', label: `User & RBAC (${managedUsers.length})`, icon: Users, badge: isAdmin ? 'ADMIN AREA' : 'READ ONLY' },
+          { id: 'slideshow', label: 'Homepage Slideshow', icon: Sliders, badge: 'MEDIA' },
+          { id: 'footer', label: 'Footer Links & Navigation', icon: LayoutList, badge: 'CRUD' },
+          { id: 'system', label: 'System & Logs', icon: Server, badge: 'CONFIG' },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -783,6 +980,105 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
             </div>
           </div>
 
+          {/* Interactive CRUD Operations & Roles Matrix */}
+          <div className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-4">
+            <div className="flex items-center justify-between border-b border-[#232a3d] pb-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-red-400" />
+                  <span>Matrice di Navigazione Permessi CRUD Gestionali per Ruolo</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Panoramica chiara ed intuitiva delle azioni gestionali autorizzate per ogni tipologia di utente nel sistema.
+                </p>
+              </div>
+              <span className="text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-3 py-1 rounded-full">
+                SISTEMA RBAC ATTIVO
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-[#171b28] text-slate-300 uppercase font-mono border-b border-[#262f44]">
+                    <th className="p-3 font-bold">Azione / Operazione CRUD</th>
+                    <th className="p-3 font-bold text-center text-rose-400">🔴 Admin</th>
+                    <th className="p-3 font-bold text-center text-purple-400">🟣 Editor</th>
+                    <th className="p-3 font-bold text-center text-amber-400">🟢 Dealer</th>
+                    <th className="p-3 font-bold text-center text-sky-400">🔵 Utente Privato</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1e2434] text-[11px]">
+                  <tr className="hover:bg-[#171c2b]">
+                    <td className="p-3 font-bold text-white flex items-center gap-2">
+                      <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>CREATE: Aggiunta Nuovi Veicoli / Schede</span>
+                    </td>
+                    <td className="p-3 text-center text-emerald-400 font-bold">✓ Diretto</td>
+                    <td className="p-3 text-center text-emerald-400 font-bold">✓ Bozza</td>
+                    <td className="p-3 text-center text-slate-500">Solo Inserzioni Proprietarie</td>
+                    <td className="p-3 text-center text-slate-500">✘ Non Autorizzato</td>
+                  </tr>
+
+                  <tr className="hover:bg-[#171c2b]">
+                    <td className="p-3 font-bold text-white flex items-center gap-2">
+                      <Eye className="w-3.5 h-3.5 text-sky-400" />
+                      <span>READ: Consultazione Banca Dati & Market</span>
+                    </td>
+                    <td className="p-3 text-center text-emerald-400 font-bold">✓ Completo</td>
+                    <td className="p-3 text-center text-emerald-400 font-bold">✓ Completo</td>
+                    <td className="p-3 text-center text-emerald-400 font-bold">✓ Completo</td>
+                    <td className="p-3 text-center text-emerald-400 font-bold">✓ Completo</td>
+                  </tr>
+
+                  <tr className="hover:bg-[#171c2b]">
+                    <td className="p-3 font-bold text-white flex items-center gap-2">
+                      <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                      <span>UPDATE: Modifica Specifiche Dati / Slideshow</span>
+                    </td>
+                    <td className="p-3 text-center text-emerald-400 font-bold">✓ Tutti i Record</td>
+                    <td className="p-3 text-center text-emerald-400 font-bold">✓ Schede e Slideshow</td>
+                    <td className="p-3 text-center text-slate-500">Solo Proprio Inventario</td>
+                    <td className="p-3 text-center text-slate-500">Solo Proprio Profilo</td>
+                  </tr>
+
+                  <tr className="hover:bg-[#171c2b]">
+                    <td className="p-3 font-bold text-white flex items-center gap-2">
+                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                      <span>DELETE: Eliminazione Definitiva Record</span>
+                    </td>
+                    <td className="p-3 text-center text-rose-400 font-bold">✓ Esclusivo Admin</td>
+                    <td className="p-3 text-center text-slate-500">✘ Necessita Admin</td>
+                    <td className="p-3 text-center text-slate-500">✘ Necessita Admin</td>
+                    <td className="p-3 text-center text-slate-500">✘ Non Autorizzato</td>
+                  </tr>
+
+                  <tr className="hover:bg-[#171c2b]">
+                    <td className="p-3 font-bold text-white flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5 text-purple-400" />
+                      <span>IMPORT: Batch Import AI (Gemini Web Scraper)</span>
+                    </td>
+                    <td className="p-3 text-center text-emerald-400 font-bold">✓ Illimitato</td>
+                    <td className="p-3 text-center text-emerald-400 font-bold">✓ Abilitato</td>
+                    <td className="p-3 text-center text-slate-500">✘ Non Autorizzato</td>
+                    <td className="p-3 text-center text-slate-500">✘ Non Autorizzato</td>
+                  </tr>
+
+                  <tr className="hover:bg-[#171c2b]">
+                    <td className="p-3 font-bold text-white flex items-center gap-2">
+                      <ShieldCheck className="w-3.5 h-3.5 text-rose-400" />
+                      <span>MANAGE USERS: Gestione Account, Ruoli & Permessi</span>
+                    </td>
+                    <td className="p-3 text-center text-rose-400 font-bold">✓ Esclusivo Admin</td>
+                    <td className="p-3 text-center text-slate-500">Solo Lettura Staff</td>
+                    <td className="p-3 text-center text-slate-500">✘ Nessun Accesso</td>
+                    <td className="p-3 text-center text-slate-500">✘ Nessun Accesso</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* Users List Filters */}
           <div className="bg-[#121520] p-4 rounded-2xl border border-[#23293a] flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex-1 relative flex items-center">
@@ -827,7 +1123,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
                 </thead>
                 <tbody className="divide-y divide-[#1e2434]">
                   {filteredUsers.map((usr) => {
-                    const isUserAdmin = usr.role === 'admin';
+                    const isUserAdmin = usr.role === 'super_admin';
                     const isUserEditor = usr.role === 'editor';
                     return (
                       <tr key={usr.id} className="hover:bg-[#171c2b] transition-colors">
@@ -1076,10 +1372,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
                         }}
                         className="w-full bg-[#121520] text-red-300 font-bold p-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 text-xs cursor-pointer"
                       >
-                        <option value="market">Sezione Market / Ricerca</option>
-                        <option value="register">Registrazione Utente / Ruoli</option>
-                        <option value="graph">Knowledge Graph Storico</option>
-                        <option value="catalog">Catalogo Modelli</option>
+                        <option value="market">Market Section / Search</option>
+                        <option value="register">User Registration / Roles</option>
+                        <option value="graph">Car DNA & Historical Network</option>
+                        <option value="catalog">Model Catalog</option>
                       </select>
                     </div>
 
@@ -1114,6 +1410,364 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
       )}
 
       {/* ========================================================= */}
+      {/* TAB: FOOTER LINKS & NAVIGATION MANAGEMENT (CRUD)          */}
+      {/* ========================================================= */}
+      {activeTab === 'footer' && (
+        <div className="space-y-6">
+          {/* Header Banner */}
+          <div className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center space-x-2 text-red-400 mb-1">
+                <LayoutList className="w-5 h-5" />
+                <span className="text-xs font-bold uppercase tracking-wider">Footer Navigation & Links Management (CRUD)</span>
+              </div>
+              <h2 className="text-xl font-extrabold text-white">Footer Link Columns & Structure</h2>
+              <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+                Add, edit, reorder, or delete footer sections and navigation links. Changes reflect live on the website footer with instant dynamic copyright updates.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsAddSectionOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-red-600/20"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add New Footer Column</span>
+              </button>
+
+              <button
+                onClick={handleResetFooterToDefaults}
+                className="px-4 py-2.5 rounded-xl bg-[#1d2436] hover:bg-[#28324a] text-slate-300 border border-[#2e3a54] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4 text-amber-400" />
+                <span>Reset to Defaults</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 bg-[#121520] border border-[#23293a] rounded-2xl flex items-center justify-between">
+              <div>
+                <span className="text-slate-400 text-xs font-bold uppercase block">Footer Columns</span>
+                <span className="text-2xl font-black text-white font-mono mt-1 block">{footerSections.length}</span>
+              </div>
+              <LayoutList className="w-8 h-8 text-red-500/80" />
+            </div>
+
+            <div className="p-4 bg-[#121520] border border-[#23293a] rounded-2xl flex items-center justify-between">
+              <div>
+                <span className="text-slate-400 text-xs font-bold uppercase block">Total Active Links</span>
+                <span className="text-2xl font-black text-white font-mono mt-1 block">
+                  {footerSections.reduce((sum, sec) => sum + sec.links.length, 0)}
+                </span>
+              </div>
+              <Link2 className="w-8 h-8 text-sky-500/80" />
+            </div>
+
+            <div className="p-4 bg-[#121520] border border-[#23293a] rounded-2xl flex items-center justify-between">
+              <div>
+                <span className="text-slate-400 text-xs font-bold uppercase block">Copyright Owner</span>
+                <span className="text-base font-bold text-amber-300 font-mono mt-1 block">© {new Date().getFullYear()} The Right Gear</span>
+              </div>
+              <ShieldCheck className="w-8 h-8 text-emerald-500/80" />
+            </div>
+          </div>
+
+          {/* Add New Section Inline Modal Card */}
+          {isAddSectionOpen && (
+            <form onSubmit={handleCreateFooterSection} className="p-5 bg-[#171c2b] border border-red-500/40 rounded-2xl space-y-4 animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-[#293248] pb-3">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-red-400" />
+                  <span>Create New Footer Section / Column Header</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setIsAddSectionOpen(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 text-xs font-bold mb-1.5">Section Title / Column Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newSectionTitle}
+                  onChange={(e) => setNewSectionTitle(e.target.value)}
+                  placeholder="e.g. Services, Community, Partner Programs..."
+                  className="w-full bg-[#10131e] border border-[#283248] rounded-xl px-4 py-2.5 text-white text-xs focus:outline-none focus:border-red-500 font-bold"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsAddSectionOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-[#222a3d] text-slate-300 font-bold text-xs hover:bg-[#2b354d]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs"
+                >
+                  Create Section
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Sections List */}
+          <div className="space-y-6">
+            {footerSections.map((section, secIdx) => (
+              <div key={section.id} className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-4">
+                {/* Section Header with Actions */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#23293a] pb-4">
+                  {editingSectionId === section.id ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="text"
+                        value={editingSectionTitle}
+                        onChange={(e) => setEditingSectionTitle(e.target.value)}
+                        className="bg-[#181e2e] border border-red-500/60 rounded-xl px-3 py-1.5 text-white font-bold text-sm outline-none"
+                      />
+                      <button
+                        onClick={() => handleUpdateSectionTitleSave(section.id)}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingSectionId(null)}
+                        className="px-3 py-1.5 rounded-lg bg-[#222a3d] text-slate-300 font-bold text-xs cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-3">
+                      <span className="w-7 h-7 rounded-lg bg-[#1a2030] border border-[#2a344d] text-red-400 font-mono text-xs font-bold flex items-center justify-center">
+                        {secIdx + 1}
+                      </span>
+                      <h3 className="text-base font-extrabold text-white tracking-tight">{section.title}</h3>
+                      <span className="text-[10px] font-mono font-bold text-slate-400 bg-[#181d2c] px-2 py-0.5 rounded border border-[#242c42]">
+                        {section.links.length} links
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => footerStore.moveSection(section.id, 'up')}
+                      disabled={secIdx === 0}
+                      className="p-1.5 rounded-lg bg-[#171b28] hover:bg-[#20273a] text-slate-300 disabled:opacity-30 border border-[#252d42] cursor-pointer"
+                      title="Move Column Left / Up"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => footerStore.moveSection(section.id, 'down')}
+                      disabled={secIdx === footerSections.length - 1}
+                      className="p-1.5 rounded-lg bg-[#171b28] hover:bg-[#20273a] text-slate-300 disabled:opacity-30 border border-[#252d42] cursor-pointer"
+                      title="Move Column Right / Down"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingSectionId(section.id);
+                        setEditingSectionTitle(section.title);
+                      }}
+                      className="p-1.5 rounded-lg bg-[#171b28] hover:bg-[#20273a] text-sky-400 border border-[#252d42] cursor-pointer"
+                      title="Edit Column Title"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteFooterSection(section.id, section.title)}
+                      className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-400 border border-red-500/30 cursor-pointer"
+                      title="Delete Entire Column Section"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenAddLinkModal(section.id)}
+                      className="ml-2 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Link</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Section Links Table / Card Grid */}
+                {section.links.length === 0 ? (
+                  <div className="py-6 text-center border-2 border-dashed border-[#23293a] rounded-xl text-xs text-slate-500">
+                    No links in this column yet. Click "Add Link" above.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {section.links.map((link, linkIdx) => (
+                      <div
+                        key={link.id}
+                        className="p-3 bg-[#161a26] border border-[#232a3d] rounded-xl flex items-center justify-between gap-3 group hover:border-[#323d57] transition-all"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-xs text-white truncate flex items-center gap-1.5">
+                            <span className="text-slate-200">{link.label}</span>
+                            {link.isExternal && <ExternalLink className="w-3 h-3 text-sky-400 shrink-0" />}
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-400 truncate mt-0.5">
+                            {link.pageKey ? `Page: ${link.pageKey}` : link.url || 'Smooth Scroll'}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-1 shrink-0">
+                          <button
+                            onClick={() => footerStore.moveLink(section.id, link.id, 'up')}
+                            disabled={linkIdx === 0}
+                            className="p-1 rounded bg-[#1f2638] hover:bg-[#2a344c] text-slate-300 disabled:opacity-20 cursor-pointer text-[10px]"
+                            title="Move Link Up"
+                          >
+                            <ArrowUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => footerStore.moveLink(section.id, link.id, 'down')}
+                            disabled={linkIdx === section.links.length - 1}
+                            className="p-1 rounded bg-[#1f2638] hover:bg-[#2a344c] text-slate-300 disabled:opacity-20 cursor-pointer text-[10px]"
+                            title="Move Link Down"
+                          >
+                            <ArrowDown className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenEditLinkModal(section.id, link)}
+                            className="p-1 rounded bg-[#1f2638] hover:bg-[#2a344c] text-sky-400 cursor-pointer"
+                            title="Edit Link"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFooterLink(section.id, link.id, link.label)}
+                            className="p-1 rounded bg-red-950/60 hover:bg-red-900/80 text-red-400 cursor-pointer"
+                            title="Delete Link"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal for Adding or Editing Footer Link */}
+      {isLinkModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#121520] border border-[#2b354d] rounded-2xl max-w-md w-full p-6 space-y-5 text-slate-200 animate-fadeIn shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#222a3d] pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-red-400" />
+                <span>{editingLinkId ? 'Edit Footer Link' : 'Add New Footer Link'}</span>
+              </h3>
+              <button
+                onClick={() => setIsLinkModalOpen(false)}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveFooterLink} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Link Display Text *</label>
+                <input
+                  type="text"
+                  required
+                  value={linkFormData.label}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, label: e.target.value })}
+                  placeholder="e.g. Verified Catalog, Market Reports..."
+                  className="w-full bg-[#181e2e] border border-[#2a344d] rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Target Page / Destination *</label>
+                <select
+                  value={linkFormData.pageKey}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, pageKey: e.target.value })}
+                  className="w-full bg-[#181e2e] border border-[#2a344d] rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 font-bold"
+                >
+                  <option value="market">Marketplace & Verified Catalog (market)</option>
+                  <option value="listings">Dealer & Auction Listings (listings)</option>
+                  <option value="graph">Knowledge Graph Inspector (graph)</option>
+                  <option value="ai-advisor">AI Advisor Consultant (ai-advisor)</option>
+                  <option value="compare">Vehicle Comparison Tool (compare)</option>
+                  <option value="editorial">Editorial & Deep Dives (editorial)</option>
+                  <option value="watchlist">My Saved Watchlist (watchlist)</option>
+                  <option value="home">Homepage (home)</option>
+                  <option value="admin">Admin Console (admin)</option>
+                  <option value="register">Register / Sign In (register)</option>
+                  <option value="profile">User Profile Settings (profile)</option>
+                  <option value="custom">Custom External / Custom URL</option>
+                </select>
+              </div>
+
+              {linkFormData.pageKey === 'custom' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Custom URL / Path</label>
+                  <input
+                    type="text"
+                    value={linkFormData.url}
+                    onChange={(e) => setLinkFormData({ ...linkFormData, url: e.target.value })}
+                    placeholder="https://... or /custom-page"
+                    className="w-full bg-[#181e2e] border border-[#2a344d] rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none focus:border-red-500"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="chkExternal"
+                  checked={linkFormData.isExternal}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, isExternal: e.target.checked })}
+                  className="rounded bg-[#181e2e] border-[#2a344d] text-red-600 focus:ring-0 cursor-pointer"
+                />
+                <label htmlFor="chkExternal" className="text-xs text-slate-300 font-bold cursor-pointer">
+                  Mark as external link (shows external arrow icon)
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-[#222a3d]">
+                <button
+                  type="button"
+                  onClick={() => setIsLinkModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-[#222a3d] text-slate-300 font-bold text-xs hover:bg-[#2b354d] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs cursor-pointer"
+                >
+                  {editingLinkId ? 'Save Changes' : 'Add Link'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
       {/* TAB 4: SISTEMA, CONFIGURAZIONE API & LOGS                 */}
       {/* ========================================================= */}
       {activeTab === 'system' && (
@@ -1137,15 +1791,167 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
               <div className="p-3 bg-[#171b28] border border-[#262f44] rounded-xl">
                 <span className="text-slate-400 block mb-1 font-bold">Uptime Backend Express</span>
-                <span className="text-white font-mono text-sm font-bold">{health?.uptime ? `${Math.round(health.uptime)} secondi` : 'Attivo'}</span>
+                <span className="text-white font-mono text-sm font-bold">{health?.uptime ? `${Math.round(health.uptime)} seconds` : 'Active'}</span>
               </div>
               <div className="p-3 bg-[#171b28] border border-[#262f44] rounded-xl">
-                <span className="text-slate-400 block mb-1 font-bold">Integrazione Gemini AI API</span>
-                <span className="text-emerald-400 font-mono text-sm font-bold">Abilitato (Google Grounding)</span>
+                <span className="text-slate-400 block mb-1 font-bold">Gemini AI API Integration</span>
+                <span className="text-emerald-400 font-mono text-sm font-bold">Enabled (Google Grounding)</span>
               </div>
               <div className="p-3 bg-[#171b28] border border-[#262f44] rounded-xl">
-                <span className="text-slate-400 block mb-1 font-bold">Architettura Provider Commerciali</span>
-                <span className="text-amber-300 font-mono text-sm font-bold">Ready per API Pagate (CarQuery / Vincario)</span>
+                <span className="text-slate-400 block mb-1 font-bold">Commercial Provider Architecture</span>
+                <span className="text-amber-300 font-mono text-sm font-bold">Ready for Commercial APIs (CarQuery / Vincario)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Email Service & Domain Activation Setup Card */}
+          <div className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-4">
+            <div className="flex items-center justify-between border-b border-[#232a3d] pb-3">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-sky-400" />
+                  <span>Servizio Email Transactional & Stato Dominio</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Invio automatizzato email di conferma registrazione e attivazione account per <span className="font-mono text-red-300 font-bold">therightgear.app</span> via Resend.
+                </p>
+              </div>
+              <span className="text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-full flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>DOMINIO VERIFICATO (RESEND)</span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
+              {/* Verified Domain Status Summary */}
+              <div className="p-4 bg-[#171b28] border border-emerald-500/30 rounded-xl space-y-3">
+                <div className="font-bold text-white text-xs flex items-center justify-between text-emerald-300">
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span>Infrastruttura DNS & Provider</span>
+                  </span>
+                  <span className="text-[10px] bg-emerald-900/60 text-emerald-300 px-2 py-0.5 rounded font-mono">STATUS: Verified</span>
+                </div>
+                <div className="space-y-2 text-slate-300 text-[11px] leading-relaxed font-mono bg-[#0c0e17] p-3 rounded-lg border border-[#202738]">
+                  <div className="flex justify-between"><span className="text-slate-500">Dominio:</span> <span className="text-white font-bold">therightgear.app</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">DNS Provider:</span> <span className="text-sky-400">Cloudflare</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Regione Resend:</span> <span className="text-amber-400">Ireland (eu-west-1)</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">DKIM / SPF:</span> <span className="text-emerald-400">✓ Verificati</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Sender Ufficiale:</span> <span className="text-red-300">noreply@therightgear.app</span></div>
+                </div>
+              </div>
+
+              {/* Live Test Email Trigger */}
+              <div className="p-4 bg-[#171b28] border border-[#262f44] rounded-xl space-y-3 flex flex-col justify-between">
+                <div>
+                  <div className="font-bold text-white text-xs flex items-center gap-1.5 text-sky-300 mb-2">
+                    <Mail className="w-4 h-4 text-sky-400" />
+                    <span>Test Inserimento & Collaudo Inviante</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mb-3">
+                    Invia una email di prova per verificare il recapito in posta in arrivo dal mittente <strong className="text-slate-200 font-mono">noreply@therightgear.app</strong>.
+                  </p>
+                  
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={testEmailRecipient}
+                      onChange={(e) => setTestEmailRecipient(e.target.value)}
+                      placeholder="la-tua-email@dominio.com"
+                      className="flex-1 px-3 py-2 bg-[#0c0e17] border border-[#242b3f] rounded-lg text-white text-xs font-mono focus:border-sky-500 outline-none"
+                    />
+                    <button
+                      onClick={handleSendTestEmail}
+                      disabled={isSendingTestEmail}
+                      className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {isSendingTestEmail ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Mail className="w-3.5 h-3.5" />
+                      )}
+                      <span>Invia Test</span>
+                    </button>
+                  </div>
+                </div>
+
+                {testEmailResult && (
+                  <div className={`p-2.5 rounded-lg border text-[11px] font-mono mt-2 ${
+                    testEmailResult.status === 'success' 
+                      ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300' 
+                      : 'bg-amber-950/60 border-amber-500/40 text-amber-300'
+                  }`}>
+                    {testEmailResult.message}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Google Cloud Multi-App Hosting Strategy (The Right Gear + Presidium) */}
+          <div className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-4">
+            <div className="flex items-center justify-between border-b border-[#232a3d] pb-3">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Server className="w-5 h-5 text-purple-400" />
+                  <span>Hosting Unificato Google Cloud Platform (The Right Gear + Presidium)</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Analisi architetturale per far girare entrambe le App/Siti su infrastruttura Google Cloud con costi minimi e massima scalabilità.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono font-bold text-purple-300 bg-purple-950/80 border border-purple-500/30 px-2.5 py-1 rounded-full">
+                STIMA COSTI: ~0€ - 5€/MESE
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <div className="p-4 bg-[#171b28] border border-emerald-500/30 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-emerald-300 font-mono">OPZIONE 1 (RACCOMANDATA)</span>
+                  <span className="text-[9px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded font-bold">SERVERLESS</span>
+                </div>
+                <h3 className="font-bold text-white">Google Cloud Run</h3>
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Ogni app (The Right Gear e Presidium) viene impacchettata in un piccolo container Docker.
+                </p>
+                <div className="pt-2 text-[10px] text-emerald-300 font-mono space-y-1">
+                  <div>✓ 2 Milioni di richieste/mese GRATIS</div>
+                  <div>✓ Scala a ZERO quando non c'è traffico (0€ fisso)</div>
+                  <div>✓ SSL automatico & Custom Domain via Cloudflare</div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-[#171b28] border border-sky-500/30 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-sky-300 font-mono">OPZIONE 2</span>
+                  <span className="text-[9px] bg-sky-950 text-sky-300 px-1.5 py-0.5 rounded font-bold">STATIC + API</span>
+                </div>
+                <h3 className="font-bold text-white">Firebase Hosting + Cloud Run</h3>
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  I file statici React/Vite vengono distribuiti gratuitamente sulla CDN Edge globale di Firebase.
+                </p>
+                <div className="pt-2 text-[10px] text-sky-300 font-mono space-y-1">
+                  <div>✓ CDN globale ultra-veloce gratuita</div>
+                  <div>✓ Rewrite automatico verso Cloud Run per le API</div>
+                  <div>✓ Gestione certificati SSL automatica</div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-[#171b28] border border-amber-500/30 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-amber-300 font-mono">OPZIONE 3</span>
+                  <span className="text-[9px] bg-amber-950 text-amber-300 px-1.5 py-0.5 rounded font-bold">MONOLITE VPS</span>
+                </div>
+                <h3 className="font-bold text-white">Google Compute Engine (GCE)</h3>
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Un'unica VM e2-micro o e2-small con Docker e Nginx reverse proxy che instrada i due domini.
+                </p>
+                <div className="pt-2 text-[10px] text-amber-300 font-mono space-y-1">
+                  <div>✓ e2-micro inclusa nel Free Tier GCP</div>
+                  <div>✓ Costo fisso prevedibile (~$0-12/mese)</div>
+                  <div>⚠ Richiede manutenzione sistemistica manuale</div>
+                </div>
               </div>
             </div>
           </div>

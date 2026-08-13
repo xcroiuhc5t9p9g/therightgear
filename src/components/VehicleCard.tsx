@@ -12,7 +12,7 @@ interface VehicleCardProps {
 
 export const VehicleCard: React.FC<VehicleCardProps> = ({
   vehicle,
-  activeRole = 'public',
+  activeRole = 'visitor',
   onSelectVehicle,
   onNavigate,
   onOpenAuthModal
@@ -22,7 +22,8 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({
     onNavigate('detail', vehicle.slug);
   };
 
-  const medianPrice = vehicle.current_median_price_eur || vehicle.market_stats?.median_price_eur || 250000;
+  const medianPrice = vehicle?.current_median_price_eur || vehicle?.market_stats?.median_price_eur || 250000;
+  const formattedPrice = typeof medianPrice === 'number' ? medianPrice.toLocaleString('it-IT') : '250.000';
 
   return (
     <div className="bg-[#121520] border border-[#23293a] hover:border-amber-500/40 rounded-2xl overflow-hidden transition-all duration-300 flex flex-col justify-between group shadow-lg">
@@ -32,9 +33,9 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({
         className="relative aspect-[16/10] bg-slate-900 overflow-hidden cursor-pointer"
       >
         <img
-          src={vehicle.hero_image_url}
-          alt={`${vehicle.manufacturer_name} ${vehicle.model_name}`}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          src={vehicle?.hero_image_url || ''}
+          alt={`${vehicle?.manufacturer_name || ''} ${vehicle?.model_name || ''}`}
+          className="w-full h-full object-cover motion-safe:group-hover:scale-105 transition-transform duration-500"
         />
       </div>
 
@@ -42,22 +43,22 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({
       <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
         <div className="space-y-1.5">
           <div className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">
-            {vehicle.manufacturer_name}
+            {vehicle?.manufacturer_name}
           </div>
           <h3 
             onClick={handleClick}
             className="text-base font-extrabold text-white group-hover:text-amber-300 transition-colors cursor-pointer"
           >
-            {vehicle.model_name}
+            {vehicle?.model_name}
           </h3>
           <div className="text-xs text-slate-400 font-mono">
-            Production Start Year: <strong className="text-slate-200">{vehicle.model_year_from}</strong>
+            Production Start Year: <strong className="text-slate-200">{vehicle?.model_year_from}</strong>
           </div>
 
           {/* Market Valuation (Blurred for Guest / Unregistered User) */}
           <div className="pt-2 flex items-center justify-between text-xs border-t border-[#1d2335]">
             <span className="text-slate-400 font-mono">Valuation:</span>
-            {activeRole === 'public' ? (
+            {activeRole === 'visitor' ? (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -77,7 +78,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({
               </button>
             ) : (
               <span className="font-mono font-extrabold text-emerald-400">
-                €{medianPrice.toLocaleString('it-IT')}
+                €{formattedPrice}
               </span>
             )}
           </div>

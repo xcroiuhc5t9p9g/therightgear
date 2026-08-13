@@ -1,5 +1,5 @@
-import { VehicleVariant, Manufacturer, GraphEntity, GraphRelationship, DataAssertion, SearchFilters } from '../types';
-import { MANUFACTURERS, GRAPH_ENTITIES, GRAPH_RELATIONSHIPS, DATA_ASSERTIONS_MOCK } from '../data/catalogData';
+import { VehicleVariant, Manufacturer, GraphEntity, GraphRelationship, DataAssertion, SearchFilters, Maker, Model, Generation } from '../types';
+import { catalogueRepository } from './catalogueRepository';
 import { unifiedVehicleStore } from './unifiedVehicleStore';
 
 const API_BASE = '/api/v1';
@@ -10,7 +10,17 @@ export async function fetchHealth() {
     if (!res.ok) throw new Error('Health check failed');
     return await res.json();
   } catch (e) {
-    return { status: 'offline', version: '0.2', catalog_count: unifiedVehicleStore.getAll().length };
+    return { status: 'offline', version: '0.2', catalog_count: catalogueRepository.getAllVariants().total };
+  }
+}
+
+export async function fetchMakers(): Promise<Maker[]> {
+  try {
+    const res = await fetch(`${API_BASE}/brands`);
+    if (!res.ok) throw new Error('Failed to fetch brands');
+    return await res.json();
+  } catch (e) {
+    return catalogueRepository.getMakers();
   }
 }
 
@@ -20,7 +30,15 @@ export async function fetchManufacturers(): Promise<Manufacturer[]> {
     if (!res.ok) throw new Error('Failed to fetch manufacturers');
     return await res.json();
   } catch (e) {
-    return MANUFACTURERS;
+    return catalogueRepository.getMakers().map(m => ({
+      id: m.id,
+      slug: m.slug,
+      official_name: m.canonical_name || m.official_name || m.slug,
+      country_code: m.country_code || 'IT',
+      founded_year: m.founded_year || 1900,
+      active: m.active ?? true,
+      logo_url: m.logo_url || ''
+    }));
   }
 }
 
@@ -46,23 +64,7 @@ export async function fetchVehicles(filters?: SearchFilters): Promise<{ total: n
     if (!res.ok) throw new Error('Failed to fetch vehicles');
     return await res.json();
   } catch (e) {
-    // Client-side fallback filter using unifiedVehicleStore
-    let filtered = unifiedVehicleStore.getAll();
-    if (filters?.query) {
-      const q = filters.query.toLowerCase();
-      filtered = filtered.filter(v => 
-        v.manufacturer_name.toLowerCase().includes(q) ||
-        v.model_name.toLowerCase().includes(q) ||
-        v.variant_name.toLowerCase().includes(q)
-      );
-    }
-    if (filters?.category && filters.category !== 'All') {
-      filtered = filtered.filter(v => v.category === filters.category);
-    }
-    if (filters?.tier && filters.tier !== 'All') {
-      filtered = filtered.filter(v => v.tier === filters.tier);
-    }
-    return { total: filtered.length, vehicles: filtered };
+    return catalogueRepository.getAllVariants(filters);
   }
 }
 
@@ -72,7 +74,7 @@ export async function fetchVehicleBySlug(slug: string): Promise<VehicleVariant |
     if (!res.ok) throw new Error('Vehicle not found');
     return await res.json();
   } catch (e) {
-    return unifiedVehicleStore.getByIdOrSlug(slug) || null;
+    return catalogueRepository.getVariantBySlug(slug) || unifiedVehicleStore.getByIdOrSlug(slug) || null;
   }
 }
 
@@ -93,7 +95,25 @@ export async function fetchKnowledgeGraph(): Promise<{ entities: GraphEntity[]; 
     if (!res.ok) throw new Error('Failed to fetch graph');
     return await res.json();
   } catch (e) {
-    return { entities: GRAPH_ENTITIES, relationships: GRAPH_RELATIONSHIPS };
+    const entities: GraphEntity[] = [];
+    const relationships: GraphRelationship[] = [];
+    const hierarchy = catalogueRepository.getHierarchy();
+    hierarchy.makers.forEach(maker => {
+      entities.push({ id: maker.id, name: maker.canonical_name || maker.official_name || maker.slug, type: 'MANUFACTURER', slug: maker.slug, attributes: { Country: maker.country_code || '' } });
+    });
+    hierarchy.models.forEach(model => {
+      entities.push({ id: model.id, name: model.canonical_name || (model as any).model_name || model.slug, type: 'MODEL', slug: model.slug, attributes: { Maker: model.maker_id } });
+      relationships.push({ id: `rel-${model.id}-${model.maker_id}`, subject_entity_id: model.id, predicate: 'MANUFACTURED_BY', object_entity_id: model.maker_id, confidence_score: 1.0 });
+    });
+    hierarchy.generations.forEach(gen => {
+      entities.push({ id: gen.id, name: gen.canonical_name || (gen as any).generation_name || gen.slug, type: 'GENERATION', slug: gen.slug, attributes: { Model: gen.model_id } });
+      relationships.push({ id: `rel-${gen.id}-${gen.model_id}`, subject_entity_id: gen.id, predicate: 'PART_OF_MODEL', object_entity_id: gen.model_id, confidence_score: 1.0 });
+    });
+    hierarchy.variants.forEach(v => {
+      entities.push({ id: v.id, name: `${v.manufacturer_name} ${v.variant_name}`, type: 'VARIANT', slug: v.slug, attributes: { Year: String(v.model_year_from || '') } });
+      relationships.push({ id: `rel-${v.id}-${v.generation_id}`, subject_entity_id: v.id, predicate: 'PART_OF_GENERATION', object_entity_id: v.generation_id, confidence_score: 1.0 });
+    });
+    return { entities, relationships };
   }
 }
 
@@ -122,7 +142,7 @@ export async function fetchAssertions(): Promise<DataAssertion[]> {
     if (!res.ok) throw new Error('Failed to fetch assertions');
     return await res.json();
   } catch (e) {
-    return DATA_ASSERTIONS_MOCK;
+    return [];
   }
 }
 
@@ -176,7 +196,7 @@ export async function extractVehicleDataFromWeb(query: string, provider: string 
     });
     if (!res.ok) {
       const errData = await res.json();
-      throw new Error(errData.error || errData.details || 'Errore durante l\'estrazione');
+      throw new Error(errData.error || errData.details || 'Error during extraction');
     }
     return await res.json();
   } catch (e: any) {
@@ -184,7 +204,7 @@ export async function extractVehicleDataFromWeb(query: string, provider: string 
       success: false,
       provider,
       records: [],
-      error: e.message || 'Connessione al server di estrazione fallita'
+      error: e.message || 'Connection to extraction server failed'
     };
   }
 }

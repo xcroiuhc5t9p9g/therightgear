@@ -174,7 +174,7 @@ export const UPCOMING_AUCTIONS: WorldwideAuctionEvent[] = [
     featuredCarSlugs: ['ferrari-f40', 'mclaren-f1', 'porsche-959-komfort'],
     featuredCarsNames: ['1989 Ferrari F40 Non-Cat', '1995 McLaren F1 GTR', '1988 Porsche 959 Sport'],
     descriptionIt: 'L’evento d’asta d’epoca più importante e prestigioso al mondo durante la Monterey Car Week. Asta di riferimento per le supercar iconiche degli anni ’80 e ’90.',
-    descriptionEn: 'The flagship collector car auction of Monterey Car Week, featuring record-setting European supercars and rare blue-chip classics.',
+    descriptionEn: 'The flagship collector car auction of Monterey Car Week, featuring record-setting supercars and rare blue-chip classics.',
     officialWebsiteUrl: 'https://rmsothebys.com'
   },
   {

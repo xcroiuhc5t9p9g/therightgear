@@ -1,25 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  User, 
-  ShieldCheck, 
-  Building2, 
-  Bookmark, 
-  CheckCircle2, 
-  Settings, 
-  Mail, 
-  Sparkles, 
-  FileCheck,
-  ChevronRight,
-  ArrowRight
-} from 'lucide-react';
-import { UserRole } from '../types';
-import { HERO_VEHICLES } from '../data/catalogData';
-import { Locale, translations } from '../data/translations';
+import { User, Settings, Bookmark, CheckCircle2, Building2, ShieldCheck, ChevronRight, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Locale } from '../data/translations';
+import { catalogueRepository } from '../services/catalogueRepository';
+import { useAuth } from '../context/AuthContext';
+import { UserProfile } from '../types/security';
 
 interface ProfilePageProps {
   locale: Locale;
-  activeRole: UserRole;
-  setActiveRole: (r: UserRole) => void;
+  activeRole: string;
+  setActiveRole: (role: string) => void;
   watchlistIds: string[];
   onNavigate: (page: string, slug?: string) => void;
   onSelectVehicle: (slug: string) => void;
@@ -33,15 +22,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onNavigate,
   onSelectVehicle
 }) => {
-  const t = translations[locale];
-
-  const [userName, setUserName] = useState('Riccardo Monaco');
-  const [userEmail, setUserEmail] = useState('riccardo.monaco@gmail.com');
-  const [companyName, setCompanyName] = useState('The Right Gear Collector Group');
-  const [preferredCurrency, setPreferredCurrency] = useState<'EUR' | 'USD' | 'GBP'>('EUR');
+  const { currentUser, actualRole } = useAuth();
+  
+  // This state would normally be populated from Firestore
+  const [profile, setProfile] = useState<Partial<UserProfile>>({
+    email: currentUser?.email || '',
+    accountStatus: 'ACTIVE', 
+  });
+  
+  const [userName, setUserName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [isSaved, setIsSaved] = useState(false);
-
-  const watchlistVehicles = HERO_VEHICLES.filter(v => watchlistIds.includes(v.id));
+  const [currentTab, setCurrentTab] = useState<'personal' | 'organization'>('personal');
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,219 +41,163 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     setTimeout(() => setIsSaved(false), 3000);
   };
 
+  const getStatusBadge = () => {
+    switch (profile.accountStatus) {
+      case 'ACTIVE': return <span className="inline-flex items-center px-2 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded uppercase"><CheckCircle2 className="w-3 h-3 mr-1" /> Active</span>;
+      case 'PENDING': return <span className="inline-flex items-center px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-bold rounded uppercase"><AlertCircle className="w-3 h-3 mr-1" /> Pending</span>;
+      case 'SUSPENDED': return <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-800 text-[10px] font-bold rounded uppercase"><AlertTriangle className="w-3 h-3 mr-1" /> Suspended</span>;
+      default: return null;
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16">
-      
-      {/* Top Banner */}
-      <div className="bg-[#121520] p-6 lg:p-8 rounded-2xl border border-[#23293a] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/15 border border-red-500/40 flex items-center justify-center text-red-400 text-2xl font-bold shadow-lg">
-            <User className="w-8 h-8" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-white">{userName}</h1>
-              <span className="bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold">
-                {activeRole.replace('_', ' ')}
-              </span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-trg-carbon font-display tracking-tight">Account Settings</h1>
+        <p className="text-trg-gray-500 mt-2 text-sm">Manage your personal and corporate details.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+        <div className="lg:col-span-1">
+          <nav className="flex flex-col gap-2">
+            <button
+              onClick={() => setCurrentTab('personal')}
+              className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                currentTab === 'personal'
+                  ? 'border-trg-carbon bg-trg-carbon text-white shadow-lg'
+                  : 'border-trg-gray-200 bg-white text-trg-carbon hover:border-trg-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <User className="w-5 h-5" />
+                <span className="font-semibold text-sm">Personal Info</span>
+              </div>
+            </button>
+            
+            {actualRole === 'corporate_user' && (
+              <button
+                onClick={() => { setCurrentTab('organization'); onNavigate('profile/organization'); }}
+                className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                  currentTab === 'organization'
+                    ? 'border-trg-carbon bg-trg-carbon text-white shadow-lg'
+                    : 'border-trg-gray-200 bg-white text-trg-carbon hover:border-trg-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Building2 className="w-5 h-5" />
+                  <span className="font-semibold text-sm">Corporate Profile</span>
+                </div>
+              </button>
+            )}
+          </nav>
+        </div>
+
+        <div className="lg:col-span-3 space-y-8">
+          {currentTab === 'personal' && (
+            <div className="bg-white rounded-2xl border border-trg-gray-200 p-8">
+               <div className="flex justify-between items-start mb-6 border-b border-trg-gray-100 pb-4">
+                 <div>
+                   <h2 className="text-xl font-bold text-trg-carbon font-display">Personal Information</h2>
+                   <p className="text-sm text-trg-gray-500">Update your account identity.</p>
+                 </div>
+                 {getStatusBadge()}
+               </div>
+               <form onSubmit={handleSaveSettings} className="space-y-6 max-w-xl">
+                <div>
+                  <label className="block text-xs font-bold text-trg-carbon uppercase tracking-wider mb-2">Display Name</label>
+                  <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="w-full bg-trg-warm-white border border-trg-gray-200 rounded-lg px-4 py-2.5 text-sm text-trg-carbon focus:outline-none focus:border-trg-red focus:ring-1 focus:ring-trg-red transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-trg-carbon uppercase tracking-wider mb-2">Email Address</label>
+                  <input
+                    type="email"
+                    value={profile.email || ''}
+                    disabled
+                    className="w-full bg-trg-gray-100 border border-trg-gray-200 rounded-lg px-4 py-2.5 text-sm text-trg-gray-500 cursor-not-allowed"
+                  />
+                </div>
+                <div className="pt-4 border-t border-trg-gray-100">
+                  <button
+                    type="submit"
+                    className="bg-trg-carbon text-white px-6 py-2.5 rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-black transition-colors"
+                  >
+                    Save Changes
+                  </button>
+                  {isSaved && <span className="ml-4 text-sm text-emerald-600 font-medium">Saved successfully</span>}
+                </div>
+              </form>
             </div>
-            <p className="text-xs text-slate-400 mt-1">{userEmail}</p>
-          </div>
-        </div>
+          )}
 
-        <button
-          onClick={() => onNavigate('register')}
-          className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-slate-950 font-bold text-xs shadow-md hover:brightness-110 transition-all cursor-pointer flex items-center gap-1.5"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Change / Edit Account</span>
-        </button>
-      </div>
-
-      {/* Role Management Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        
-        <div className={`p-4 rounded-xl border transition-all ${
-          activeRole === 'registered_user' || activeRole === 'premium_user'
-            ? 'bg-[#181d2c] border-red-500/50 text-white'
-            : 'bg-[#121520] border-[#222838] text-slate-400'
-        }`}>
-          <div className="flex items-center justify-between text-xs font-bold mb-1">
-            <span className="flex items-center gap-1.5 text-red-400">
-              <User className="w-4 h-4" />
-              <span>Private User</span>
-            </span>
-            {activeRole === 'registered_user' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-          </div>
-          <p className="text-[11px] text-slate-300">Access to vehicle dossiers and personal watchlist.</p>
-          <button
-            onClick={() => setActiveRole('registered_user')}
-            className="mt-3 text-[11px] text-red-400 hover:underline font-bold cursor-pointer"
-          >
-            Select Private Role
-          </button>
-        </div>
-
-        <div className={`p-4 rounded-xl border transition-all ${
-          activeRole === 'dealer'
-            ? 'bg-[#181d2c] border-purple-500/50 text-white'
-            : 'bg-[#121520] border-[#222838] text-slate-400'
-        }`}>
-          <div className="flex items-center justify-between text-xs font-bold mb-1">
-            <span className="flex items-center gap-1.5 text-purple-400">
-              <Building2 className="w-4 h-4" />
-              <span>Dealer / Operator</span>
-            </span>
-            {activeRole === 'dealer' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-          </div>
-          <p className="text-[11px] text-slate-300">Manage listings and dealer network portal.</p>
-          <button
-            onClick={() => setActiveRole('dealer')}
-            className="mt-3 text-[11px] text-purple-400 hover:underline font-bold cursor-pointer"
-          >
-            Select Dealer Role
-          </button>
-        </div>
-
-        <div className={`p-4 rounded-xl border transition-all ${
-          activeRole === 'admin' || activeRole === 'editor'
-            ? 'bg-[#181d2c] border-rose-500/50 text-white'
-            : 'bg-[#121520] border-[#222838] text-slate-400'
-        }`}>
-          <div className="flex items-center justify-between text-xs font-bold mb-1">
-            <span className="flex items-center gap-1.5 text-rose-400">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Admin / Editorial</span>
-            </span>
-            {activeRole === 'admin' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-          </div>
-          <p className="text-[11px] text-slate-300">Data assertion governance, graph, and RBAC.</p>
-          <button
-            onClick={() => setActiveRole('admin')}
-            className="mt-3 text-[11px] text-rose-400 hover:underline font-bold cursor-pointer"
-          >
-            Select Admin Role
-          </button>
-        </div>
-
-      </div>
-
-      {/* Account Settings Form */}
-      <div className="bg-[#121520] p-6 lg:p-8 rounded-2xl border border-[#23293a] space-y-6">
-        <div className="flex items-center justify-between border-b border-[#222838] pb-4">
-          <div className="flex items-center space-x-2 text-red-400">
-            <Settings className="w-5 h-5" />
-            <h2 className="text-base font-bold text-white">Profile Details & Preferences</h2>
-          </div>
-          {isSaved && (
-            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Changes Saved!</span>
-            </span>
+          {currentTab === 'organization' && actualRole === 'corporate_user' && (
+            <div className="bg-white rounded-2xl border border-trg-gray-200 p-8">
+               <div className="flex justify-between items-start mb-6 border-b border-trg-gray-100 pb-4">
+                 <div>
+                   <h2 className="text-xl font-bold text-trg-carbon font-display">Corporate Profile</h2>
+                   <p className="text-sm text-trg-gray-500">Manage your verified organization details.</p>
+                 </div>
+                 {getStatusBadge()}
+               </div>
+               
+               {profile.accountStatus === 'PENDING' && (
+                 <div className="mb-6 bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-lg text-sm flex items-start">
+                   <AlertCircle className="w-5 h-5 mr-3 shrink-0" />
+                   <div>
+                     <p className="font-bold">Verification Pending</p>
+                     <p className="mt-1">Your corporate profile is currently under review by our editorial team. Some features may be restricted until verification is complete.</p>
+                   </div>
+                 </div>
+               )}
+               
+               {profile.accountStatus === 'SUSPENDED' && (
+                 <div className="mb-6 bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg text-sm flex items-start">
+                   <AlertTriangle className="w-5 h-5 mr-3 shrink-0" />
+                   <div>
+                     <p className="font-bold">Account Suspended</p>
+                     <p className="mt-1">Your corporate account has been suspended. Please contact support.</p>
+                   </div>
+                 </div>
+               )}
+               
+               <form onSubmit={handleSaveSettings} className="space-y-6 max-w-xl">
+                <div>
+                  <label className="block text-xs font-bold text-trg-carbon uppercase tracking-wider mb-2">Company Name</label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    disabled={profile.accountStatus === 'SUSPENDED'}
+                    className="w-full bg-trg-warm-white border border-trg-gray-200 rounded-lg px-4 py-2.5 text-sm text-trg-carbon focus:outline-none focus:border-trg-red focus:ring-1 focus:ring-trg-red transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-trg-carbon uppercase tracking-wider mb-2">VAT Number / Tax ID</label>
+                  <input
+                    type="text"
+                    disabled={profile.accountStatus !== 'ACTIVE'}
+                    className="w-full bg-trg-warm-white border border-trg-gray-200 rounded-lg px-4 py-2.5 text-sm text-trg-carbon focus:outline-none focus:border-trg-red focus:ring-1 focus:ring-trg-red transition-all"
+                  />
+                </div>
+                <div className="pt-4 border-t border-trg-gray-100">
+                  <button
+                    type="submit"
+                    disabled={profile.accountStatus === 'SUSPENDED'}
+                    className="bg-trg-carbon text-white px-6 py-2.5 rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-black transition-colors disabled:opacity-50"
+                  >
+                    Save Corporate Details
+                  </button>
+                  {isSaved && <span className="ml-4 text-sm text-emerald-600 font-medium">Saved successfully</span>}
+                </div>
+              </form>
+            </div>
           )}
         </div>
-
-        <form onSubmit={handleSaveSettings} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Full Name</label>
-              <input
-                type="text"
-                value={userName}
-                onChange={e => setUserName(e.target.value)}
-                className="w-full bg-[#171b28] text-xs text-white px-3.5 py-2.5 rounded-xl border border-[#283248] focus:outline-none focus:border-red-500"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Contact Email</label>
-              <input
-                type="email"
-                value={userEmail}
-                onChange={e => setUserEmail(e.target.value)}
-                className="w-full bg-[#171b28] text-xs text-white px-3.5 py-2.5 rounded-xl border border-[#283248] focus:outline-none focus:border-red-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Organization / Company</label>
-              <input
-                type="text"
-                value={companyName}
-                onChange={e => setCompanyName(e.target.value)}
-                className="w-full bg-[#171b28] text-xs text-white px-3.5 py-2.5 rounded-xl border border-[#283248] focus:outline-none focus:border-red-500"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">Preferred Currency</label>
-              <select
-                value={preferredCurrency}
-                onChange={e => setPreferredCurrency(e.target.value as any)}
-                className="w-full bg-[#171b28] text-xs text-white px-3.5 py-2.5 rounded-xl border border-[#283248] focus:outline-none focus:border-red-500"
-              >
-                <option value="EUR">Euro (€)</option>
-                <option value="USD">US Dollar ($)</option>
-                <option value="GBP">British Pound (£)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="submit"
-              className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
-            >
-              Save Profile Settings
-            </button>
-          </div>
-        </form>
       </div>
-
-      {/* Watchlist Quick Summary */}
-      <div className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-red-400">
-            <Bookmark className="w-5 h-5" />
-            <h2 className="text-base font-bold text-white">Monitored Vehicles in Watchlist ({watchlistVehicles.length})</h2>
-          </div>
-          <button
-            onClick={() => onNavigate('watchlist')}
-            className="text-xs text-red-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
-          >
-            <span>View All</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {watchlistVehicles.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {watchlistVehicles.map(car => (
-              <div
-                key={car.id}
-                onClick={() => { onSelectVehicle(car.slug); onNavigate('detail', car.slug); }}
-                className="p-3 rounded-xl bg-[#171a26] hover:bg-[#1f2434] border border-[#242b3d] flex items-center justify-between cursor-pointer transition-all"
-              >
-                <div className="flex items-center space-x-3 min-w-0">
-                  <img src={car.hero_image_url} alt={car.variant_name} className="w-10 h-10 rounded-lg object-cover" />
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-white truncate">{car.manufacturer_name} {car.model_name}</div>
-                    <div className="text-[10px] text-slate-400 truncate">{car.variant_name}</div>
-                  </div>
-                </div>
-                <div className="text-xs font-mono font-bold text-red-400 shrink-0">
-                  €{(car.current_median_price_eur / 1000).toFixed(0)}k
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-slate-400">No vehicles currently saved in watchlist.</p>
-        )}
-      </div>
-
     </div>
   );
 };

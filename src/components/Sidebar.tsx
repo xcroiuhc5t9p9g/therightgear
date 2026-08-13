@@ -48,9 +48,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Role restricted portals
   const roleNav = [
-    { id: 'dealer-portal', label: t.nav_dealer_portal, icon: Building2, roles: ['dealer', 'admin'] },
-    { id: 'editorial', label: t.nav_editorial, icon: FileCheck, roles: ['editor', 'data_manager', 'admin'] },
-    { id: 'admin', label: t.nav_admin, icon: ShieldCheck, roles: ['admin'] }
+    { id: 'dealer-portal', label: t.nav_dealer_portal, icon: Building2, roles: ['corporate_user', 'super_admin'] },
+    { id: 'editorial', label: t.nav_editorial, icon: FileCheck, roles: ['editor', 'editor', 'super_admin'] },
+    { id: 'super_admin', label: t.nav_admin, icon: ShieldCheck, roles: ['super_admin'] }
   ];
 
   return (

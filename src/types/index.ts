@@ -1,12 +1,63 @@
-export type UserRole = 
-  | 'public'             // Personale Ospite (non registrato)
-  | 'registered_user'    // Personale Base (registrato)
-  | 'premium_user'       // Personale con Abbonamento (Subscription)
-  | 'dealer'             // Aziendale / Corporate Business
-  | 'corporate_premium'  // Aziendale con Abbonamento (Corporate Subscription)
-  | 'editor'             // Redattore / Content Editor
-  | 'data_manager'       // Gestore Banca Dati
-  | 'admin';             // Amministratore di Sistema
+export type CatalogueStatus = 'IN_RESEARCH' | 'IN_REVIEW' | 'APPROVED' | 'PUBLISHED' | 'ARCHIVED';
+
+export type CatalogueTier = 'HERO' | 'CORE' | 'DISCOVERY';
+
+export interface Maker {
+  id: string;
+  slug: string;
+  canonical_name: string;
+  official_name?: string;
+  country_code?: string | null;
+  country_of_origin?: string | null;
+  founded_year?: number | null;
+  active: boolean;
+  catalogue_status: CatalogueStatus;
+  logo_url?: string;
+  website_url?: string;
+}
+
+export interface Model {
+  id: string;
+  maker_id: string;
+  canonical_name: string;
+  slug: string;
+  category?: CategoryType;
+  introduced_year?: number | null;
+  discontinued_year?: number | null;
+  catalogue_status: CatalogueStatus;
+  catalogue_tier?: CatalogueTier;
+  hero_image_url?: string;
+  summary_en?: string;
+}
+
+export interface Generation {
+  id: string;
+  model_id: string;
+  generation_code: string;
+  canonical_name: string;
+  slug: string;
+  production_start?: number | null;
+  production_end?: number | null;
+  production_total?: number | null;
+  production_total_confidence?: 'High' | 'Medium' | 'Low' | 'Insufficient Data';
+  catalogue_status: CatalogueStatus;
+  distinctive_features_en?: string[];
+  hero_image_url?: string;
+}
+
+export interface VehicleInstance {
+  id: string;
+  variant_id: string;
+  chassis_number_masked?: string;
+  build_date?: string;
+  production_sequence?: number;
+  current_country_code?: string;
+  current_mileage_km?: number;
+  originality_status?: string;
+  public_visibility: 'PUBLIC' | 'REGISTERED' | 'PREMIUM' | 'EDITORIAL' | 'PRIVATE';
+}
+
+export type UserRole = 'visitor' | 'private_user' | 'corporate_user' | 'editor' | 'super_admin';
 
 export type VerificationStatus = 
   | 'imported' 
@@ -18,7 +69,7 @@ export type VerificationStatus =
   | 'superseded'
   | 'published';
 
-export type DataStatus = 'demo' | 'provisional' | 'verified' | 'licensed' | 'imported';
+export type DataStatus = 'demo' | 'provisional' | 'verified' | 'licensed' | 'imported' | 'DEMO';
 
 export type CategoryType = 
   | 'Supercar' 
@@ -305,44 +356,48 @@ export interface VehicleVariant {
   slug: string;
   variant_name: string;
   in_primo_piano?: boolean;
-  tier: 'Hero' | 'Core' | 'Discovery';
-  category: CategoryType;
-  market_code: string;
-  model_year_from: number;
-  model_year_to?: number;
-  steering_side: 'LHD' | 'RHD' | 'Both';
-  body_style: string;
-  limited_edition: boolean;
-  numbered_series: boolean;
-  production_total: number;
-  original_list_price_eur?: number;
+  tier?: 'Hero' | 'Core' | 'Discovery';
+  category?: CategoryType;
+  market_code?: string;
+  model_year_from?: number | null;
+  model_year_to?: number | null;
+  production_start_year?: number | null;
+  steering_side?: 'LHD' | 'RHD' | 'Both' | null;
+  body_style?: string | null;
+  limited_edition?: boolean | null;
+  numbered_series?: boolean | null;
+  production_total?: number | null;
+  original_list_price_eur?: number | null;
   data_status: DataStatus;
-  hero_image_url: string;
-  gallery_images: string[];
+  dataStatus?: DataStatus;
+  catalogue_status?: CatalogueStatus;
+  catalogueStatus?: CatalogueStatus;
+  hero_image_url?: string;
+  gallery_images?: string[];
   
   // Detailed specs
-  engine: EngineSpec;
-  transmission: TransmissionSpec;
-  specs: TechnicalSpecs;
-  scores: Scores;
+  engine?: EngineSpec | null;
+  transmission?: TransmissionSpec | null;
+  specs?: TechnicalSpecs | null;
+  scores?: Scores | null;
   
   // Market summary
-  current_median_price_eur: number;
-  price_change_1y_pct: number;
-  price_change_3y_pct: number;
-  liquidity_score: number; // 0-100
-  volatility_score: number; // 0-100
-  avg_days_on_market: number;
+  current_median_price_eur?: number | null;
+  price_change_1y_pct?: number | null;
+  price_change_3y_pct?: number | null;
+  liquidity_score?: number | null; // 0-100
+  volatility_score?: number | null; // 0-100
+  avg_days_on_market?: number | null;
   
   // Narrative details (Hero/Core level)
-  history_it: string;
-  history_en: string;
-  designers: Person[];
-  engineers: Person[];
-  production_site: string;
-  known_issues: KnownIssue[];
-  maintenance_complexity: 'Very High' | 'High' | 'Moderate' | 'Low';
-  annual_est_maintenance_eur: number;
+  history_it?: string | null;
+  history_en?: string | null;
+  designers?: Person[];
+  engineers?: Person[];
+  production_site?: string | null;
+  known_issues?: KnownIssue[];
+  maintenance_complexity?: 'Very High' | 'High' | 'Moderate' | 'Low' | null;
+  annual_est_maintenance_eur?: number | null;
   youtube_video_ids?: string[];
   
   // Versions, Editions & Factory Colors Breakdown
@@ -354,10 +409,10 @@ export interface VehicleVariant {
   production_breakdown_notes_en?: string;
   
   // Price history
-  price_history: PriceHistoryPoint[];
-  auctions: AuctionResult[];
-  listings: Listing[];
-  historical_events: HistoricalEvent[];
+  price_history?: PriceHistoryPoint[];
+  auctions?: AuctionResult[];
+  listings?: Listing[];
+  historical_events?: HistoricalEvent[];
 }
 
 export interface GraphEntity {
@@ -365,9 +420,14 @@ export interface GraphEntity {
   name: string;
   type: 
     | 'Manufacturer'
+    | 'MANUFACTURER'
     | 'Model'
+    | 'MODEL'
     | 'Generation'
+    | 'GENERATION'
     | 'Variant'
+    | 'VARIANT'
+    | 'VEHICLE'
     | 'Engine'
     | 'Transmission'
     | 'Designer'
@@ -375,10 +435,13 @@ export interface GraphEntity {
     | 'Factory'
     | 'Event'
     | 'CompetitorModel'
-    | 'Auction';
+    | 'Auction'
+    | string;
   category?: string;
   subtitle?: string;
   image_url?: string;
+  slug?: string;
+  attributes?: Record<string, any>;
   details?: Record<string, any>;
 }
 
@@ -387,6 +450,8 @@ export interface GraphRelationship {
   subject_entity_id: string;
   predicate: 
     | 'MANUFACTURED_BY'
+    | 'PART_OF_MODEL'
+    | 'PART_OF_GENERATION'
     | 'POWERED_BY'
     | 'DESIGNED_BY'
     | 'ENGINEERED_BY'
@@ -397,12 +462,13 @@ export interface GraphRelationship {
     | 'SUCCEEDED_BY'
     | 'SHARES_ENGINE_WITH'
     | 'SHARES_PLATFORM_WITH'
-    | 'ASSOCIATED_WITH_EVENT';
+    | 'ASSOCIATED_WITH_EVENT'
+    | string;
   object_entity_id: string;
   confidence_score: number; // 0-100
-  verification_status: VerificationStatus;
-  explanation_it: string;
-  explanation_en: string;
+  verification_status?: VerificationStatus;
+  explanation_it?: string;
+  explanation_en?: string;
 }
 
 export interface DataAssertion {

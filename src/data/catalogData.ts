@@ -179,7 +179,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         years: '1990 - 1992',
         power_hp: 478,
         description_it: 'Evoluzione introdotta per rispettare le normative antinquinamento, con catalizzatori allo scarico e sistema elettronico di regolazione altezza sospensioni a 3 livelli.',
-        description_en: 'Later European production run equipped with catalytic converters and 3-stage electronic ride-height adjustable suspension.',
+        description_en: 'Later production run equipped with catalytic converters and 3-stage electronic ride-height adjustable suspension.',
         key_features: ['Marmitte catalitiche d’ispezione', 'Sospensioni elettroniche sollevabili', 'Vetri discendenti in cristallo']
       },
       {
@@ -197,9 +197,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         years: '1989 - 1996',
         power_hp: 720,
         is_racing: true,
-        description_it: 'Sviluppata da Michelotto per gare Endurance e IMSA. Peso ridotto a 1.050 kg, alettone posteriore regolabile in carbonio, fari fissi in plexiglass e motore spinto oltre 720 CV.',
+        description_it: 'Sviluppata da Michelotto per gare Endurance e IMSA. Peso ridotto a 1.050 kg, alettone posteriore regolabile in carbonio, fari fissi in plexiglass e motore spinto oltre 720 hp.',
         description_en: 'Extreme racing version built by Michelotto for IMSA GTO and Le Mans. 1,050 kg kerb weight, 720+ HP, fixed plexiglass headlights, and adjustable rear wing.',
-        key_features: ['Motore F120B da 720 CV', 'Fari fissi integrati', 'Peso 1.050 kg', 'Alettone posteriore regolabile in carbonio']
+        key_features: ['Motore F120B da 720 hp', 'Fari fissi integrati', 'Peso 1.050 kg', 'Alettone posteriore regolabile in carbonio']
       },
       {
         name: 'F40 GT',
@@ -207,7 +207,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         years: '1992 - 1994',
         power_hp: 560,
         is_racing: true,
-        description_it: 'Variante da competizione allestita da Michelotto per il Campionato Italiano Supercar. Potenza elevata a 560 CV, freni Brembo da gara e sospensioni ricalibrate.',
+        description_it: 'Variante da competizione allestita da Michelotto per il Campionato Italiano Supercar. Potenza elevata a 560 hp, freni Brembo da gara e sospensioni ricalibrate.',
         description_en: 'Competition version prepared by Michelotto for the Italian Supercar Championship with 560 HP and upgraded Brembo race brakes.',
         key_features: ['Omologazione CSAI Supercar', 'Freni Brembo maggiorati', 'Assetto e barre antirollio da gara']
       },
@@ -234,7 +234,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
       { id: 'auc-f40-2', variant_id: 'v-ferrari-f40', auction_house_name: 'Gooding & Company', auction_event_name: 'Pebble Beach 2023', lot_number: '038', auction_date: '2023-08-19', country_code: 'US', estimate_low_eur: 2400000, estimate_high_eur: 2800000, hammer_price_eur: 2700000, sale_price_eur: 3020000, sold: true, mileage_km: 4100, chassis_number_masked: 'ZFFGJ34B000088***' }
     ],
     listings: [
-      { id: 'list-f40-1', partner_dealer_id: 'dlr-rome', partner_dealer_name: 'Autosport Classic Roma', dealer_city: 'Roma', dealer_country: 'IT', dealer_verified: true, variant_id: 'v-ferrari-f40', title: '1989 Ferrari F40 Non-Cat Non-Adjustable Classiche Certified', description_it: 'Esemplare immacolato con certificato Ferrari Classiche, soli 8.200 km da nuova. Serbatoi sostituiti nel 2024.', description_en: 'Immaculate European specimen with Ferrari Classiche certification, only 8,200 km from new.', price_eur: 2950000, mileage_km: 8200, registration_year: 1989, chassis_number_masked: 'ZFFGJ34B000084***', condition_grade: 'Mint / Concours', exterior_color: 'Rosso Corsa', interior_color: 'Stoffa Rossa Nomex', transmission_type: 'Manual', published_at: '2025-01-12', status: 'active', image_urls: ['https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=800&auto=format&fit=crop'] }
+      { id: 'list-f40-1', partner_dealer_id: 'dlr-rome', partner_dealer_name: 'Autosport Classic Roma', dealer_city: 'Roma', dealer_country: 'IT', dealer_verified: true, variant_id: 'v-ferrari-f40', title: '1989 Ferrari F40 Non-Cat Non-Adjustable Classiche Certified', description_it: 'Esemplare immacolato con certificato Ferrari Classiche, soli 8.200 km da nuova. Serbatoi sostituiti nel 2024.', description_en: 'Immaculate specimen with Ferrari Classiche certification, only 8,200 km from new.', price_eur: 2950000, mileage_km: 8200, registration_year: 1989, chassis_number_masked: 'ZFFGJ34B000084***', condition_grade: 'Mint / Concours', exterior_color: 'Rosso Corsa', interior_color: 'Stoffa Rossa Nomex', transmission_type: 'Manual', published_at: '2025-01-12', status: 'active', image_urls: ['https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=800&auto=format&fit=crop'] }
     ],
     historical_events: [
       { id: 'ev-f40-launch', title_it: 'Presentazione ufficiale a Maranello', title_en: 'Official Unveiling at Maranello', description_it: 'Presentata da Enzo Ferrari l’21 luglio 1987.', description_en: 'Unveiled by Enzo Ferrari on July 21, 1987.', event_date: '1987-07-21', event_type: 'Launch', country_code: 'IT' }
@@ -553,7 +553,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         production_count: '5 esemplari + 1 XP1 LM',
         years: '1996',
         power_hp: 680,
-        description_it: 'Costruita per celebrare le 5 F1 GTR arrivate al traguardo a Le Mans 1995. Peso ridotto a 1.062 kg, motore V12 privo di strozzature da gara da 680 CV, colore Papaya Orange.',
+        description_it: 'Costruita per celebrare le 5 F1 GTR arrivate al traguardo a Le Mans 1995. Peso ridotto a 1.062 kg, motore V12 privo di strozzature da gara da 680 hp, colore Papaya Orange.',
         description_en: 'Ultra-exclusive series celebrating Le Mans victory. 1,062 kg dry weight, unrestricted 680 HP V12, and iconic Papaya Orange paint.'
       },
       {
@@ -982,7 +982,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         image_url: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop',
         description_it: 'L’unica M3 G80 a mantenere il cambio manuale a 6 rapporti purissimo con trazione posteriore.',
         description_en: 'The pure manual 6-speed specification of the G80 M3 sending 480 HP exclusively to the rear wheels.',
-        key_features: ['Cambio Manuale 6M', '480 CV S58 Twin-Turbo', 'Trazione Posteriore', 'Sedili M Carbon (Opt)']
+        key_features: ['Cambio Manuale 6M', '480 hp S58 Twin-Turbo', 'Trazione Posteriore', 'Sedili M Carbon (Opt)']
       },
       {
         generation_code: 'G80/G81',
@@ -1003,9 +1003,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€95,000 - €125,000',
         median_price_eur: 108000,
         image_url: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop',
-        description_it: 'Variante da 510 CV con cambio M Steptronic e trazione integrale intelligente M xDrive disinseribile.',
+        description_it: 'Variante da 510 hp con cambio M Steptronic e trazione integrale intelligente M xDrive disinseribile.',
         description_en: '510 HP Competition specification with selectable M xDrive all-wheel drive for 3.5s 0-100 km/h launches.',
-        key_features: ['510 CV / 650 Nm', 'M xDrive AWD Disinseribile', 'Cambio M Steptronic 8M', 'Impianto M Compound']
+        key_features: ['510 hp / 650 Nm', 'M xDrive AWD Disinseribile', 'Cambio M Steptronic 8M', 'Impianto M Compound']
       },
       {
         generation_code: 'G80/G81',
@@ -1028,7 +1028,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         image_url: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop',
         description_it: 'La prima storica M3 Station Wagon prodotta in serie da BMW M. Unisce prestazioni superlative e massima versatilità.',
         description_en: 'The historic first-ever official production M3 Touring wagon created by BMW M GmbH.',
-        key_features: ['Prima M3 Station Wagon Ufficiale', '510 CV M xDrive', 'Bagagliaio 500L', 'Design G81 Esclusivo']
+        key_features: ['Prima M3 Station Wagon Ufficiale', '510 hp M xDrive', 'Bagagliaio 500L', 'Design G81 Esclusivo']
       },
       {
         generation_code: 'G80/G81',
@@ -1049,9 +1049,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€145,000 - €195,000',
         median_price_eur: 168000,
         image_url: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop',
-        description_it: 'Edizione speciale alleggerita di 20 kg con cofano in CFRP, 550 CV e calandra iconica bordeaux M4 CSL style.',
+        description_it: 'Edizione speciale alleggerita di 20 kg con cofano in CFRP, 550 hp e calandra iconica bordeaux M4 CSL style.',
         description_en: '550 HP lightweight special edition with CFRP bonnet and titanium exhaust system.',
-        key_features: ['550 CV S58 Engine', 'Scarico Titano M', 'Cofano Carbonio CFRP', '0-100 in 3.4s']
+        key_features: ['550 hp S58 Engine', 'Scarico Titano M', 'Cofano Carbonio CFRP', '0-100 in 3.4s']
       },
 
       // F80 Generation
@@ -1076,7 +1076,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         image_url: 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=1200&auto=format&fit=crop',
         description_it: 'Il debutto della sovralimentazione biturbo sul motore 6 cilindri S55 con albero di trasmissione in fibra di carbonio.',
         description_en: 'First turbo M3 featuring S55 3.0L twin-turbo inline 6 and carbon fiber driveshaft.',
-        key_features: ['431 CV S55 Biturbo', 'Tetto in Carbonio CFRP', 'Differenziale M Attivo']
+        key_features: ['431 hp S55 Biturbo', 'Tetto in Carbonio CFRP', 'Differenziale M Attivo']
       },
       {
         generation_code: 'F80',
@@ -1097,9 +1097,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€58,000 - €85,000',
         median_price_eur: 68000,
         image_url: 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=1200&auto=format&fit=crop',
-        description_it: 'Pacchetto Competition con 450 CV, assetto Adaptive M ritarato, cerchi fucinati da 20" Styling 666M e scarico sportivo.',
+        description_it: 'Pacchetto Competition con 450 hp, assetto Adaptive M ritarato, cerchi fucinati da 20" Styling 666M e scarico sportivo.',
         description_en: 'Competition package adding 450 HP, stiffer Adaptive M suspension, 20-inch 666M wheels, and loud sports exhaust.',
-        key_features: ['450 CV S55', 'Cerchi 666M 20"', 'Sedili M con Intagli', 'Scarico Sportivo M']
+        key_features: ['450 hp S55', 'Cerchi 666M 20"', 'Sedili M con Intagli', 'Scarico Sportivo M']
       },
       {
         generation_code: 'F80',
@@ -1120,9 +1120,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€85,000 - €125,000',
         median_price_eur: 98000,
         image_url: 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=1200&auto=format&fit=crop',
-        description_it: 'Versione finale limitata a soli 1.200 esemplari con 460 CV, splitter anteriore e gurney flange posteriore in carbonio.',
+        description_it: 'Versione finale limitata a soli 1.200 esemplari con 460 hp, splitter anteriore e gurney flange posteriore in carbonio.',
         description_en: 'Limited run of 1,200 units with 460 HP, exposed carbon fiber aerodynamics and OLED taillights.',
-        key_features: ['1,200 Unità Limitate', '460 CV / 600 Nm', 'Fari Posteriori OLED', 'Cofano in Carbonio CFRP']
+        key_features: ['1,200 Unità Limitate', '460 hp / 600 Nm', 'Fari Posteriori OLED', 'Cofano in Carbonio CFRP']
       },
 
       // E90/E92/E93 Generation
@@ -1192,9 +1192,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         median_price_eur: 240000,
         image_url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1200&auto=format&fit=crop',
         is_racing: true,
-        description_it: 'Vertice assoluto della generazione E92: motore V8 aumentato a 4.4 litri (450 CV), tinta Fire Orange, roll cage di fabbrica ed alettone regolabile.',
+        description_it: 'Vertice assoluto della generazione E92: motore V8 aumentato a 4.4 litri (450 hp), tinta Fire Orange, roll cage di fabbrica ed alettone regolabile.',
         description_en: 'Ultralight track homologation special with 4.4L 450 HP S65 V8, Fire Orange paint, roll cage, and adjustable rear wing.',
-        key_features: ['135 Unità Prodotte', 'Motore 4.4L V8 450 CV', 'Tinta Fire Orange', 'Rollbar & Cinture 6 Punti']
+        key_features: ['135 Unità Prodotte', 'Motore 4.4L V8 450 hp', 'Tinta Fire Orange', 'Rollbar & Cinture 6 Punti']
       },
 
       // E46 Generation
@@ -1219,7 +1219,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         image_url: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=1200&auto=format&fit=crop',
         description_it: 'Icona intramontabile con motore 6 cilindri S54B32 a 8.000 giri/min, corpo farfallato per cilindro e differenziale autobloccante M.',
         description_en: 'The definitive classic M3 coupe powered by the legendary 8,000 RPM S54 6-cylinder engine.',
-        key_features: ['Motore S54B32 343 CV', 'Regime a 8.000 RPM', 'Cofano in Alluminio con Powerdome']
+        key_features: ['Motore S54B32 343 hp', 'Regime a 8.000 RPM', 'Cofano in Alluminio con Powerdome']
       },
       {
         generation_code: 'E46',
@@ -1288,7 +1288,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€30,000 - €50,000',
         median_price_eur: 38000,
         image_url: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop',
-        description_it: 'La prima M3 a 6 cilindri della storia, motore S50B30 da 286 CV e debutto del sistema di fasatura variabile VANOS.',
+        description_it: 'La prima M3 a 6 cilindri della storia, motore S50B30 da 286 hp e debutto del sistema di fasatura variabile VANOS.',
         description_en: 'First 6-cylinder M3 in history featuring 286 HP S50B30 engine and single VANOS variable valve timing.',
         key_features: ['Primo 6 Cilindri M3', 'Sistema Single-VANOS', 'Differenziale Autobloccante 25%']
       },
@@ -1311,9 +1311,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€38,000 - €70,000',
         median_price_eur: 48000,
         image_url: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop',
-        description_it: 'Evoluzione da 321 CV con motore S50B32 3.2L, cambio manuale a 6 marce, sistema Double-VANOS e freni anteriori in due pezzi.',
+        description_it: 'Evoluzione da 321 hp con motore S50B32 3.2L, cambio manuale a 6 marce, sistema Double-VANOS e freni anteriori in due pezzi.',
         description_en: '321 HP upgrade featuring 3.2L engine, 6-speed manual gearbox, Double-VANOS and 2-piece floating front brake discs.',
-        key_features: ['321 CV Double-VANOS', 'Cambio 6 Marce', 'Freni Anteriori Flottanti']
+        key_features: ['321 hp Double-VANOS', 'Cambio 6 Marce', 'Freni Anteriori Flottanti']
       },
       {
         generation_code: 'E36',
@@ -1342,7 +1342,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
       // E30 Generation
       {
         generation_code: 'E30',
-        name: 'M3 E30 2.3 Base (195-200 CV)',
+        name: 'M3 E30 2.3 Base (195-200 hp)',
         production_count: '16,059',
         years: '1986 – 1989',
         power_hp: 200,
@@ -1366,7 +1366,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
       {
         generation_code: 'E30',
         name: 'M3 E30 Evolution II (Evo 2)',
-        production_count: 501,
+        production_count: 500,
         years: '1988',
         power_hp: 220,
         torque_nm: 245,
@@ -1382,9 +1382,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€140,000 - €220,000',
         median_price_eur: 175000,
         image_url: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1200&auto=format&fit=crop',
-        description_it: 'Evoluzione omologativa limitata a 501 esemplari con 220 CV, pistoni ad alta compressione, spoiler anteriore e vetri alleggeriti.',
-        description_en: 'Homologation special of 501 units featuring 220 HP, higher compression pistons, deeper front spoiler and thinner glass.',
-        key_features: ['501 Unità Prodotte', '220 CV S14 Engine', 'Spoiler Anteriore e Posteriore Evo']
+        description_it: 'Evoluzione omologativa limitata a 500 esemplari con 220 hp, pistoni ad alta compressione, spoiler anteriore e vetri alleggeriti.',
+        description_en: 'Homologation special of 500 units featuring 220 HP, higher compression pistons, deeper front spoiler and thinner glass.',
+        key_features: ['500 Unità Prodotte', '220 hp S14 Engine', 'Spoiler Anteriore e Posteriore Evo']
       },
       {
         generation_code: 'E30',
@@ -1405,9 +1405,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€180,000 - €320,000',
         median_price_eur: 240000,
         image_url: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1200&auto=format&fit=crop',
-        description_it: 'Il Sacro Graal della M3 E30: motore aumentato a 2.5L (238 CV), alettone e splitter regolabili su tre posizioni, prodotta in soli 600 esemplari.',
+        description_it: 'Il Sacro Graal della M3 E30: motore aumentato a 2.5L (238 hp), alettone e splitter regolabili su tre posizioni, prodotta in soli 600 esemplari.',
         description_en: 'The holy grail E30 M3: 2.5L S14 engine generating 238 HP, 3-position adjustable aerodynamic splitters, limited to 600 units.',
-        key_features: ['600 Unità Prodotte', 'Motore 2.5L S14B25 238 CV', 'Alettone & Splitter Regolabili 3 Posizioni']
+        key_features: ['600 Unità Prodotte', 'Motore 2.5L S14B25 238 hp', 'Alettone & Splitter Regolabili 3 Posizioni']
       }
     ],
     production_breakdown_notes_en: 'The BMW M3 lineage spans 6 legendary generations: E30 (S14 4-cylinder DTM homologation), E36 (S50 6-cylinder & saloon debut), E46 (S54 6-cylinder & iconic CSL), E90/E92/E93 (Formula 1 derived S65 V8), F80 (S55 Twin-Turbo) and G80/G81 (S58 Twin-Turbo with xDrive and first-ever M3 Touring).',
@@ -1417,8 +1417,8 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         generation_code: 'G80/G81',
         title: 'Sesta Generazione: BMW M3 G80 / G81',
         years: '2020 – Oggi',
-        engine_summary: '3.0L 6 in Linea S58B30T0 Twin-Turbo (480 - 550 CV)',
-        power_hp_range: '480 – 550 CV @ 6.250 rpm',
+        engine_summary: '3.0L 6 in Linea S58B30T0 Twin-Turbo (480 - 550 hp)',
+        power_hp_range: '480 – 550 hp @ 6.250 rpm',
         torque_nm_range: '550 – 650 Nm @ 2.750-5.950 rpm',
         acceleration_0_100: '3.4s - 4.2s',
         top_speed_kmh: 290,
@@ -1435,15 +1435,15 @@ export const HERO_VEHICLES: VehicleVariant[] = [
           'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop',
           'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1200&auto=format&fit=crop'
         ],
-        notes_it: 'Potenza fino a 550 CV, debutto della trazione integrale disinseribile M xDrive e della prima M3 Touring Station Wagon (G81).',
+        notes_it: 'Potenza fino a 550 hp, debutto della trazione integrale disinseribile M xDrive e della prima M3 Touring Station Wagon (G81).',
         notes_en: 'Up to 550 HP, introducing selectable M xDrive all-wheel-drive and the historic first-ever M3 Touring wagon (G81).'
       },
       {
         generation_code: 'F80',
         title: 'Quinta Generazione: BMW M3 F80',
         years: '2014 – 2018',
-        engine_summary: '3.0L 6 in Linea S55B30 Biturbo (431 - 460 CV)',
-        power_hp_range: '431 – 460 CV @ 5.500-7.300 rpm',
+        engine_summary: '3.0L 6 in Linea S55B30 Biturbo (431 - 460 hp)',
+        power_hp_range: '431 – 460 hp @ 5.500-7.300 rpm',
         torque_nm_range: '550 – 600 Nm @ 1.850-5.500 rpm',
         acceleration_0_100: '3.9s - 4.3s',
         top_speed_kmh: 280,
@@ -1466,8 +1466,8 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         generation_code: 'E90/E92/E93',
         title: 'Quarta Generazione: BMW M3 E90 / E92 / E93',
         years: '2007 – 2013',
-        engine_summary: '4.0L - 4.4L V8 Aspirato S65B40 / S65B44 (420 - 450 CV)',
-        power_hp_range: '420 – 450 CV @ 8.300 rpm',
+        engine_summary: '4.0L - 4.4L V8 Aspirato S65B40 / S65B44 (420 - 450 hp)',
+        power_hp_range: '420 – 450 hp @ 8.300 rpm',
         torque_nm_range: '400 – 440 Nm @ 3.900 rpm',
         acceleration_0_100: '4.4s - 5.1s',
         top_speed_kmh: 290,
@@ -1490,8 +1490,8 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         generation_code: 'E46',
         title: 'Terza Generazione: BMW M3 E46',
         years: '2000 – 2006',
-        engine_summary: '3.2L 6 in Linea Aspirato S54B32 (343 - 360 CV High-Rev)',
-        power_hp_range: '343 – 360 CV @ 7.900 rpm',
+        engine_summary: '3.2L 6 in Linea Aspirato S54B32 (343 - 360 hp High-Rev)',
+        power_hp_range: '343 – 360 hp @ 7.900 rpm',
         torque_nm_range: '365 – 370 Nm @ 4.900 rpm',
         acceleration_0_100: '4.9s - 5.5s',
         top_speed_kmh: 280,
@@ -1514,8 +1514,8 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         generation_code: 'E36',
         title: 'Seconda Generazione: BMW M3 E36',
         years: '1992 – 1999',
-        engine_summary: '3.0L - 3.2L 6 in Linea S50 / S52 VANOS (286 - 321 CV)',
-        power_hp_range: '286 – 321 CV @ 7.000 rpm',
+        engine_summary: '3.0L - 3.2L 6 in Linea S50 / S52 VANOS (286 - 321 hp)',
+        power_hp_range: '286 – 321 hp @ 7.000 rpm',
         torque_nm_range: '320 – 350 Nm @ 3.250 rpm',
         acceleration_0_100: '5.5s - 6.0s',
         top_speed_kmh: 250,
@@ -1538,8 +1538,8 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         generation_code: 'E30',
         title: 'Prima Generazione: BMW M3 E30',
         years: '1986 – 1991',
-        engine_summary: '2.3L - 2.5L 4 cilindri S14 Aspirato (195 - 238 CV)',
-        power_hp_range: '195 – 238 CV @ 6.750 rpm',
+        engine_summary: '2.3L - 2.5L 4 cilindri S14 Aspirato (195 - 238 hp)',
+        power_hp_range: '195 – 238 hp @ 6.750 rpm',
         torque_nm_range: '230 – 240 Nm @ 4.750 rpm',
         acceleration_0_100: '6.1s - 6.9s',
         top_speed_kmh: 248,
@@ -1571,7 +1571,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
     extended_variant_editions: [
       // GENERATION 1: E30
       {
-        name: 'M3 E30 (200 CV / 195 CV cat)',
+        name: 'M3 E30 (200 hp / 195 hp cat)',
         generation_code: 'E30',
         production_count: '17,970 esemplari (base)',
         years: '1986–1989',
@@ -1583,7 +1583,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         body_style: 'Coupé 2 Porte',
         description_it: 'Motore 4 cil. S14B23 (2.3L). Prima versione stradale di serie creata per l’omologazione Gruppo A.',
         description_en: '2.3L S14B23 4-cylinder engine. Initial homologation road car.',
-        key_features: ['S14B23 2.3L', '200 CV / 195 CV cat', 'Coupé 2 Porte', 'Dog-Leg Manual']
+        key_features: ['S14B23 2.3L', '200 hp / 195 hp cat', 'Coupé 2 Porte', 'Dog-Leg Manual']
       },
       {
         name: 'M3 E30 Cabrio',
@@ -1626,9 +1626,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€140.000 - €200.000',
         engine_code: 'S14B23 Evo II',
         body_style: 'Coupé 2 Porte',
-        description_it: 'Motore S14 2.3L potenziato a 220 CV, spoiler anteriore maggiorato e alettone posteriore con flap.',
+        description_it: 'Motore S14 2.3L potenziato a 220 hp, spoiler anteriore maggiorato e alettone posteriore con flap.',
         description_en: '220 HP 2.3L S14 with enhanced aerodynamics and front splitter.',
-        key_features: ['500 Esemplari', '220 CV', 'Aero Evo II', 'Pistoni Alleggeriti']
+        key_features: ['500 Esemplari', '220 hp', 'Aero Evo II', 'Pistoni Alleggeriti']
       },
       {
         name: 'M3 Sport Evolution (Evo 3)',
@@ -1641,9 +1641,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€220.000 - €320.000+',
         engine_code: 'S14B25',
         body_style: 'Coupé 2 Porte',
-        description_it: 'Massima evoluzione E30. Motore S14B25 da 2.5 litri (238 CV), spoiler e alettone regolabili, vetri sottili.',
+        description_it: 'Massima evoluzione E30. Motore S14B25 da 2.5 litri (238 hp), spoiler e alettone regolabili, vetri sottili.',
         description_en: 'Ultimate E30 spec. 2.5L S14B25 engine (238 HP), 3-position adjustable wings.',
-        key_features: ['600 Esemplari', '2.5L S14B25', '238 CV', 'Spoiler Regolabile']
+        key_features: ['600 Esemplari', '2.5L S14B25', '238 hp', 'Spoiler Regolabile']
       },
       {
         name: 'M3 Cecotto / Ravaglia',
@@ -1658,7 +1658,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         body_style: 'Coupé 2 Porte',
         description_it: 'Edizioni limitate dedicate ai piloti ufficiali Johnny Cecotto e Roberto Ravaglia con placca numerata.',
         description_en: 'Numbered limited editions honoring BMW factory racing champions.',
-        key_features: ['215 CV', 'Placca Numerata', 'Cover Motore Rossa', 'Colori Dedicati']
+        key_features: ['215 hp', 'Placca Numerata', 'Cover Motore Rossa', 'Colori Dedicati']
       },
 
       // GENERATION 2: E36
@@ -1673,9 +1673,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€28.000 - €55.000',
         engine_code: 'S50B30',
         body_style: 'Coupé / Berlina / Cabrio',
-        description_it: 'Passaggio al 6 cilindri in linea S50B30 da 3.0 litri con sistema VANOS (286 CV). Introduzione della Berlina.',
+        description_it: 'Passaggio al 6 cilindri in linea S50B30 da 3.0 litri con sistema VANOS (286 hp). Introduzione della Berlina.',
         description_en: 'Shift to 3.0L S50 6-cylinder with VANOS (286 HP). First 4-door Saloon.',
-        key_features: ['3.0L S50B30', '286 CV', 'VANOS Singolo', 'Debutto Berlina']
+        key_features: ['3.0L S50B30', '286 hp', 'VANOS Singolo', 'Debutto Berlina']
       },
       {
         name: 'M3 E36 GT',
@@ -1690,7 +1690,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         body_style: 'Coupé 2 Porte',
         description_it: 'Edizione limitata in colore British Racing Green con portiere in alluminio e alettone regolabile.',
         description_en: 'Homologation special in British Racing Green with aluminum doors and adjustable wing.',
-        key_features: ['356 Esemplari', '295 CV', 'British Racing Green', 'Portiere Alluminio']
+        key_features: ['356 Esemplari', '295 hp', 'British Racing Green', 'Portiere Alluminio']
       },
       {
         name: 'M3 E36 3.2 Evolution (S50B32)',
@@ -1703,9 +1703,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€32.000 - €68.000',
         engine_code: 'S50B32',
         body_style: 'Coupé / Berlina / Cabrio',
-        description_it: 'Motore S50B32 da 3.2L con Doppio VANOS, 321 CV e cambio manuale Getrag a 6 marce o SMG I.',
+        description_it: 'Motore S50B32 da 3.2L con Doppio VANOS, 321 hp e cambio manuale Getrag a 6 marce o SMG I.',
         description_en: '3.2L S50B32 engine with Double VANOS, 321 HP, and 6-speed manual or SMG I.',
-        key_features: ['3.2L S50B32', '321 CV', 'Doppio VANOS', 'Cambio 6 Marce']
+        key_features: ['3.2L S50B32', '321 hp', 'Doppio VANOS', 'Cambio 6 Marce']
       },
       {
         name: 'M3 Lightweight (LTW)',
@@ -1735,9 +1735,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€38.000 - €75.000',
         engine_code: 'S54B32',
         body_style: 'Coupé / Cabrio',
-        description_it: 'Motore aspirato ad alti regimi S54B32 da 343 CV (8.000 rpm). Non è stata prodotta in versione Berlina.',
+        description_it: 'Motore aspirato ad alti regimi S54B32 da 343 hp (8.000 rpm). Non è stata prodotta in versione Berlina.',
         description_en: 'High-revving 3.2L S54B32 343 HP engine. Offered strictly in Coupé and Convertible.',
-        key_features: ['3.2L S54B32', '343 CV', 'Redline 8.000 RPM', 'Differenziale M Variable']
+        key_features: ['3.2L S54B32', '343 hp', 'Redline 8.000 RPM', 'Differenziale M Variable']
       },
       {
         name: 'M3 CSL (Coupe Sport Leichtbau)',
@@ -1752,7 +1752,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         body_style: 'Coupé Lightweight',
         description_it: 'Leggenda assoluta: tetto in fibra di carbonio, airbox in carbonio dall’inconfondibile rombo, -110 kg.',
         description_en: 'Iconic lightweight legend. Carbon fiber roof, carbon airbox intake, 110 kg weight reduction.',
-        key_features: ['1.383 Esemplari', '360 CV', 'Tetto & Airbox Carbonio', '-110 kg']
+        key_features: ['1.383 Esemplari', '360 hp', 'Tetto & Airbox Carbonio', '-110 kg']
       },
       {
         name: 'M3 Competition Package (ZCP / CS)',
@@ -1800,7 +1800,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         body_style: 'Berlina 4 Porte',
         description_it: 'Ritorno della carrozzeria 4 porte dotata del motore V8 aspirato S65B40 da 4.0L derivato dalla F1 (8.400 rpm).',
         description_en: '4-door saloon powered by the F1-derived 4.0L S65 V8 engine (8,400 rpm redline).',
-        key_features: ['V8 S65B40 4.0L', '420 CV', '8.400 RPM Redline', 'Berlina 4 Porte']
+        key_features: ['V8 S65B40 4.0L', '420 hp', '8.400 RPM Redline', 'Berlina 4 Porte']
       },
       {
         name: 'M3 E92 Coupé',
@@ -1815,7 +1815,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         body_style: 'Coupé 2 Porte',
         description_it: 'Variante Coupé con tetto in fibra di carbonio a vista di serie, cambio manuale a 6 marce o DKG a 7 rapporti.',
         description_en: 'Coupé model featuring standard exposed carbon fiber roof and 7-speed DKG dual-clutch transmission.',
-        key_features: ['V8 S65B40 4.0L', 'Tetto Carbonio', '420 CV', 'Cambio DKG 7M']
+        key_features: ['V8 S65B40 4.0L', 'Tetto Carbonio', '420 hp', 'Cambio DKG 7M']
       },
       {
         name: 'M3 E93 Cabrio',
@@ -1830,7 +1830,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         body_style: 'Cabrio Hardtop',
         description_it: 'Variante cabriolet con tetto rigido ripiegabile in metallo a 3 elementi.',
         description_en: 'Convertible variant with 3-piece folding hardtop metal roof.',
-        key_features: ['V8 S65B40', 'Hardtop Metallo', '420 CV', 'Open Air V8']
+        key_features: ['V8 S65B40', 'Hardtop Metallo', '420 hp', 'Open Air V8']
       },
       {
         name: 'M3 GTS (E92)',
@@ -1844,9 +1844,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€180.000 - €280.000',
         engine_code: 'S65B44',
         body_style: 'Coupé Track-Tool',
-        description_it: 'Pronto corsa da 4.4L V8 (450 CV), tinta Arancio Fire, roll-bar, alettone regolabile e freni carboceramici.',
+        description_it: 'Pronto corsa da 4.4L V8 (450 hp), tinta Arancio Fire, roll-bar, alettone regolabile e freni carboceramici.',
         description_en: 'Track-focused 4.4L V8 (450 HP) in Fire Orange with roll cage and carbon wing.',
-        key_features: ['135 Esemplari', 'V8 4.4L (450 CV)', 'Fire Orange', 'Freni Carboceramici']
+        key_features: ['135 Esemplari', 'V8 4.4L (450 hp)', 'Fire Orange', 'Freni Carboceramici']
       },
       {
         name: 'M3 CRT (Carbon Racing Tech - E90)',
@@ -1861,7 +1861,7 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         body_style: 'Berlina Lightweight',
         description_it: 'Edizione ultraleggera su base Berlina con componenti in carbonio a nido d’ape e motore V8 4.4L della GTS.',
         description_en: 'Ultra-lightweight saloon utilizing honeycomb carbon components and 4.4L V8 GTS engine.',
-        key_features: ['67 Esemplari', '450 CV', 'Carbonio CRT', 'Frozen Polar Silver']
+        key_features: ['67 Esemplari', '450 hp', 'Carbonio CRT', 'Frozen Polar Silver']
       },
 
       // GENERATION 5: F80
@@ -1876,9 +1876,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€45.000 - €70.000',
         engine_code: 'S55B30',
         body_style: 'Berlina 4 Porte',
-        description_it: 'Abbandona l’aspirato per il 6 cilindri in linea Biturbo S55B30 da 431 CV. Le coupé e cabrio diventano F82/F83 M4.',
+        description_it: 'Abbandona l’aspirato per il 6 cilindri in linea Biturbo S55B30 da 431 hp. Le coupé e cabrio diventano F82/F83 M4.',
         description_en: 'Adopts 3.0L S55 Twin-Turbo 6-cylinder (431 HP). Coupés rebranded as F82 M4.',
-        key_features: ['S55B30 Biturbo', '431 CV', 'Cambio DKG 7 Marce', 'Tetto Carbonio']
+        key_features: ['S55B30 Biturbo', '431 hp', 'Cambio DKG 7 Marce', 'Tetto Carbonio']
       },
       {
         name: 'M3 Competition Package (F80)',
@@ -1891,9 +1891,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€52.000 - €80.000',
         engine_code: 'S55B30 Comp',
         body_style: 'Berlina 4 Porte',
-        description_it: 'Potenza elevata a 450 CV, cerchi M da 20" forgiati, assetto adattivo M e scarico sportivo.',
+        description_it: 'Potenza elevata a 450 hp, cerchi M da 20" forgiati, assetto adattivo M e scarico sportivo.',
         description_en: 'Power boosted to 450 HP, 20" forged wheels, revised M adaptive suspension and sports exhaust.',
-        key_features: ['450 CV', 'Cerchi 20" Forgiati', 'Assetto Adapt M', 'Scarico M Sport']
+        key_features: ['450 hp', 'Cerchi 20" Forgiati', 'Assetto Adapt M', 'Scarico M Sport']
       },
       {
         name: 'M3 CS (Club Sport - F80)',
@@ -1906,9 +1906,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€80.000 - €120.000',
         engine_code: 'S55B30 CS',
         body_style: 'Berlina Track-Spec',
-        description_it: 'Edizione limitata alleggerita da 460 CV con cofano e splitter in CFRP, freni carboceramici opzionali.',
+        description_it: 'Edizione limitata alleggerita da 460 hp con cofano e splitter in CFRP, freni carboceramici opzionali.',
         description_en: 'Lightweight track-focused edition producing 460 HP with CFRP bonnet and splitters.',
-        key_features: ['1.200 Esemplari', '460 CV', 'CFRP Bonnet & Aero', 'OLED Rear Lights']
+        key_features: ['1.200 Esemplari', '460 hp', 'CFRP Bonnet & Aero', 'OLED Rear Lights']
       },
 
       // GENERATION 6: G80 / G81
@@ -1923,9 +1923,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€80.000 - €105.000',
         engine_code: 'S58B30T0',
         body_style: 'Berlina Manuale RWD',
-        description_it: 'Motore Biturbo S58B30T0 da 480 CV, trazione posteriore e cambio manuale a 6 marce.',
+        description_it: 'Motore Biturbo S58B30T0 da 480 hp, trazione posteriore e cambio manuale a 6 marce.',
         description_en: '480 HP S58 Twin-Turbo engine, rear-wheel drive and 6-speed manual transmission.',
-        key_features: ['S58 3.0L Biturbo', '480 CV', 'Cambio Manuale 6M', 'Trazione Posteriore']
+        key_features: ['S58 3.0L Biturbo', '480 hp', 'Cambio Manuale 6M', 'Trazione Posteriore']
       },
       {
         name: 'M3 G80 Competition / xDrive',
@@ -1938,9 +1938,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€88.000 - €125.000',
         engine_code: 'S58B30T0 Comp',
         body_style: 'Berlina 4 Porte',
-        description_it: '510 CV con cambio M Steptronic a 8 rapporti. Disponibile con la prima trazione integrale intelligente M xDrive disinseribile.',
+        description_it: '510 hp con cambio M Steptronic a 8 rapporti. Disponibile con la prima trazione integrale intelligente M xDrive disinseribile.',
         description_en: '510 HP with 8-speed M Steptronic. Introduces optional selectable M xDrive AWD system.',
-        key_features: ['510 CV', 'M xDrive Disinseribile', 'M Steptronic 8M', 'Sedili Carbon Bucket']
+        key_features: ['510 hp', 'M xDrive Disinseribile', 'M Steptronic 8M', 'Sedili Carbon Bucket']
       },
       {
         name: 'M3 Touring G81 (Competition xDrive)',
@@ -1953,9 +1953,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€98.000 - €140.000',
         engine_code: 'S58B30T0 Comp',
         body_style: 'Station Wagon (Touring)',
-        description_it: 'La prima M3 Station Wagon ufficiale di serie della storia: 510 CV, trazione xDrive e praticità quotidiana.',
+        description_it: 'La prima M3 Station Wagon ufficiale di serie della storia: 510 hp, trazione xDrive e praticità quotidiana.',
         description_en: 'First official production M3 Station Wagon in history: 510 HP, xDrive and family versatility.',
-        key_features: ['Prima M3 Wagon', '510 CV xDrive', 'G81 Touring', 'Praticità Quotidiana']
+        key_features: ['Prima M3 Wagon', '510 hp xDrive', 'G81 Touring', 'Praticità Quotidiana']
       },
       {
         name: 'M3 CS G80 (Club Sport)',
@@ -1968,9 +1968,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€145.000 - €185.000',
         engine_code: 'S58B30T0 CS',
         body_style: 'Berlina Track-Spec',
-        description_it: 'Versione ad altissime prestazioni da 550 CV con trazione M xDrive, dettagli in carbonio rossi e -20 kg.',
+        description_it: 'Versione ad altissime prestazioni da 550 hp con trazione M xDrive, dettagli in carbonio rossi e -20 kg.',
         description_en: 'Ultra performance 550 HP spec with M xDrive, red accent carbon details and 20 kg weight loss.',
-        key_features: ['550 CV', 'M xDrive', 'Dettagli Carbonio Rossi', 'CFRP Roof & Bonnet']
+        key_features: ['550 hp', 'M xDrive', 'Dettagli Carbonio Rossi', 'CFRP Roof & Bonnet']
       },
       {
         name: 'M3 G80 / G81 LCI (Facelift)',
@@ -1983,9 +1983,9 @@ export const HERO_VEHICLES: VehicleVariant[] = [
         price_range_eur: '€95.000 - €145.000',
         engine_code: 'S58 LCI',
         body_style: 'Berlina / Wagon',
-        description_it: 'Restyling di metà carriera: i modelli Competition xDrive salgono a 530 CV con nuovi fari LED a matrice.',
+        description_it: 'Restyling di metà carriera: i modelli Competition xDrive salgono a 530 hp con nuovi fari LED a matrice.',
         description_en: 'Mid-cycle facelift boosting Competition xDrive variants to 530 HP with new matrix LED lighting.',
-        key_features: ['530 CV xDrive', 'Nuovi Fari LED', 'LCI Facelift', 'BMW Operating System 8.5']
+        key_features: ['530 hp xDrive', 'Nuovi Fari LED', 'LCI Facelift', 'BMW Operating System 8.5']
       }
     ],
     known_issues: [
@@ -2662,7 +2662,7 @@ export function generateFullCatalog(): VehicleVariant[] {
       volatility_score: 20,
       avg_days_on_market: 36,
       history_it: `Scheda vettura ${t.brand} ${t.name}, pezzo di elevata rilevanza nel mercato del collezionismo europeo.`,
-      history_en: `Datasheet for ${t.brand} ${t.name}, highly significant European collector vehicle.`,
+      history_en: `Datasheet for ${t.brand} ${t.name}, highly significant collector vehicle.`,
       designers: [{ id: 'p-des-generic', full_name: ' Centro Stile', nationality: 'IT', role: 'Designer', biography_it: 'Centro stile ufficiale.', biography_en: 'Official styling studio.' }],
       engineers: [],
       production_site: 'Europe',

@@ -16,7 +16,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     { id: 'market', label: 'Market', icon: Compass },
     { id: 'graph', label: 'Knowledge', icon: Network },
     { id: 'watchlist', label: 'Preferiti', icon: Heart, badge: watchlistCount },
-    { id: 'admin', label: 'Gestione', icon: ShieldCheck },
+    { id: 'super_admin', label: 'Gestione', icon: ShieldCheck },
     { id: 'profile', label: 'Profilo', icon: User },
   ];
 

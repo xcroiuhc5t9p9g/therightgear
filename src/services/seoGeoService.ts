@@ -150,7 +150,7 @@ export function generateVehicleJsonLd(variant: VehicleVariant, canonicalUrl: str
         name: `What is the current collector market valuation for ${variant.manufacturer_name} ${variant.variant_name}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `The current estimated median valuation for ${variant.variant_name} is approximately € ${variant.current_median_price_eur.toLocaleString('en-US')}. The car carries a Collector Score of ${collectorScoreVal}/100 and an Investment Score of ${investmentScoreVal}/100.`
+          text: `The current estimated median valuation for ${variant.variant_name} is approximately € ${variant.current_median_price_eur ? variant.current_median_price_eur.toLocaleString('en-US') : 'N/A'}. The car carries a Collector Score of ${collectorScoreVal}/100 and an Investment Score of ${investmentScoreVal}/100.`
         }
       },
       {
@@ -222,8 +222,9 @@ export function generatePersonJsonLd(person: {
 }
 
 export function generateCompareJsonLd(vehicles: VehicleVariant[], canonicalUrl: string) {
+  const safeVehicles = vehicles || [];
   const currentUrl = canonicalUrl || getAbsolutePageUrl('/compare');
-  const vehicleNames = vehicles.map(v => `${v.manufacturer_name} ${v.variant_name}`).join(' vs ');
+  const vehicleNames = safeVehicles.map(v => `${v?.manufacturer_name || ''} ${v?.variant_name || ''}`).join(' vs ');
 
   const itemPageSchema = {
     '@context': 'https://schema.org',
@@ -231,16 +232,16 @@ export function generateCompareJsonLd(vehicles: VehicleVariant[], canonicalUrl: 
     '@id': `${currentUrl}#comparison`,
     name: `Confronto Tecnico e Prestazionale: ${vehicleNames}`,
     description: `Confronto dettagliato per motorizzazioni, accelerazione, rapporto peso/potenza, quotazioni storiche e collector score tra ${vehicleNames}.`,
-    about: vehicles.map(v => ({
+    about: safeVehicles.map(v => ({
       '@type': 'Car',
-      name: `${v.manufacturer_name} ${v.variant_name}`,
-      image: v.hero_image_url,
-      brand: v.manufacturer_name,
+      name: `${v?.manufacturer_name || ''} ${v?.variant_name || ''}`,
+      image: v?.hero_image_url || '',
+      brand: v?.manufacturer_name || '',
       offers: {
         '@type': 'AggregateOffer',
         priceCurrency: 'EUR',
-        lowPrice: Math.round(v.current_median_price_eur * 0.85),
-        highPrice: Math.round(v.current_median_price_eur * 1.25)
+        lowPrice: Math.round((v?.current_median_price_eur || 0) * 0.85),
+        highPrice: Math.round((v?.current_median_price_eur || 0) * 1.25)
       }
     }))
   };
@@ -251,10 +252,10 @@ export function generateCompareJsonLd(vehicles: VehicleVariant[], canonicalUrl: 
     mainEntity: [
       {
         '@type': 'Question',
-        name: `Quale vettura ha prestazioni superiori tra ${vehicles.map(v => v.variant_name).join(' e ')}?`,
+        name: `Quale vettura ha prestazioni superiori tra ${safeVehicles.map(v => v?.variant_name || '').join(' e ')}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Dalla matrice comparativa dell'Automotive Intelligence Platform: ${vehicles.map(v => `${v.variant_name} eroga ${v.engine?.power_hp || 'N/A'} CV (0-100 in ${v.specs?.acceleration_0_100 || 'N/A'}s)`).join('; ')}.`
+          text: `Dalla matrice comparativa dell'Automotive Intelligence Platform: ${safeVehicles.map(v => `${v?.variant_name || ''} eroga ${v?.engine?.power_hp || 'N/A'} CV (0-100 in ${v?.specs?.acceleration_0_100 || 'N/A'}s)`).join('; ')}.`
         }
       }
     ]
@@ -296,10 +297,10 @@ export function generateOrganizationJsonLd() {
     '@type': 'Organization',
     '@id': `${getAbsolutePageUrl('/')}#organization`,
     name: 'Automotive Intelligence Platform',
-    alternateName: 'AIP European Automotive Knowledge Base',
+    alternateName: 'AIP Automotive Knowledge Base',
     url: getAbsolutePageUrl('/'),
     logo: getAbsolutePageUrl('/logo.png'),
-    description: 'Intelligence platform and knowledge graph for iconic sports cars, youngtimers, and European supercars.',
+    description: 'Intelligence platform and knowledge graph for iconic sports cars, youngtimers, and supercars.',
     sameAs: [
       'https://twitter.com/auto_intelligence',
       'https://github.com/automotive-intelligence'
