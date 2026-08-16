@@ -1,8 +1,10 @@
-export interface KeyEntity {
+export type EntityClass = 'PERSON' | 'ORGANIZATION';
+
+export interface BaseKeyEntity {
   id: string;
   slug: string;
   name: string;
-  type: 'Engineer' | 'Designer' | 'Coachbuilder / Design House' | 'Founder / Visionary';
+  entityClass: EntityClass;
   nationality: string;
   countryCode: string;
   yearsActive: string;
@@ -15,8 +17,24 @@ export interface KeyEntity {
   companyInfoEn?: string;
   keyAchievementsIt: string[];
   keyAchievementsEn: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  publishedAt?: string;
+  publicationStatus?: 'DRAFT' | 'REVIEW' | 'PUBLISHED';
   associatedVehicleSlugs: string[];
 }
+
+export interface PersonEntity extends BaseKeyEntity {
+  entityClass: 'PERSON';
+  roles: Array<'DESIGNER' | 'ENGINEER' | 'RACING_FIGURE' | 'TEST_DRIVER' | 'FOUNDER'>;
+}
+
+export interface OrganizationEntity extends BaseKeyEntity {
+  entityClass: 'ORGANIZATION';
+  organizationType: 'MAKER' | 'DESIGN_HOUSE' | 'ENGINEERING_ORGANIZATION';
+}
+
+export type KeyEntity = PersonEntity | OrganizationEntity;
 
 export interface WorldwideAuctionEvent {
   id: string;
@@ -44,7 +62,8 @@ export const KEY_ENTITIES: KeyEntity[] = [
     id: 'ent-nicola-materazzi',
     slug: 'nicola-materazzi',
     name: 'Nicola Materazzi',
-    type: 'Engineer',
+    entityClass: 'PERSON',
+    roles: ['ENGINEER'],
     nationality: 'Italiana',
     countryCode: 'IT',
     yearsActive: '1939 - 2022',
@@ -73,7 +92,8 @@ export const KEY_ENTITIES: KeyEntity[] = [
     id: 'ent-pininfarina',
     slug: 'pininfarina',
     name: 'Pininfarina S.p.A.',
-    type: 'Coachbuilder / Design House',
+    entityClass: 'ORGANIZATION',
+    organizationType: 'DESIGN_HOUSE',
     nationality: 'Italiana',
     countryCode: 'IT',
     yearsActive: '1930 - Presente',
@@ -102,7 +122,8 @@ export const KEY_ENTITIES: KeyEntity[] = [
     id: 'ent-marcello-gandini',
     slug: 'marcello-gandini',
     name: 'Marcello Gandini',
-    type: 'Designer',
+    entityClass: 'PERSON',
+    roles: ['DESIGNER'],
     nationality: 'Italiana',
     countryCode: 'IT',
     yearsActive: '1938 - 2024',
@@ -131,7 +152,8 @@ export const KEY_ENTITIES: KeyEntity[] = [
     id: 'ent-gordon-murray',
     slug: 'gordon-murray',
     name: 'Gordon Murray',
-    type: 'Engineer',
+    entityClass: 'PERSON',
+    roles: ['ENGINEER'],
     nationality: 'Sudafricana / Britannica',
     countryCode: 'GB',
     yearsActive: '1946 - Presente',
@@ -214,7 +236,7 @@ export const UPCOMING_AUCTIONS: WorldwideAuctionEvent[] = [
     featuredCarSlugs: ['bugatti-eb110-gt', 'porsche-959-komfort'],
     featuredCarsNames: ['1994 Bugatti EB110 GT', '1992 Porsche 959 Late Re-issue'],
     descriptionIt: 'L’asta autunnale di riferimento in Europa continentale, situata nella rinomata località balneare belga con focus su supercar da collezione e vetture storiche omologate.',
-    descriptionEn: 'Premier continental European autumn auction located in coastal Belgium with top supercar lots.',
+    descriptionEn: 'Premier continental autumn auction located in coastal Belgium with top supercar lots.',
     officialWebsiteUrl: 'https://bonhams.com'
   },
   {

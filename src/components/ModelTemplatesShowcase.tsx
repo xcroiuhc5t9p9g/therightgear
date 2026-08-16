@@ -68,7 +68,7 @@ export const ModelTemplatesShowcase: React.FC<ModelTemplatesShowcaseProps> = ({
         </div>
 
         <button
-          onClick={() => onNavigate('explore')}
+          onClick={() => onNavigate('home')}
           className="self-start md:self-auto px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-amber-400 hover:to-red-600 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-red-600/10 transition-all flex items-center space-x-2 shrink-0 cursor-pointer"
         >
           <span>Explore Full Index (300)</span>

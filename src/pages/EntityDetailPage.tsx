@@ -40,7 +40,7 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
     const personSchema = generatePersonJsonLd({
       full_name: entity.name,
       nationality: entity.nationality,
-      role: entity.type === 'Engineer' ? 'Engineer' : 'Designer',
+      role: entity.entityClass === 'PERSON' ? entity.roles[0] : entity.organizationType,
       biography_it: entity.biographyIt,
       biography_en: entity.biographyEn
     });
@@ -50,7 +50,7 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
       description: locale === 'it' ? entity.biographyIt.slice(0, 160) : entity.biographyEn.slice(0, 160),
       canonicalUrl: canonical,
       ogType: 'website',
-      keywords: [entity.name, entity.type, 'Automotive Designer', 'Supercar Engineer', 'Automotive Intelligence']
+      keywords: [entity.name, entity.entityClass === 'PERSON' ? entity.roles[0] : entity.organizationType, 'Automotive Designer', 'Supercar Engineer', 'Automotive Intelligence']
     }, [personSchema]);
   }, [entity, locale]);
 
@@ -92,7 +92,7 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
           <div className="space-y-2 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-1 rounded-md bg-[#D71920]/15 border border-[#D71920]/30 text-[#D71920] text-[11px] font-bold uppercase tracking-wider">
-                {entity.type}
+                {entity.entityClass === 'PERSON' ? entity.roles.join(', ') : entity.organizationType.replace('_', ' ')}
               </span>
               <span className="px-2.5 py-1 rounded-md bg-[#0B0D10] text-slate-300 text-[11px] font-medium border border-[#2B303B]">
                 {entity.nationality} ({entity.countryCode})

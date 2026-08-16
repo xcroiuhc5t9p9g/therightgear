@@ -3,7 +3,7 @@ let content = fs.readFileSync('server.ts', 'utf8');
 
 const oldHomeHtml = `      \\$\{headerHtml\}
       <main>
-        <h1>The Right Gear | Iconic Cars, Decoded</h1>
+        <h1>The Right Gear | Iconic Cars and Motorbikes Decoded</h1>
         <p>Automotive Intelligence & Provenance for collectible and investment-relevant automobiles.</p>
         <section>
           <h2>Featured Automotive Entities</h2>
@@ -19,7 +19,7 @@ const oldHomeHtml = `      \\$\{headerHtml\}
 const newHomeHtml = `      \\$\{headerHtml\}
       <main>
         <section>
-          <h1>The Right Gear | Iconic Cars, Decoded</h1>
+          <h1>The Right Gear | Iconic Cars and Motorbikes Decoded</h1>
           <p>Automotive intelligence for the cars that matter.</p>
         </section>
         <section>

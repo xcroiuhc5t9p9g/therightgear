@@ -71,14 +71,14 @@ export const WatchlistPage: React.FC<WatchlistPageProps> = ({
 
       {/* Vehicles Grid */}
       {savedVehicles.length === 0 ? (
-        <div className="bg-[#121520] p-12 rounded-2xl border border-[#23293a] text-center space-y-4">
+        <div className="bg-[#121520] p-6 sm:p-12 rounded-2xl border border-[#23293a] text-center space-y-4">
           <Bookmark className="w-12 h-12 text-slate-600 mx-auto" />
           <h2 className="text-lg font-bold text-white">Your Watchlist is currently empty</h2>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
             Add vehicles from the catalog index or detail pages to track their market performance over time.
           </p>
           <button
-            onClick={() => onNavigate('explore')}
+            onClick={() => onNavigate('home')}
             className="px-5 py-2.5 bg-red-600 text-white font-bold text-xs rounded-xl cursor-pointer"
           >
             Explore Catalog

@@ -14,33 +14,23 @@ export interface FooterSection {
 
 const DEFAULT_FOOTER_SECTIONS: FooterSection[] = [
   {
-    id: 'sec-explore',
-    title: 'Explore & Market',
+    id: 'sec-catalogue',
+    title: 'CATALOGUE',
     links: [
-      { id: 'lnk-explore', label: 'Explore Iconic Cars', pageKey: 'explore' },
       { id: 'lnk-market', label: 'Market Intelligence', pageKey: 'market' },
-      { id: 'lnk-compare', label: 'Side-by-Side Compare', pageKey: 'compare' },
-      { id: 'lnk-advisor', label: 'AI Decision Support', pageKey: 'ai-advisor' },
     ],
   },
   {
     id: 'sec-about',
-    title: 'Platform & Provenance',
+    title: 'ABOUT',
     links: [
       { id: 'lnk-about', label: 'About The Right Gear', pageKey: 'about' },
-      { id: 'lnk-methodology', label: 'Data Methodology', pageKey: 'methodology' },
-      { id: 'lnk-partnerships', label: 'Data Partnerships', pageKey: 'data-partnerships' },
-    ],
-  },
-  {
-    id: 'sec-resources',
-    title: 'Legal & Privacy',
-    links: [
+      { id: 'lnk-methodology', label: 'Methodology', pageKey: 'methodology' },
+      { id: 'lnk-contact', label: 'Contact', pageKey: 'contact' },
       { id: 'lnk-privacy', label: 'Privacy Policy', pageKey: 'privacy' },
       { id: 'lnk-terms', label: 'Terms of Use', pageKey: 'terms' },
-      { id: 'lnk-profile', label: 'Account Profile', pageKey: 'profile' },
     ],
-  },
+  }
 ];
 
 const LOCAL_STORAGE_KEY = 'the_right_gear_footer_sections_v1';

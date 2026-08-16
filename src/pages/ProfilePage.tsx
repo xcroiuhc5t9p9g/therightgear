@@ -94,7 +94,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
         <div className="lg:col-span-3 space-y-8">
           {currentTab === 'personal' && (
-            <div className="bg-white rounded-2xl border border-trg-gray-200 p-8">
+            <div className="bg-white rounded-2xl border border-trg-gray-200 p-6 sm:p-8">
                <div className="flex justify-between items-start mb-6 border-b border-trg-gray-100 pb-4">
                  <div>
                    <h2 className="text-xl font-bold text-trg-carbon font-display">Personal Information</h2>
@@ -135,7 +135,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           )}
 
           {currentTab === 'organization' && actualRole === 'corporate_user' && (
-            <div className="bg-white rounded-2xl border border-trg-gray-200 p-8">
+            <div className="bg-white rounded-2xl border border-trg-gray-200 p-6 sm:p-8">
                <div className="flex justify-between items-start mb-6 border-b border-trg-gray-100 pb-4">
                  <div>
                    <h2 className="text-xl font-bold text-trg-carbon font-display">Corporate Profile</h2>

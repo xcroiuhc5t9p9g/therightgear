@@ -39,6 +39,14 @@ export interface UserProfile {
   role: AppRole;
   accountStatus: 'ACTIVE' | 'PENDING' | 'SUSPENDED';
   verificationStatus?: 'NOT_REQUESTED' | 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED'; // for corporate
+  
+  // Onboarding / Profile Type properties
+  profileType?: 'enthusiast' | 'professional' | null;
+  country?: string | null;
+  companyName?: string | null;
+  professionalActivity?: string | null;
+  professionalProfileStatus?: 'unverified' | 'verified' | 'rejected' | null;
+
   createdAt: string;
   updatedAt: string;
   preferences?: Record<string, any>;

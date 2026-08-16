@@ -17,6 +17,7 @@ interface AuthContextType {
   effectiveRole: PreviewRole;
   hasEffectiveCapability: (capability: Capability) => boolean;
   signOut: () => Promise<void>;
+  reloadAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextType>({
   effectiveRole: null,
   hasEffectiveCapability: () => false,
   signOut: async () => {},
+  reloadAuth: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -87,12 +89,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const effectiveRole = previewRole !== null ? previewRole : (actualRole || 'visitor');
 
   const hasEffectiveCapability = (capability: Capability): boolean => {
+    if (currentUser && !currentUser.emailVerified) {
+      return false;
+    }
     const actualHasIt = hasCapability(actualRole, capability);
     if (previewRole) {
       const previewHasIt = hasCapability(previewRole, capability);
       return actualHasIt && previewHasIt;
     }
     return actualHasIt;
+  };
+
+  const reloadAuth = async () => {
+    if (currentUser) {
+      await currentUser.reload();
+      setCurrentUser(firebaseAuth.currentUser);
+    }
   };
 
   const value = {
@@ -107,6 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     effectiveRole,
     hasEffectiveCapability,
     signOut,
+    reloadAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -37,7 +37,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const mainNav = [
     { id: 'home', label: t.nav_home, icon: Home },
-    { id: 'explore', label: t.nav_explore, icon: Compass },
     { id: 'market', label: t.nav_market, icon: TrendingUp },
     { id: 'graph', label: t.nav_graph, icon: Network },
     { id: 'compare', label: t.nav_compare, icon: Scale, badge: compareCount },

@@ -1,11 +1,31 @@
-import { Maker, Model, Generation, VehicleVariant, SearchFilters } from '../types';
-import { TEST_MAKERS, TEST_MODELS, TEST_GENERATIONS, TEST_VARIANTS } from '../data/testCatalogue';
+import { Maker, Model, Generation, VehicleVariant, CanonicalEngine, SearchFilters, CategoryType, SearchResult, SearchIndexEntry, SearchKey, SearchKeyKind } from '../types';
+import { TEST_MAKERS, TEST_MODELS, TEST_GENERATIONS, TEST_VARIANTS, TEST_CANONICAL_ENGINES } from '../data/testCatalogue';
+import { PERSON_FIXTURES } from '../data/uiPeopleFixtures';
+
+
+
+
+
+
+
+
+function normalizeQueryTechnical(query: string): string {
+  return query.toLowerCase().trim().replace(/[-\s]/g, '');
+}
+
+function normalizeQueryStandard(query: string): string {
+  return query.toLowerCase().trim();
+}
 
 export class CatalogueRepository {
   // --- SEARCH ---
   
   // --- CANONICAL ROUTING ---
-  public getCanonicalEntityUrl(type: 'MAKER' | 'MODEL' | 'GENERATION' | 'VARIANT', ids: { makerId?: string, modelId?: string, generationId?: string, variantId?: string }): string {
+  public getCanonicalEntityUrl(type: 'MAKER' | 'MODEL' | 'GENERATION' | 'VARIANT' | 'ENGINE', ids: { makerId?: string, modelId?: string, generationId?: string, variantId?: string, engineId?: string }): string {
+    if (type === 'ENGINE' && ids.engineId) {
+      const e = this.engines.find(eng => eng.id === ids.engineId);
+      return e ? `/engines/${e.slug}` : '';
+    }
     if (type === 'MAKER' && ids.makerId) {
       const m = this.makers.find(mk => mk.id === ids.makerId);
       return m ? `/brands/${m.slug}` : '';
@@ -31,50 +51,67 @@ export class CatalogueRepository {
     return '';
   }
 
-  public search(query: string): any[] {
-    const qLower = query.toLowerCase().trim();
-    if (qLower.length < 2) return [];
+  private searchIndex: SearchIndexEntry[] | null = null;
 
-    const results: any[] = [];
-    
-    // Makers
-    this.makers.filter(m => m.canonical_name.toLowerCase().includes(qLower)).forEach(m => {
-      results.push({
+
+
+
+  private buildSearchIndex(): void {
+    if (this.searchIndex) return;
+
+    this.searchIndex = [];
+
+    // Maker adapter
+    this.makers.forEach(m => {
+      this.searchIndex!.push({
         id: m.id,
+        entityType: 'MAKER',
+        searchKeys: [
+          { value: m.canonical_name, kind: 'CANONICAL_NAME' }
+        ],
+        canonicalUrl: this.getCanonicalEntityUrl('MAKER', { makerId: m.id }),
         title: m.canonical_name,
-        type: 'MAKER',
-        url: this.getCanonicalEntityUrl('MAKER', { makerId: m.id }),
-        makerSlug: m.slug,
-        thumbnail: m.logo_url
+        thumbnail: m.logo_url,
+        makerSlug: m.slug
       });
     });
 
-    // Models
-    this.models.filter(m => m.canonical_name.toLowerCase().includes(qLower)).forEach(m => {
+    // Model adapter
+    this.models.forEach(m => {
       const maker = this.makers.find(mk => mk.id === m.maker_id);
       if (maker) {
-        results.push({
+        this.searchIndex!.push({
           id: m.id,
+          entityType: 'MODEL',
+          searchKeys: [
+            { value: m.canonical_name, kind: 'CANONICAL_NAME' },
+            { value: maker.canonical_name, kind: 'RELATIONAL_CONTEXT' }
+          ],
+          canonicalUrl: this.getCanonicalEntityUrl('MODEL', { modelId: m.id }),
           title: `${maker.canonical_name} ${m.canonical_name}`,
-          type: 'MODEL',
-          url: this.getCanonicalEntityUrl('MODEL', { modelId: m.id }),
           makerSlug: maker.slug,
           modelSlug: m.slug
         });
       }
     });
 
-    // Generations
-    this.generations.filter(g => g.canonical_name.toLowerCase().includes(qLower) || g.generation_code.toLowerCase().includes(qLower)).forEach(g => {
+    // Generation adapter
+    this.generations.forEach(g => {
       const model = this.models.find(m => m.id === g.model_id);
       if (model) {
         const maker = this.makers.find(mk => mk.id === model.maker_id);
         if (maker) {
-          results.push({
+          this.searchIndex!.push({
             id: g.id,
+            entityType: 'GENERATION',
+            searchKeys: [
+              { value: g.canonical_name, kind: 'CANONICAL_NAME' },
+              { value: g.generation_code, kind: 'GENERATION_CODE' },
+              { value: maker.canonical_name, kind: 'RELATIONAL_CONTEXT' },
+              { value: model.canonical_name, kind: 'RELATIONAL_CONTEXT' }
+            ],
+            canonicalUrl: this.getCanonicalEntityUrl('GENERATION', { generationId: g.id }),
             title: `${maker.canonical_name} ${model.canonical_name} · ${g.generation_code}`,
-            type: 'GENERATION',
-            url: this.getCanonicalEntityUrl('GENERATION', { generationId: g.id }),
             makerSlug: maker.slug,
             modelSlug: model.slug,
             generationSlug: g.slug
@@ -83,37 +120,212 @@ export class CatalogueRepository {
       }
     });
 
-    // Variants
-    this.variants.filter(v => v.variant_name.toLowerCase().includes(qLower)).forEach(v => {
+    
+    // Person adapter
+    /* 
+      UNIVERSAL SEARCHABILITY CONTRACT
+      Searchable entity data should be indexed from entity data sources,
+      not manually duplicated in page components.
+      
+      Future searchable entity classes include:
+      MAKER, MODEL, GENERATION, VARIANT, ENGINE, PERSON, ORGANIZATION
+      
+      Future searchable key categories include:
+      canonical names, display names, approved aliases, engine codes,
+      generation codes, chassis codes, platform codes, market designations,
+      alternative designations.
+    */
+    Object.values(PERSON_FIXTURES).forEach(person => {
+      this.searchIndex!.push({
+        id: person.slug, // using slug as ID for UI fixtures
+        entityType: 'PERSON',
+        searchKeys: [
+          { value: person.canonical_name, kind: 'CANONICAL_NAME' }
+        ],
+        canonicalUrl: `/people/${person.slug}`,
+        title: person.canonical_name,
+        thumbnail: person.portrait_url
+      });
+    });
+
+    // Variant adapter
+    
+
+    this.variants.forEach(v => {
       const generation = this.generations.find(g => g.id === v.generation_id);
       if (generation) {
         const model = this.models.find(m => m.id === generation.model_id);
         if (model) {
           const maker = this.makers.find(mk => mk.id === model.maker_id);
           if (maker) {
-            results.push({
+            const keys: SearchKey[] = [
+              { value: v.variant_name, kind: 'CANONICAL_NAME' },
+              { value: generation.generation_code, kind: 'GENERATION_CODE' },
+              { value: maker.canonical_name, kind: 'RELATIONAL_CONTEXT' },
+              { value: model.canonical_name, kind: 'RELATIONAL_CONTEXT' }
+            ];
+
+            if (v.technical_identifiers) {
+              v.technical_identifiers.forEach(id => {
+                keys.push({ value: id, kind: 'TECHNICAL_CODE' });
+              });
+            }
+
+            this.searchIndex!.push({
               id: v.id,
+              entityType: 'VARIANT',
+              searchKeys: keys,
+              canonicalUrl: this.getCanonicalEntityUrl('VARIANT', { variantId: v.id }),
               title: `${maker.canonical_name} ${model.canonical_name} · ${generation.generation_code} · ${v.variant_name}`,
-              type: 'VARIANT',
-              url: this.getCanonicalEntityUrl('VARIANT', { variantId: v.id }),
+              thumbnail: v.hero_image_url,
               makerSlug: maker.slug,
               modelSlug: model.slug,
               generationSlug: generation.slug,
-              variantSlug: v.slug,
-              thumbnail: v.hero_image_url
+              variantSlug: v.slug
             });
           }
         }
       }
     });
+  }
 
-    return results.slice(0, 8);
+  public search(query: string): { results: SearchResult[], discovery: { id: string, url: string, title: string }[] } {
+    const stdQuery = normalizeQueryStandard(query);
+    const techQuery = normalizeQueryTechnical(query);
+    if (stdQuery.length < 2) return { results: [], discovery: [] };
+
+    if (!this.searchIndex) {
+      this.buildSearchIndex();
+    }
+
+    const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return { results: [], discovery: [] };
+
+    const scoredResults: { entry: SearchIndexEntry; score: number }[] = [];
+
+    for (const entry of this.searchIndex!) {
+      let combinedScore = 0;
+      let allTokensCovered = true;
+      let hasOwnIdentityMatch = false;
+
+      // FULL_QUERY_OWN_IDENTITY_PRIORITY & FUZZY_SEARCH
+      // Check full query first on own identity
+      let exactFullMatchScore = 0;
+      for (const key of entry.searchKeys) {
+          if (!key.value || key.kind === 'RELATIONAL_CONTEXT') continue;
+          const isTech = ['TECHNICAL_CODE', 'GENERATION_CODE', 'ENGINE_CODE', 'CHASSIS_CODE', 'PLATFORM_CODE'].includes(key.kind);
+          const normalizedKey = isTech ? normalizeQueryTechnical(key.value) : normalizeQueryStandard(key.value);
+          const fullQ = isTech ? techQuery : stdQuery;
+          if (normalizedKey === fullQ) {
+              exactFullMatchScore = Math.max(exactFullMatchScore, 10);
+          } else if (normalizedKey.startsWith(fullQ)) {
+              exactFullMatchScore = Math.max(exactFullMatchScore, 8);
+          }
+      }
+
+      for (const token of tokens) {
+        const tokenStd = normalizeQueryStandard(token);
+        const tokenTech = normalizeQueryTechnical(token);
+        
+        let bestTokenScore = 0;
+        let tokenHasOwnIdentityMatch = false;
+
+        for (const key of entry.searchKeys) {
+          if (!key.value) continue;
+          const isTech = ['TECHNICAL_CODE', 'GENERATION_CODE', 'ENGINE_CODE', 'CHASSIS_CODE', 'PLATFORM_CODE'].includes(key.kind);
+          const normalizedKey = isTech ? normalizeQueryTechnical(key.value) : normalizeQueryStandard(key.value);
+          const q = isTech ? tokenTech : tokenStd;
+
+          let score = 0;
+          if (normalizedKey === q) {
+            score = key.kind === 'RELATIONAL_CONTEXT' ? 1.5 : 3;
+          } else if (normalizedKey.startsWith(q)) {
+            score = key.kind === 'RELATIONAL_CONTEXT' ? 1 : 2;
+          } else if (normalizedKey.includes(q)) {
+            score = key.kind === 'RELATIONAL_CONTEXT' ? 0.5 : 1;
+          }
+          if (score > bestTokenScore) {
+            bestTokenScore = score;
+            if (key.kind !== 'RELATIONAL_CONTEXT') {
+              tokenHasOwnIdentityMatch = true;
+            }
+          }
+        }
+        
+        if (bestTokenScore === 0) {
+          allTokensCovered = false;
+          break;
+        }
+
+        combinedScore += bestTokenScore;
+        if (tokenHasOwnIdentityMatch) {
+            hasOwnIdentityMatch = true;
+        }
+      }
+
+      let finalScore = exactFullMatchScore > 0 ? exactFullMatchScore + combinedScore : combinedScore;
+
+      if (allTokensCovered && hasOwnIdentityMatch && finalScore > 0) {
+        scoredResults.push({ entry, score: finalScore });
+      }
+    }
+
+    scoredResults.sort((a, b) => b.score - a.score || a.entry.title.localeCompare(b.entry.title));
+
+    const finalResults: SearchResult[] = [];
+    const discovery: { id: string, url: string, title: string }[] = [];
+    
+    // Add models by maker discovery action if a maker is a top match
+    if (scoredResults.length > 0 && scoredResults[0].entry.entityType === 'MAKER') {
+      const bestMaker = scoredResults[0].entry;
+      finalResults.push({
+        id: bestMaker.id,
+        type: bestMaker.entityType,
+        url: bestMaker.canonicalUrl,
+        title: bestMaker.title,
+        makerSlug: bestMaker.makerSlug,
+        thumbnail: bestMaker.thumbnail
+      });
+      discovery.push({
+        id: 'discover_models_' + bestMaker.id,
+        url: '/brands/' + bestMaker.makerSlug + '#models',
+        title: 'Models by ' + bestMaker.title,
+      });
+      
+      // Add the rest
+      finalResults.push(...scoredResults.slice(1).map(r => ({
+        id: r.entry.id,
+        type: r.entry.entityType,
+        url: r.entry.canonicalUrl,
+        title: r.entry.title,
+        thumbnail: r.entry.thumbnail,
+        makerSlug: r.entry.makerSlug,
+        modelSlug: r.entry.modelSlug,
+        generationSlug: r.entry.generationSlug,
+        variantSlug: r.entry.variantSlug
+      })));
+    } else {
+      finalResults.push(...scoredResults.map(r => ({
+        id: r.entry.id,
+        type: r.entry.entityType,
+        url: r.entry.canonicalUrl,
+        title: r.entry.title,
+        thumbnail: r.entry.thumbnail,
+        makerSlug: r.entry.makerSlug,
+        modelSlug: r.entry.modelSlug,
+        generationSlug: r.entry.generationSlug,
+        variantSlug: r.entry.variantSlug
+      })));
+    }
+
+    return { results: finalResults.slice(0, 8), discovery };
   }
 
   private makers: Maker[] = [...TEST_MAKERS];
   private models: Model[] = [...TEST_MODELS];
   private generations: Generation[] = [...TEST_GENERATIONS];
   private variants: VehicleVariant[] = [...TEST_VARIANTS];
+  private engines: CanonicalEngine[] = [...TEST_CANONICAL_ENGINES];
 
   // --- MAKERS ---
   public getMakers(): Maker[] {
@@ -145,6 +357,12 @@ export class CatalogueRepository {
     return [...this.generations];
   }
 
+  public getPeopleByMaker(makerSlug: string) {
+    return Object.values(PERSON_FIXTURES).filter(person => 
+      person.related_organizations?.some(org => org.slug === makerSlug)
+    );
+  }
+
   public getGenerationsByModel(modelIdOrSlug: string): Generation[] {
     return this.generations.filter(g => g.model_id === modelIdOrSlug || g.model_id.endsWith(modelIdOrSlug));
   }
@@ -153,13 +371,46 @@ export class CatalogueRepository {
     return this.generations.find(g => g.slug === generationSlug || g.id === generationSlug);
   }
 
+  // --- ENGINES ---
+  public getEngines(): CanonicalEngine[] {
+    return [...this.engines];
+  }
+
+  public getEngineById(id: string): CanonicalEngine | undefined {
+    return this.engines.find(e => e.id === id);
+  }
+
+  public getEngineBySlug(slug: string): CanonicalEngine | undefined {
+    return this.engines.find(e => e.slug === slug);
+  }
+
+  public getPublicEngineBySlug(slug: string): CanonicalEngine | undefined {
+    const engine = this.getEngineBySlug(slug);
+    if (!engine) return undefined;
+    const catStatus = (engine as any).catalogue_status || (engine as any).catalogueStatus;
+    const datStatus = (engine as any).data_status || (engine as any).dataStatus;
+    if (catStatus === 'PUBLISHED' && isPublicCanonicalFact(datStatus)) {
+      return engine;
+    }
+    return undefined;
+  }
+
+  public getCanonicalEngineForVariant(variantId: string): CanonicalEngine | undefined {
+    const variant = this.variants.find(v => v.id === variantId);
+    if (!variant || !variant.canonical_engine_id) {
+      return undefined;
+    }
+    return this.getEngineById(variant.canonical_engine_id);
+  }
+
   // --- HIERARCHY ---
   public getHierarchy() {
     return {
       makers: this.getMakers(),
       models: this.getModels(),
       generations: this.getGenerations(),
-      variants: this.variants
+      variants: this.variants,
+      engines: this.getEngines()
     };
   }
 
@@ -227,7 +478,7 @@ export function isPublicCanonicalFact(status?: string): boolean {
 
 export function filterVehicleForPublic(vehicle: VehicleVariant): VehicleVariant {
   // If the vehicle's data status is not public canonical, strip factual specs, but keep identity
-  if (!isPublicCanonicalFact(vehicle.data_status)) {
+  if (!isPublicCanonicalFact(vehicle.data_status) && !vehicle.is_ui_fixture) {
     return {
       ...vehicle,
       engine: undefined,

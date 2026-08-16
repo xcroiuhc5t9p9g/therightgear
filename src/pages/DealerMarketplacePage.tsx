@@ -39,7 +39,7 @@ export const DealerMarketplacePage: React.FC<DealerMarketplacePageProps> = ({
         </div>
 
         {(activeRole === 'corporate_user' || activeRole === 'super_admin') && (
-          <button className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center space-x-2 shadow-lg shadow-blue-600/20 cursor-pointer">
+          <button onClick={() => onNavigate('contact')} className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center space-x-2 shadow-lg shadow-blue-600/20 cursor-pointer">
             <Plus className="w-4 h-4" />
             <span>List Vehicle in Network</span>
           </button>

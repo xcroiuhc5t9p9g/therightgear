@@ -1,168 +1,149 @@
-import React from 'react';
-import { Search, Filter, TrendingUp, Calendar, Users, Grid, Database, GitMerge, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, TrendingUp, Calendar, Users, ArrowRight } from 'lucide-react';
 import { catalogueRepository } from '../services/catalogueRepository';
+import { HeroBlock, SectionHeader, ContentCard, EmptyStatePanel, Container } from '../components/ui-blocks';
 
 interface ExplorePageProps {
-  onNavigate: (page: string, params?: Record<string, string>) => void;
+  onNavigate: (page: string, params?: any) => void;
 }
 
 export const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
+  const [query, setQuery] = useState('');
   const makers = catalogueRepository.getMakers();
 
   return (
-    <div className="w-full flex flex-col bg-trg-warm-white">
+    <div className="w-full bg-white">
       {/* 1. HERO */}
-      <section className="bg-white border-b border-trg-gray-200 py-16 md:py-24">
-        <div className="max-w-[1440px] mx-auto px-4 md:px-8 w-full">
-          <p className="text-sm font-semibold tracking-widest text-trg-gray-400 uppercase mb-4">Explore</p>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-trg-carbon mb-6">
-            Find a car. Follow its story.
-          </h1>
-          <p className="text-lg text-trg-gray-500 max-w-3xl mb-10">
-            Explore significant automobiles from around the world through engineering, history, market context, people and connections.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 max-w-3xl">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-trg-gray-400" />
-              <input
-                type="text"
-                placeholder="Search maker, model, generation or variant"
-                className="w-full bg-white text-base text-trg-carbon placeholder-trg-gray-400 pl-12 pr-4 py-3.5 rounded-xl border border-trg-gray-300 shadow-sm focus:outline-none focus:border-trg-red focus:ring-2 focus:ring-trg-red/10 transition-all"
-              />
+      <HeroBlock 
+        title="Catalogue"
+        subtitle="Explore the global knowledge graph of iconic cars and motorcycles."
+      />
+
+      {/* 2. SEARCH PROMPT */}
+      <section className="py-12 border-b border-trg-gray-200">
+        <Container>
+          <div className="max-w-2xl mx-auto relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-trg-gray-400" />
             </div>
-            <button className="flex items-center justify-center gap-2 px-6 py-3.5 bg-trg-gray-100 hover:bg-trg-gray-200 text-trg-carbon font-medium rounded-xl transition-colors whitespace-nowrap">
-              <Filter className="w-4 h-4" /> Advanced Search
-            </button>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && query.trim()) {
+                  onNavigate('search-result', { q: query.trim() });
+                }
+              }}
+              placeholder="Search makers, models, generations, variants..."
+              className="w-full bg-trg-warm-white text-base text-trg-carbon placeholder-trg-gray-400 pl-12 pr-4 py-4 rounded-xl border border-trg-gray-200 focus:outline-none focus:border-trg-red focus:bg-white transition-all shadow-sm"
+            />
           </div>
-        </div>
+        </Container>
       </section>
 
-      {/* Main Content Area */}
-      <div className="max-w-[1440px] mx-auto px-4 md:px-8 w-full py-16 space-y-24">
-        
-        {/* 1. Market Movers */}
-        <section>
-          <div className="flex justify-between items-end mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-trg-carbon tracking-tight mb-2">Market Movers</h2>
-              <p className="text-trg-gray-500">Track recent valuation changes.</p>
-            </div>
-            <button onClick={() => onNavigate('market')} className="text-sm font-medium text-trg-carbon hover:text-trg-red flex items-center gap-1 group">
-              View Market Intelligence <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-          <div className="bg-white rounded-xl border border-trg-gray-200 p-10 text-center flex flex-col items-center justify-center min-h-[200px]">
-            <TrendingUp className="w-8 h-8 text-trg-gray-300 mb-3" />
-            <p className="text-trg-carbon font-medium">Market data integration in progress.</p>
-          </div>
-        </section>
-
-        {/* 2. Explore by Maker */}
-        <section>
-          <h2 className="text-2xl font-bold text-trg-carbon tracking-tight mb-2">Explore by Maker</h2>
-          <p className="text-trg-gray-500 mb-8">Browse the global catalogue by manufacturer.</p>
+      {/* 3. FEATURED MAKERS */}
+      <section className="py-20">
+        <Container>
+          <SectionHeader title="Makers" />
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {makers.slice(0, 12).map(maker => (
               <button 
                 key={maker.id}
                 onClick={() => onNavigate('maker', { makerSlug: maker.slug })}
-                className="flex items-center justify-center p-6 bg-white border border-trg-gray-200 rounded-xl hover:border-trg-gray-400 hover:shadow-sm transition-all"
+                className="flex items-center justify-center p-3 sm:p-6 bg-white border border-trg-gray-200 rounded-xl hover:border-trg-gray-400 hover:shadow-sm transition-all text-center min-h-[44px]"
               >
-                <span className="font-bold text-lg text-trg-carbon">{maker.canonical_name}</span>
+                <span className="font-bold text-base sm:text-lg text-trg-carbon">{maker.canonical_name}</span>
               </button>
             ))}
           </div>
-        </section>
+        </Container>
+      </section>
 
-        {/* 3. Explore by Era */}
-        <section>
-          <h2 className="text-2xl font-bold text-trg-carbon tracking-tight mb-2">Explore by Era</h2>
-          <p className="text-trg-gray-500 mb-8">Discover vehicles from specific decades.</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-            {['1950s', '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', 'Modern Icons'].map(era => (
-              <button 
-                key={era}
-                className="py-4 px-2 text-center rounded-lg bg-white border border-trg-gray-200 hover:border-trg-gray-400 text-trg-carbon font-medium transition-all"
-              >
-                {era}
-              </button>
+      {/* 4. FEATURED MODELS */}
+      <section className="py-20 bg-trg-warm-white border-y border-trg-gray-200">
+        <Container>
+          <SectionHeader title="Featured Models" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+              <ContentCard 
+                key={i}
+                tag="Model"
+                title={`Highlight Model ${i}`}
+                description="This area is reserved for featured vehicles connecting generations and variants."
+              />
             ))}
           </div>
-        </section>
+        </Container>
+      </section>
 
-        {/* 4. Explore by Category */}
-        <section>
-          <h2 className="text-2xl font-bold text-trg-carbon tracking-tight mb-2">Explore by Category</h2>
-          <p className="text-trg-gray-500 mb-8">Browse by vehicle classification.</p>
+      {/* 5. & 6. BY CATEGORY & ERA */}
+      <section className="py-20">
+        <Container className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+          <div>
+            <SectionHeader title="By Category" />
+            <div className="flex flex-wrap gap-3">
+              {['Classics', 'Supercars', 'Homologation', 'Limited Editions', 'Youngtimers'].map(cat => (
+                <button key={cat} onClick={() => onNavigate('search-result', { q: cat })} className="px-5 py-3 bg-white border border-trg-gray-200 rounded-lg text-trg-carbon font-medium hover:border-trg-gray-400 transition-colors min-h-[44px]">
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <SectionHeader title="By Era" />
+            <div className="flex flex-wrap gap-3">
+              {['1950s', '1960s', '1970s', '1980s', '1990s', '2000s'].map(era => (
+                <button key={era} onClick={() => onNavigate('search-result', { q: era })} className="px-5 py-3 bg-white border border-trg-gray-200 rounded-lg text-trg-carbon font-medium hover:border-trg-gray-400 transition-colors min-h-[44px]">
+                  {era}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* 7. DESIGNERS */}
+      <section className="py-20 bg-trg-warm-white border-y border-trg-gray-200 text-center">
+        <Container>
+          <h2 className="text-fluid-h2 font-bold text-trg-carbon tracking-tight mb-8">Designers & Engineers</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {['Classics', 'Youngtimers', 'Supercars', 'Hypercars', 'Homologation Specials', 'Limited Editions', 'Future Classics', 'Motorsport-derived Road Cars'].map(cat => (
-              <button 
-                key={cat}
-                className="flex flex-col p-6 bg-white border border-trg-gray-200 rounded-xl hover:border-trg-gray-400 hover:shadow-sm transition-all text-left"
-              >
-                <span className="font-bold text-lg text-trg-carbon">{cat}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* 5. Auctions & Events */}
-        <section>
-          <h2 className="text-2xl font-bold text-trg-carbon tracking-tight mb-2">Auctions & Events</h2>
-          <p className="text-trg-gray-500 mb-8">Global auction and event intelligence.</p>
-          <div className="bg-white rounded-xl border border-trg-gray-200 p-10 text-center flex flex-col items-center justify-center min-h-[200px]">
-            <Calendar className="w-8 h-8 text-trg-gray-300 mb-3" />
-            <p className="text-trg-carbon font-medium">Event intelligence is currently being integrated.</p>
-          </div>
-        </section>
-
-        {/* 6. Designers & Engineers */}
-        <section>
-          <h2 className="text-2xl font-bold text-trg-carbon tracking-tight mb-2">Designers & Engineers</h2>
-          <p className="text-trg-gray-500 mb-8">Discover the people whose ideas shaped the cars that matter.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map(idx => (
-              <div key={idx} className="bg-white border border-trg-gray-200 rounded-xl p-6 flex flex-col items-center text-center">
-                <div className="w-20 h-20 rounded-full bg-trg-gray-100 mb-4 flex items-center justify-center">
-                  <Users className="w-8 h-8 text-trg-gray-300" />
-                </div>
-                <h3 className="font-bold text-trg-carbon">Person Name</h3>
-                <p className="text-sm text-trg-gray-500">Role / Active Period</p>
+            {['Marcello Gandini', 'Giorgetto Giugiaro', 'Leonardo Fioravanti', 'Gordon Murray'].map(name => (
+              <div key={name} className="flex flex-col items-center justify-center p-3 sm:p-6 bg-white border border-trg-gray-200 rounded-xl min-h-[44px]">
+                <Users className="w-6 h-6 text-trg-gray-400 mb-3" />
+                <span className="font-bold text-trg-carbon">{name}</span>
               </div>
             ))}
           </div>
-        </section>
+        </Container>
+      </section>
 
-        {/* 7. Curated Collections */}
-        <section>
-          <h2 className="text-2xl font-bold text-trg-carbon tracking-tight mb-2">Curated Collections</h2>
-          <p className="text-trg-gray-500 mb-8">Editorial selections of significant vehicles.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {['Homologation Heroes', 'Analogue Supercars', 'The Turbo Era'].map(collection => (
-              <button key={collection} className="group relative aspect-[16/9] rounded-xl overflow-hidden border border-trg-gray-200 flex items-center justify-center bg-trg-graphite">
-                <div className="absolute inset-0 bg-trg-carbon/40 group-hover:bg-trg-carbon/20 transition-all z-10"></div>
-                <h3 className="relative z-20 text-white font-bold text-2xl px-6 text-center">{collection}</h3>
-              </button>
-            ))}
+      {/* 8. MARKET SNAPSHOT PREVIEW */}
+      <section className="py-20">
+        <Container className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div>
+            <SectionHeader title="Market Snapshot" />
+            <EmptyStatePanel 
+              icon={<TrendingUp className="w-8 h-8" />}
+              title="Integration in progress"
+              description="Market intelligence will be populated here soon."
+              action={
+                <button onClick={() => onNavigate('market')} className="mt-4 px-6 py-2 bg-white border border-trg-gray-300 rounded-lg text-sm font-medium hover:bg-trg-gray-100 min-h-[44px]">
+                  View Market
+                </button>
+              }
+            />
           </div>
-        </section>
-
-        {/* 8. Explore its DNA */}
-        <section>
-          <div className="bg-trg-graphite text-white rounded-2xl p-12 text-center border border-trg-carbon">
-            <GitMerge className="w-12 h-12 text-trg-gray-500 mx-auto mb-6" />
-            <h2 className="text-3xl font-bold mb-4">Explore its DNA</h2>
-            <p className="text-trg-gray-400 max-w-2xl mx-auto mb-8">
-              Navigate the complete automotive knowledge graph to discover relationships between entities.
-            </p>
-            <button className="px-6 py-3 bg-white text-trg-carbon font-semibold rounded-lg hover:bg-trg-gray-100 transition-colors">
-              Launch Graph Explorer
-            </button>
+          <div>
+            <SectionHeader title="Upcoming Events" />
+            <EmptyStatePanel 
+              icon={<Calendar className="w-8 h-8" />}
+              title="Calendars coming soon"
+              description="Global auctions and events will be listed here."
+            />
           </div>
-        </section>
-
-      </div>
+        </Container>
+      </section>
     </div>
   );
 };

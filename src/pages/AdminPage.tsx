@@ -1813,12 +1813,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
                   <span>Servizio Email Transactional & Stato Dominio</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Invio automatizzato email di conferma registrazione e attivazione account per <span className="font-mono text-red-300 font-bold">therightgear.app</span> via Resend.
+                  Invio automatizzato email di conferma registrazione e attivazione account per <span className="font-mono text-red-300 font-bold">therightgear.app</span> via Firebase Identity Platform.
                 </p>
               </div>
               <span className="text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-full flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>DOMINIO VERIFICATO (RESEND)</span>
+                <span>DOMINIO VERIFICATO</span>
               </span>
             </div>
 
@@ -1835,7 +1835,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ locale, activeRole, setAct
                 <div className="space-y-2 text-slate-300 text-[11px] leading-relaxed font-mono bg-[#0c0e17] p-3 rounded-lg border border-[#202738]">
                   <div className="flex justify-between"><span className="text-slate-500">Dominio:</span> <span className="text-white font-bold">therightgear.app</span></div>
                   <div className="flex justify-between"><span className="text-slate-500">DNS Provider:</span> <span className="text-sky-400">Cloudflare</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Regione Resend:</span> <span className="text-amber-400">Ireland (eu-west-1)</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Email Delivery:</span> <span className="text-amber-400">Ireland (eu-west-1)</span></div>
                   <div className="flex justify-between"><span className="text-slate-500">DKIM / SPF:</span> <span className="text-emerald-400">✓ Verificati</span></div>
                   <div className="flex justify-between"><span className="text-slate-500">Sender Ufficiale:</span> <span className="text-red-300">noreply@therightgear.app</span></div>
                 </div>

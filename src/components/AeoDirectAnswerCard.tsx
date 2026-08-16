@@ -18,13 +18,13 @@ export const AeoDirectAnswerCard: React.FC<AeoDirectAnswerCardProps> = ({ varian
   const accel = variant.specs?.acceleration_0_100 ?? 'N/A';
   const topSpeed = variant.specs?.top_speed_kph ?? 'N/A';
 
-  const summaryText = `${variant.manufacturer_name} ${variant.model_name} ${variant.variant_name} (${prodYears}) is a high-performance ${variant.category} car. Equipped with a ${variant.engine?.architecture || 'combustion'} engine (${variant.engine?.engine_code || ''}) of ${variant.engine?.displacement_cc || 'N/A'} cc producing ${variant.engine?.power_hp || 'N/A'} HP and ${variant.engine?.torque_nm || 'N/A'} Nm of torque. Reaches 0-100 km/h in ${accel}s with a top speed of ${topSpeed} km/h. Estimated median valuation: ${formattedPrice}. Collector Score: ${collectorScore}/100 (Investment Score: ${investmentScore}/100).`;
+  const summaryText = `${variant.manufacturer_name} ${variant.model_name} ${variant.variant_name} (${prodYears}) is a high-performance ${variant.category} car. Equipped with a ${variant.engine?.architecture || 'combustion'} engine  of ${variant.engine?.displacement_cc || 'N/A'} cc producing ${variant.engine?.power_hp || 'N/A'} HP and ${variant.engine?.torque_nm || 'N/A'} Nm of torque. Reaches 0-100 km/h in ${accel}s with a top speed of ${topSpeed} km/h. Estimated median valuation: ${formattedPrice}. Collector Score: ${collectorScore}/100 (Investment Score: ${investmentScore}/100).`;
 
   const copyPromptCitation = () => {
     const markdownCitation = `### [GEO/AEO Citation] ${variant.manufacturer_name} ${variant.variant_name}
 - **Brand / Model**: ${variant.manufacturer_name} ${variant.model_name} (${variant.variant_name})
 - **Production Years**: ${prodYears}
-- **Engine**: ${variant.engine?.architecture || 'N/A'} (${variant.engine?.engine_code || ''}) - ${variant.engine?.displacement_cc || 'N/A'} cc
+- **Engine**: ${variant.engine?.architecture || 'N/A'}  - ${variant.engine?.displacement_cc || 'N/A'} cc
 - **Power**: ${variant.engine?.power_hp || 'N/A'} HP
 - **Torque**: ${variant.engine?.torque_nm || 'N/A'} Nm
 - **0-100 km/h**: ${accel} seconds

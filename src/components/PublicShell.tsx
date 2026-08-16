@@ -30,26 +30,13 @@ export const PublicShell: React.FC<PublicShellProps> = ({
   authModalReason,
   setAuthModalOpen
 }) => {
-  const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<any[]>([]);
 
-      const { actualRole, previewRole, setPreviewRole } = useAuth();
-  
-  const handleSearch = (q: string) => {
-    setQuery(q);
-    if (q.length >= 2) {
-      const results = catalogueRepository.search(q);
-      setSuggestions(results.map(r => ({
-        ...r,
-        action: () => onNavigate('search-result', r)
-      })));
-    } else {
-      setSuggestions([]);
-    }
-  };
+  const { actualRole, previewRole, setPreviewRole } = useAuth();
+
+
 
   return (
-    <div className="min-h-screen bg-trg-warm-white text-trg-carbon flex flex-col font-sans selection:bg-trg-red selection:text-white">
+    <div className="min-h-dvh bg-white text-trg-carbon flex flex-col font-sans selection:bg-trg-red selection:text-white">
       {actualRole === 'super_admin' && previewRole && previewRole !== 'super_admin' && (
         <div className="bg-trg-red text-white px-4 py-2 text-xs font-bold flex justify-between items-center z-50">
           <span>VIEWING AS {previewRole.replace('_', ' ').toUpperCase()}</span>
@@ -64,11 +51,7 @@ export const PublicShell: React.FC<PublicShellProps> = ({
       <Header
         
         watchlistCount={watchlistCount}
-        onSearch={handleSearch}
         onNavigate={onNavigate}
-        query={query}
-        setQuery={setQuery}
-        suggestions={suggestions}
       />
       
       <main className="flex-1 min-w-0 flex flex-col">

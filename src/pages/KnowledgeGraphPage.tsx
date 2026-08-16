@@ -60,7 +60,7 @@ export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({ locale, 
     const schemas = generateKnowledgeGraphJsonLd(GRAPH_ENTITIES, GRAPH_RELATIONSHIPS);
     injectSeoGeoMetadata({
       title: 'Automotive Knowledge Graph - Grafo Ontologico Verificato | AIP',
-      description: 'Mappa interattiva e verficata delle relazioni tra ingegneri, designer, motori e vetture storiche nel patrimonio automotive europeo.',
+      description: 'Mappa interattiva e verficata delle relazioni tra ingegneri, designer, motori e vetture storiche nel patrimonio automotive.',
       canonicalUrl: pageCanonicalUrl,
       ogType: 'website',
       keywords: ['Knowledge Graph Automotive', 'Ingegneri', 'Designer', 'Motori', 'Ontologia Vetture']

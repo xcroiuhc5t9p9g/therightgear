@@ -48,3 +48,4 @@
 - Bot Fight Mode (Monitor/Enabled cautiously)
 - Security Level: Medium
 - Browser Integrity Check: Enabled
+

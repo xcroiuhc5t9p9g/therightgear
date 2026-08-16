@@ -461,3 +461,36 @@ units
 This file (`/docs/VISUAL_BRAND_GUIDE.md`, Version `0.1.0`) is the canonical source of truth for all visual presentation decisions across The Right Gear.
 
 Do **NOT** alter core brand colors, typography rules, or spacing principles inside individual components without updating this master guide and incrementing its version number.
+
+## OFFICIAL LOGO MASTER
+- **Path**: \`public/brand/the-right-gear-logo-master.png\`
+- **Expected SHA256**: \`b044d4ba77c03e503fbb2545411ba4fe8157f0d082ec63191560f98e1e5d65af\`
+- **Expected Dimensions**: \`1184 × 159\`
+- **Constraint**: The master is immutable.
+- **Constraint**: Production builds must fail if its integrity check fails.
+
+## Maker Logo Asset Policy
+
+- **Wikimedia-first policy**: The primary automatic source for all Maker logos is the Wikimedia ecosystem.
+- **Wikidata entity resolution**: Maker logo resolution must begin with resolving the correct Maker identity via Wikidata. No brand-name string matching fallbacks.
+- **P154 logo image**: When a Wikidata entity is resolved, use property P154 (logo image) to find the primary brand asset.
+- **Wikimedia Commons media acquisition**: The referenced P154 media file must be retrieved from Wikimedia Commons. SVG format must be preserved when available.
+- **Official Maker source as secondary fallback**: If Wikimedia resolution fails or returns an invalid asset, an official Maker-provided source acts as the secondary automated fallback provider.
+- **Automatic workflow**: Resolving Maker logos is fully automated.
+- **No normal manual editorial logo management**: Editorial staff must NOT manually search, upload, or manage normal Maker logos on a brand-by-brand basis. Human intervention is reserved strictly for exceptional corrections.
+- **No permanent external hotlinking**: External assets are acquired, validated, and cached inside The Right Gear's controlled asset storage. UI consumers must use the internal TRG asset URL.
+- **Controlled TRG asset URL**: The final state of a resolved logo is a stable, controlled internal asset URL.
+- **Safe no-logo fallback**: If all providers fail to produce a valid asset (asset_status = UNAVAILABLE), the system fails safely and the UI renders a clean text-only identity. No broken image icons or placeholder graphics.
+- **One shared Maker asset source**: The resolved logo asset serves as the single source of truth for all UI consumers across the application (Maker pages, Search, directories, cards, etc.). No component-specific logo logic.
+
+## Global UI Surface & Typography Contract
+- White is the universal primary public UI surface.
+- Hierarchy comes from typography, spacing, alignment, borders and dividers.
+- Gray backgrounds are not the normal separation mechanism.
+- Meaningful text uses readable Carbon / Graphite tones.
+- Light gray is reserved mainly for borders, dividers, disabled states and
+  decorative details.
+- Knowledge-page typography remains compact.
+- TRG Red is a selective accent.
+
+If an element can be separated using spacing, typography or a divider, do not give it a different background.

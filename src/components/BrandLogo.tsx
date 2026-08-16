@@ -12,7 +12,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({ variant = 'light-bg', clas
     <img 
       src={src} 
       alt="The Right Gear" 
-      className={`w-auto h-auto object-contain ${className}`}
+      className={`${className || "w-auto h-auto"} object-contain`}
       referrerPolicy="no-referrer"
       width={1184}
       height={159}

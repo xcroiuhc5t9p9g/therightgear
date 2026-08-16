@@ -2,8 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { HomePage } from './pages/HomePage';
+import { CarsPage } from './pages/CarsPage';
+import { MotorcyclesPage } from './pages/MotorcyclesPage';
+import { EventsPage } from './pages/EventsPage';
 import { ExplorePage } from './pages/ExplorePage';
+import { MakerDetailPage } from './pages/MakerDetailPage';
+import { ModelDetailPage } from './pages/ModelDetailPage';
 import { VehicleDetailPage } from './pages/VehicleDetailPage';
+import EngineDetailPage from './pages/EngineDetailPage';
 import { MarketIntelligencePage } from './pages/MarketIntelligencePage';
 import { KnowledgeGraphPage } from './pages/KnowledgeGraphPage';
 import { ComparePage } from './pages/ComparePage';
@@ -14,10 +20,14 @@ import { WatchlistPage } from './pages/WatchlistPage';
 import { AdminPage } from './pages/AdminPage';
 import { ModelTemplatesPage } from './pages/ModelTemplatesPage';
 import { EntityDetailPage } from './pages/EntityDetailPage';
-import { RegisterPage } from './pages/RegisterPage';
+import { AuthPage } from './pages/AuthPage';
+import { OnboardingPage } from './pages/OnboardingPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ImportLabPage } from './pages/ImportLabPage';
 import { AboutPage } from './pages/AboutPage';
+import { FAQPage } from "./pages/FAQPage";
 
 import { ContactPage } from './pages/ContactPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
@@ -25,6 +35,9 @@ import { TermsOfUsePage } from './pages/TermsOfUsePage';
 
 import { MethodologyPage } from './pages/MethodologyPage';
 import { DataPartnershipsPage } from './pages/DataPartnershipsPage';
+import { PeoplePrototypePage } from './pages/PeoplePrototypePage';
+import { PersonPage } from "./pages/PersonPage";
+import { NotFoundPage } from './pages/NotFoundPage';
 import { AuthPromptModal, AuthPromptReason } from './components/AuthPromptModal';
 import { Footer } from './components/Footer';
 
@@ -44,6 +57,9 @@ export function App() {
   const setActiveRole = (role: UserRole) => { console.log('Mock setActiveRole called:', role); };
   const [currentPage, setCurrentPage] = useState<string>('market');
   const [selectedVehicleSlug, setSelectedVehicleSlug] = useState<string>('bmw-m3-sport-evolution');
+  const [selectedPersonSlug, setSelectedPersonSlug] = useState<string>("");
+  const [selectedMakerSlug, setSelectedMakerSlug] = useState<string>('');
+  const [selectedModelSlug, setSelectedModelSlug] = useState<string>('');
   const [selectedEntitySlug, setSelectedEntitySlug] = useState<string>('nicola-materazzi');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -52,8 +68,8 @@ export function App() {
   const [authModalReason, setAuthModalReason] = useState<AuthPromptReason>('general');
 
   // Watchlist & Compare state
-  const [watchlistIds, setWatchlistIds] = useState<string[]>(['bmw-m3-e30-sport-evolution', 'bmw-m3-e30-2-3']);
-  const [compareIds, setCompareIds] = useState<string[]>(['bmw-m3-e30-sport-evolution', 'bmw-m3-e30-evolution-2']);
+  const [watchlistIds, setWatchlistIds] = useState<string[]>([]);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
 
   // URL Path Synchronizer for SEO / Clean URLs
   const parseLocation = () => {
@@ -64,8 +80,35 @@ export function App() {
     if (parts.length === 0 || path === '/') {
       setCurrentPage('home');
     } else if (parts[0] === 'brands' && parts[1]) {
-      setCurrentPage('explore');
-      setSearchQuery(parts[1]);
+      setCurrentPage('brands');
+      setSelectedMakerSlug(parts[1]);
+    } else if (parts[0] === 'cars' && parts.length === 1) {
+      setCurrentPage('cars');
+    } else if (parts[0] === 'motorcycles' && parts.length === 1) {
+      setCurrentPage('motorcycles');
+    } else if (parts[0] === 'events' && parts.length === 1) {
+      setCurrentPage('events');
+    } else if (parts[0] === 'motorbikes' && parts.length === 1) {
+      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/motorcycles');
+      setCurrentPage('motorcycles');
+    } else if (parts[0] === 'cars' && parts.length === 1) {
+      setCurrentPage('cars');
+    } else if (parts[0] === 'motorcycles' && parts.length === 1) {
+      setCurrentPage('motorcycles');
+    } else if (parts[0] === 'events' && parts.length === 1) {
+      setCurrentPage('events');
+    } else if (parts[0] === 'motorbikes' && parts.length === 1) {
+      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/motorcycles');
+      setCurrentPage('motorcycles');
+    } else if (parts[0] === 'cars' && parts.length === 1) {
+      setCurrentPage('cars');
+    } else if (parts[0] === 'motorcycles' && parts.length === 1) {
+      setCurrentPage('motorcycles');
+    } else if (parts[0] === 'events' && parts.length === 1) {
+      setCurrentPage('events');
+    } else if (parts[0] === 'motorbikes' && parts.length === 1) {
+      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/motorcycles');
+      setCurrentPage('motorcycles');
     } else if (parts[0] === 'cars' && parts[1]) {
       if (parts.length === 2) {
         // Check if parts[1] is a variant slug first
@@ -88,10 +131,17 @@ export function App() {
           setCurrentPage('explore');
           setSearchQuery(parts[1]);
         }
-      } else if (parts.length === 3) {
+            } else if (parts.length === 3) {
         // /cars/:makerSlug/:modelSlug
-        setCurrentPage('explore');
-        setSearchQuery(parts[2]);
+        const model = catalogueRepository.getModelBySlug(parts[1], parts[2]);
+        if (model) {
+          setCurrentPage('model');
+          setSelectedMakerSlug(parts[1]);
+          setSelectedModelSlug(parts[2]);
+        } else {
+          setCurrentPage('explore');
+          setSearchQuery(parts[2]);
+        }
       } else if (parts.length === 4) {
         // /cars/:makerSlug/:modelSlug/:generationSlug
         setCurrentPage('explore');
@@ -118,8 +168,20 @@ export function App() {
           window.history.replaceState({ page: 'detail', slug: matchedVariant.slug }, '', canonicalUrl);
         }
       }
+    } else if (parts[0] === 'people') {
+      if (parts[1] === 'designers' || parts[1] === 'engineers' || parts[1] === 'racing') {
+        setCurrentPage('people-prototype');
+      } else if (parts[1]) {
+        setCurrentPage('person');
+        setSelectedPersonSlug(parts[1]);
+      } else {
+        setCurrentPage('people-prototype');
+      }
     } else if (parts[0] === 'entity' && parts[1]) {
       setCurrentPage('entity');
+      setSelectedEntitySlug(parts[1]);
+    } else if (parts[0] === 'engines' && parts[1]) {
+      setCurrentPage('engine');
       setSelectedEntitySlug(parts[1]);
     } else if ((parts[0] === 'category' || parts[0] === 'manufacturer') && parts[1]) {
       setCurrentPage('explore');
@@ -140,22 +202,43 @@ export function App() {
       setCurrentPage('import-lab');
     } else if (parts[0] === 'super_admin') {
       setCurrentPage('super_admin');
-    } else if (parts[0] === 'register' || parts[0] === 'login') {
-      setCurrentPage('register');
+    
+    } else if (parts[0] === 'auth') {
+      setCurrentPage('auth');
+    } else if (parts[0] === 'onboarding') {
+      setCurrentPage('onboarding');
+    } else if (parts[0] === 'register') {
+      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/auth?mode=signup');
+      setCurrentPage('auth');
+    } else if (parts[0] === 'login') {
+      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/auth?mode=signin');
+      setCurrentPage('auth');
+    } else if (parts[0] === 'verify-email') {
+      setCurrentPage('verify-email');
+    } else if (parts[0] === 'forgot-password') {
+      setCurrentPage('forgot-password');
+
     } else if (parts[0] === 'profile') {
       setCurrentPage('profile');
     } else if (parts[0] === 'about') {
       setCurrentPage('about');
+    } else if (parts[0] === 'faq') {
+      setCurrentPage('faq');
     } else if (parts[0] === 'methodology') {
       setCurrentPage('methodology');
     } else if (parts[0] === 'data-partnerships') {
       setCurrentPage('data-partnerships');
     } else if (parts[0] === 'explore' || parts[0] === 'catalog') {
-      setCurrentPage('explore');
+      if (typeof window !== 'undefined') window.history.replaceState({ page: 'home' }, '', '/');
+      setCurrentPage('home');
     } else if (parts[0] === 'market') {
       setCurrentPage('market');
+    } else if (['contact', 'privacy', 'terms'].includes(parts[0])) {
+      setCurrentPage(parts[0]);
+    } else {
+      setCurrentPage('404');
     }
-  };
+    }
 
   useEffect(() => {
     parseLocation();
@@ -207,9 +290,18 @@ export function App() {
       handleOpenAuthModal(page === 'watchlist' ? 'watchlist' : 'compare');
       return;
     }
+    if (page === 'search-result' && params?.url) {
+      if (typeof window !== 'undefined') {
+        window.history.pushState(null, '', params.url);
+        parseLocation();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+
     setCurrentPage(page);
 
-    let newPath = '/explore';
+    let newPath = '/';
 
     if (page === 'detail' && slug) {
       if (slug.includes('/')) {
@@ -231,12 +323,21 @@ export function App() {
           newPath = `/cars/variant/${slug}`;
         }
       }
-    } else if (page === 'search-result') {
-      newPath = params.url;
     } else if (page === 'brands') {
       newPath = `/brands/${slug}`;
+      setSelectedMakerSlug(slug);
+    } else if (page === 'cars') {
+      newPath = '/cars';
+    } else if (page === 'motorcycles') {
+      newPath = '/motorcycles';
+    } else if (page === 'events') {
+      newPath = '/events';
+    } else if (page === 'market') {
+      newPath = '/market';
     } else if (page === 'model') {
-      newPath = `/cars/${slug}`;
+      newPath = `/cars/${params?.makerSlug || 'unknown'}/${params?.modelSlug || slug}`;
+      setSelectedMakerSlug(params?.makerSlug || '');
+      setSelectedModelSlug(params?.modelSlug || slug);
     } else if (page === 'generation') {
       newPath = `/cars/${slug}`;
     } else if (page === 'entity' && slug) {
@@ -255,7 +356,19 @@ export function App() {
     } else if (page === 'import-lab') {
       newPath = '/editor/import-lab';
     } else if (page === 'register') {
-      newPath = '/register';
+      newPath = '/auth?mode=signup';
+      setCurrentPage('auth');
+    } else if (page === 'login') {
+      newPath = '/auth?mode=signin';
+      setCurrentPage('auth');
+    } else if (page === 'auth') {
+      newPath = (params && params.mode) ? `/auth?mode=${params.mode}` : '/auth';
+    } else if (page === 'onboarding') {
+      newPath = '/onboarding';
+    } else if (page === 'verify-email') {
+      newPath = '/verify-email';
+    } else if (page === 'forgot-password') {
+      newPath = '/forgot-password';
     } else if (page === 'profile') {
       newPath = '/profile';
     } else if (page === 'profile/organization') {
@@ -280,8 +393,20 @@ export function App() {
       newPath = '/dealer-portal';
     } else if (page === 'home') {
       newPath = '/';
-    } else if (page === 'market' || page === 'explore') {
-      newPath = '/explore';
+    } else if (page === 'engine') {
+      newPath = `/engines/${slug}`;
+      setSelectedEntitySlug(slug);
+    } else if (page === 'person') {
+      newPath = `/people/${slug}`;
+      setSelectedPersonSlug(slug);
+    } else if (page === 'people-prototype') {
+      newPath = `/people/${params?.category || ''}`;
+    } else if (page === 'market') {
+      newPath = '/market';
+    } else if (page === 'explore') {
+      page = 'home';
+      setCurrentPage('home');
+      newPath = '/';
     }
 
     if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
@@ -291,10 +416,6 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSearchHeader = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage('explore');
-  };
 
 
 
@@ -312,8 +433,27 @@ export function App() {
           {currentPage === 'home' && (
             <HomePage onNavigate={handleNavigate} />
           )}
-          {(currentPage === 'explore' || currentPage === 'catalog' || currentPage === 'templates' || currentPage === 'brands' || currentPage === 'maker' || currentPage === 'model' || currentPage === 'generation') && (
+          {currentPage === 'cars' && (
+            <CarsPage onNavigate={handleNavigate} />
+          )}
+          {currentPage === 'motorcycles' && (
+            <MotorcyclesPage onNavigate={handleNavigate} />
+          )}
+          {currentPage === 'events' && (
+            <EventsPage onNavigate={handleNavigate} />
+          )}
+          {(currentPage === 'explore' || currentPage === 'catalog' || currentPage === 'templates' || currentPage === 'maker' || currentPage === 'generation') && (
             <ExplorePage onNavigate={handleNavigate} />
+          )}
+          {currentPage === 'brands' && (
+            <MakerDetailPage makerSlug={selectedMakerSlug} onNavigate={handleNavigate} />
+          )}
+          {currentPage === 'model' && (
+            <ModelDetailPage
+              makerSlug={selectedMakerSlug}
+              modelSlug={selectedModelSlug}
+              onNavigate={handleNavigate}
+            />
           )}
           {currentPage === 'market' && (
             <MarketIntelligencePage onNavigate={handleNavigate} />
@@ -344,6 +484,12 @@ export function App() {
               onNavigate={handleNavigate}
               locale={locale}
             />
+          )}
+          {currentPage === 'person' && (
+            <PersonPage slug={selectedPersonSlug} onNavigate={handleNavigate} />
+          )}
+          {currentPage === 'people-prototype' && (
+            <PeoplePrototypePage onNavigate={handleNavigate} />
           )}
           {currentPage === 'ai-advisor' && (
             <AiAdvisorPage
@@ -393,6 +539,12 @@ export function App() {
               <ImportLabPage />
             </RequireAuth>
           )}
+          {currentPage === 'engine' && (
+            <EngineDetailPage
+              engineSlug={selectedEntitySlug}
+              onNavigate={handleNavigate}
+            />
+          )}
           {currentPage === 'entity' && (
             <EntityDetailPage
               entitySlug={selectedEntitySlug}
@@ -401,13 +553,21 @@ export function App() {
               onSelectVehicle={setSelectedVehicleSlug}
             />
           )}
-          {currentPage === 'register' && (
-            <RegisterPage
-              locale={locale}
-              activeRole={activeRole}
-              setActiveRole={setActiveRole}
+          {currentPage === 'verify-email' && (
+            <VerifyEmailPage onNavigate={handleNavigate} />
+          )}
+          {currentPage === 'forgot-password' && (
+            <ForgotPasswordPage onNavigate={handleNavigate} />
+          )}
+          {currentPage === 'auth' && (
+            <AuthPage
               onNavigate={handleNavigate}
             />
+          )}
+          {currentPage === 'onboarding' && (
+            <RequireAuth onNavigate={handleNavigate}>
+              <OnboardingPage onNavigate={handleNavigate} />
+            </RequireAuth>
           )}
           {(currentPage === 'profile' || currentPage === 'profile/organization') && (
             <RequireAuth onNavigate={handleNavigate}>
@@ -424,6 +584,9 @@ export function App() {
           {currentPage === 'about' && (
             <AboutPage onNavigate={handleNavigate} />
           )}
+          {currentPage === 'faq' && (
+            <FAQPage onNavigate={handleNavigate} />
+          )}
           
           {currentPage === 'contact' && (
             <ContactPage onNavigate={handleNavigate} />
@@ -436,6 +599,9 @@ export function App() {
           )}
           {currentPage === 'methodology' && (
             <MethodologyPage onNavigate={handleNavigate} />
+          )}
+          {currentPage === '404' && (
+            <NotFoundPage onNavigate={handleNavigate} />
           )}
           {currentPage === 'data-partnerships' && (
             <DataPartnershipsPage

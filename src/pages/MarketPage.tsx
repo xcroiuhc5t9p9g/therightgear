@@ -107,7 +107,7 @@ export const MarketPage: React.FC<MarketPageProps> = ({
       ? `/category/${selectedCategory.toLowerCase().replace(/\s+/g, '-')}`
       : selectedManufacturer !== 'All'
       ? `/manufacturer/${selectedManufacturer.toLowerCase().replace(/\s+/g, '-')}`
-      : '/explore';
+      : '/';
 
     injectSeoGeoMetadata({
       title: `${subtitle} - Automotive Intelligence Platform (therightgear.app)`,
@@ -170,7 +170,7 @@ export const MarketPage: React.FC<MarketPageProps> = ({
       <SlideshowBlock activeRole={activeRole} onNavigate={onNavigate} />
 
       {/* Section Navigation Tabs */}
-      <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-2 border-b border-[#202738]">
+      <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-2 border-b border-trg-gray-100">
         {[
           { id: 'catalog', label: `Database & Catalog (${filteredVehicles.length})`, icon: Database },
           { id: 'intelligence', label: 'Market Intelligence & Trends', icon: TrendingUp },
@@ -184,8 +184,8 @@ export const MarketPage: React.FC<MarketPageProps> = ({
               onClick={() => setActiveMarketTab(tab.id as any)}
               className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? 'bg-red-600 text-white shadow-md shadow-red-600/10'
-                  : 'bg-[#171b28] text-slate-300 hover:bg-[#202638] border border-[#262f44]'
+                  ? 'bg-red-600 text-trg-carbon shadow-md shadow-red-600/10'
+                  : 'bg-trg-gray-50 text-trg-gray-500 hover:bg-trg-gray-100 border border-trg-gray-100'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -200,17 +200,17 @@ export const MarketPage: React.FC<MarketPageProps> = ({
         <div className="space-y-4">
           
           {/* Controls & Filter Bar */}
-          <div className="bg-[#121520] p-4 rounded-2xl border border-[#23293a] flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="bg-white p-4 rounded-2xl border border-trg-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
             
             {/* Search Input */}
             <div className="flex-1 relative flex items-center">
-              <Search className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Search className="absolute left-3.5 w-4 h-4 text-trg-gray-400 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by brand, model, variant or specs..."
-                className="w-full bg-[#171b28] text-xs text-white placeholder-slate-500 pl-10 pr-4 py-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500"
+                className="w-full bg-trg-gray-50 text-xs text-trg-carbon placeholder-slate-500 pl-10 pr-4 py-2.5 rounded-xl border border-trg-gray-100 focus:outline-none focus:border-red-500"
               />
             </div>
 
@@ -219,7 +219,7 @@ export const MarketPage: React.FC<MarketPageProps> = ({
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="bg-[#171b28] text-xs text-red-300 font-bold px-3 py-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 cursor-pointer"
+                className="bg-trg-gray-50 text-xs text-red-300 font-bold px-3 py-2.5 rounded-xl border border-trg-gray-100 focus:outline-none focus:border-red-500 cursor-pointer"
               >
                 {categories.map((c) => (
                   <option key={c} value={c}>{c === 'All' ? 'All Categories' : c}</option>
@@ -229,7 +229,7 @@ export const MarketPage: React.FC<MarketPageProps> = ({
               <select
                 value={selectedManufacturer}
                 onChange={(e) => setSelectedManufacturer(e.target.value)}
-                className="bg-[#171b28] text-xs text-slate-200 font-bold px-3 py-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 cursor-pointer"
+                className="bg-trg-gray-50 text-xs text-trg-carbon font-bold px-3 py-2.5 rounded-xl border border-trg-gray-100 focus:outline-none focus:border-red-500 cursor-pointer"
               >
                 <option value="All">All Manufacturers</option>
                 {intelMakers.map((m) => (
@@ -244,7 +244,7 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                   setItemsPerPage(Number(e.target.value));
                   setPage(1);
                 }}
-                className="bg-[#171b28] text-xs text-amber-300 font-bold px-3 py-2.5 rounded-xl border border-[#262f44] focus:outline-none focus:border-red-500 cursor-pointer"
+                className="bg-trg-gray-50 text-xs text-amber-300 font-bold px-3 py-2.5 rounded-xl border border-trg-gray-100 focus:outline-none focus:border-red-500 cursor-pointer"
                 title="Results per page"
               >
                 <option value={25}>25 results / pag</option>
@@ -253,17 +253,17 @@ export const MarketPage: React.FC<MarketPageProps> = ({
               </select>
 
               {/* View toggle */}
-              <div className="flex items-center bg-[#171b28] border border-[#262f44] rounded-xl p-1 shrink-0">
+              <div className="flex items-center bg-trg-gray-50 border border-trg-gray-100 rounded-xl p-1 shrink-0">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-red-600 text-trg-carbon' : 'text-trg-gray-400 hover:text-trg-carbon'}`}
                   title="Grid Card View"
                 >
                   <Grid className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setViewMode('table')}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-red-600 text-trg-carbon' : 'text-trg-gray-400 hover:text-trg-carbon'}`}
                   title="Financial Table View"
                 >
                   <List className="w-4 h-4" />
@@ -290,11 +290,11 @@ export const MarketPage: React.FC<MarketPageProps> = ({
 
           {/* TABLE VIEW */}
           {viewMode === 'table' && (
-            <div className="bg-[#121520] rounded-2xl border border-[#23293a] overflow-hidden shadow-xl">
+            <div className="bg-white rounded-2xl border border-trg-gray-100 overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-[#161a26] text-slate-400 uppercase tracking-wider font-mono border-b border-[#232a3d]">
+                    <tr className="bg-white text-trg-gray-400 uppercase tracking-wider font-mono border-b border-trg-gray-100">
                       <th className="p-3.5 font-bold">Vehicle</th>
                       <th className="p-3.5 font-bold">Category</th>
                       <th className="p-3.5 font-bold">Year</th>
@@ -306,19 +306,19 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                   </thead>
                   <tbody className="divide-y divide-[#1e2434]">
                     {paginatedVehicles.map((v) => (
-                      <tr key={v.id} className="hover:bg-[#171c2b] transition-colors">
+                      <tr key={v.id} className="hover:bg-trg-gray-50 transition-colors">
                         <td className="p-3.5">
                           <div className="flex items-center space-x-3">
-                            <img src={v.hero_image_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 border border-[#232a3d]" />
+                            <img src={v.hero_image_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 border border-trg-gray-100" />
                             <div>
-                              <div className="font-extrabold text-white text-sm">{v.manufacturer_name} {v.model_name}</div>
-                              <div className="text-[11px] text-slate-400">{v.variant_name}</div>
+                              <div className="font-extrabold text-trg-carbon text-sm">{v.manufacturer_name} {v.model_name}</div>
+                              <div className="text-[11px] text-trg-gray-400">{v.variant_name}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="p-3.5 font-bold text-slate-300">{v.category}</td>
-                        <td className="p-3.5 font-mono text-slate-300">{v.model_year_from}</td>
-                        <td className="p-3.5 font-mono text-slate-300">{v.production_total ? `${v.production_total} units` : 'N/A'}</td>
+                        <td className="p-3.5 font-bold text-trg-gray-500">{v.category}</td>
+                        <td className="p-3.5 font-mono text-trg-gray-500">{v.model_year_from}</td>
+                        <td className="p-3.5 font-mono text-trg-gray-500">{v.production_total ? `${v.production_total} units` : 'N/A'}</td>
                         <td className="p-3.5 font-mono font-bold text-emerald-400 text-sm">
                           {activeRole === 'visitor' ? (
                             <button
@@ -326,7 +326,7 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                                 if (onOpenAuthModal) onOpenAuthModal('valuation');
                                 else onNavigate('register');
                               }}
-                              className="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-slate-900 border border-red-500/30 text-red-300 text-xs cursor-pointer hover:border-red-400"
+                              className="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-trg-gray-50 border border-red-500/30 text-red-300 text-xs cursor-pointer hover:border-red-400"
                               title="Register to unlock transparent valuation"
                             >
                               <span className="filter blur-[3.5px] select-none">€ 250,000</span>
@@ -345,7 +345,7 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                               onSelectVehicle(v.slug);
                               onNavigate('detail', v.slug);
                             }}
-                            className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-bold text-[11px] hover:bg-red-500 cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg bg-red-600 text-trg-carbon font-bold text-[11px] hover:bg-red-500 cursor-pointer"
                           >
                             Open Datasheet
                           </button>
@@ -360,11 +360,11 @@ export const MarketPage: React.FC<MarketPageProps> = ({
 
           {/* Results Range Indicator & Next/Prev Controls */}
           {filteredVehicles.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#1f2638] bg-[#121520] p-4 rounded-2xl border border-[#23293a]">
-              <div className="text-xs text-slate-300 font-mono flex items-center space-x-2">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-trg-gray-100 bg-white p-4 rounded-2xl border border-trg-gray-100">
+              <div className="text-xs text-trg-gray-500 font-mono flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>
-                  Showing <strong className="text-white">{(page - 1) * itemsPerPage + 1}</strong> - <strong className="text-white">{Math.min(page * itemsPerPage, filteredVehicles.length)}</strong> of <strong className="text-red-400 font-bold">{filteredVehicles.length}</strong> results
+                  Showing <strong className="text-trg-carbon">{(page - 1) * itemsPerPage + 1}</strong> - <strong className="text-trg-carbon">{Math.min(page * itemsPerPage, filteredVehicles.length)}</strong> of <strong className="text-red-400 font-bold">{filteredVehicles.length}</strong> results
                 </span>
               </div>
 
@@ -372,9 +372,9 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                 {page > 1 && (
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
-                    className="px-4 py-2 rounded-xl bg-[#171c28] border border-[#262f44] text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer hover:border-slate-500"
+                    className="px-4 py-2 rounded-xl bg-white border border-trg-gray-100 text-trg-gray-500 hover:text-trg-carbon text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer hover:border-slate-500"
                   >
-                    <ChevronLeft className="w-4 h-4 text-slate-400" />
+                    <ChevronLeft className="w-4 h-4 text-trg-gray-400" />
                     <span>Previous {itemsPerPage} results</span>
                   </button>
                 )}
@@ -382,10 +382,10 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                 {page < totalPages && (
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer shadow-lg shadow-red-600/20 active:scale-95"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-trg-carbon text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer shadow-lg shadow-red-600/20 active:scale-95"
                   >
                     <span>Next {Math.min(itemsPerPage, filteredVehicles.length - page * itemsPerPage)} results</span>
-                    <ChevronRight className="w-4 h-4 text-white" />
+                    <ChevronRight className="w-4 h-4 text-trg-carbon" />
                   </button>
                 )}
               </div>
@@ -398,16 +398,16 @@ export const MarketPage: React.FC<MarketPageProps> = ({
       {/* TAB 2: MARKET INTELLIGENCE & TRENDS */}
       {activeMarketTab === 'intelligence' && (
         <div className="space-y-6">
-          <div className="bg-[#121520] p-8 rounded-2xl border border-[#23293a] text-center space-y-4">
+          <div className="bg-white p-8 rounded-2xl border border-trg-gray-100 text-center space-y-4">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 mb-1">
               <AlertTriangle className="w-6 h-6" />
             </div>
-            <h2 className="text-xl font-bold text-white tracking-wide">INSUFFICIENT DATA</h2>
-            <p className="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
+            <h2 className="text-xl font-bold text-trg-carbon tracking-wide">INSUFFICIENT DATA</h2>
+            <p className="text-xs text-trg-gray-400 max-w-lg mx-auto leading-relaxed">
               There are currently 0 verified Market Price Observations, Transactions, Listings, Snapshots, or Indices in the canonical database.
               Market metrics and valuation trends require verified transaction evidence and are never simulated or fabricated.
             </p>
-            <div className="pt-2 text-[11px] font-mono text-slate-500 border-t border-[#1f2638] max-w-md mx-auto">
+            <div className="pt-2 text-[11px] font-mono text-trg-gray-400 border-t border-trg-gray-100 max-w-md mx-auto">
               MarketPriceObservations: 0 | MarketTransactions: 0 | MarketListings: 0 | MarketSnapshots: 0 | MarketIndices: 0
             </div>
           </div>
@@ -416,13 +416,13 @@ export const MarketPage: React.FC<MarketPageProps> = ({
 
       {/* TAB 3: MODEL MATRICES & TEMPLATES */}
       {activeMarketTab === 'templates' && (
-        <div className="bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-6">
-          <div className="border-b border-[#222838] pb-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="bg-white p-6 rounded-2xl border border-trg-gray-100 space-y-6">
+          <div className="border-b border-trg-gray-100 pb-4">
+            <h2 className="text-lg font-bold text-trg-carbon flex items-center gap-2">
               <Award className="w-5 h-5 text-red-400" />
               <span>Model, Limited Series & Homologation Matrix</span>
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-trg-gray-400 mt-1">
               Complete register of technical specs and production volumes for iconic models.
             </p>
           </div>
@@ -435,25 +435,25 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                   onSelectVehicle(v.slug);
                   onNavigate('detail', v.slug);
                 }}
-                className="p-5 rounded-2xl bg-[#161a26] border border-[#242c3f] hover:border-red-500/40 transition-all cursor-pointer space-y-3"
+                className="p-5 rounded-2xl bg-white border border-trg-gray-100 hover:border-red-500/40 transition-all cursor-pointer space-y-3"
               >
                 <div className="flex items-center space-x-3">
-                  <img src={v.hero_image_url} alt="" className="w-14 h-14 rounded-xl object-cover border border-[#293246]" />
+                  <img src={v.hero_image_url} alt="" className="w-14 h-14 rounded-xl object-cover border border-trg-gray-200" />
                   <div>
                     <span className="text-[10px] font-bold font-mono text-red-400 uppercase">{v.category}</span>
-                    <h3 className="text-sm font-extrabold text-white">{v.manufacturer_name} {v.model_name}</h3>
-                    <p className="text-xs text-slate-400 truncate">{v.variant_name}</p>
+                    <h3 className="text-sm font-extrabold text-trg-carbon">{v.manufacturer_name} {v.model_name}</h3>
+                    <p className="text-xs text-trg-gray-400 truncate">{v.variant_name}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs bg-[#121520] p-3 rounded-xl border border-[#202738] font-mono">
+                <div className="grid grid-cols-2 gap-2 text-xs bg-white p-3 rounded-xl border border-trg-gray-100 font-mono">
                   <div>
-                    <span className="text-slate-500 text-[10px] block">Production Year</span>
-                    <span className="font-bold text-slate-200">{v.model_year_from}</span>
+                    <span className="text-trg-gray-400 text-[10px] block">Production Year</span>
+                    <span className="font-bold text-trg-carbon">{v.model_year_from}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 text-[10px] block">Units Produced</span>
-                    <span className="font-bold text-slate-200">{v.production_total || 'Limited Series'}</span>
+                    <span className="text-trg-gray-400 text-[10px] block">Units Produced</span>
+                    <span className="font-bold text-trg-carbon">{v.production_total || 'Limited Series'}</span>
                   </div>
                 </div>
               </div>

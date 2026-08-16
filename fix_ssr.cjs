@@ -15,7 +15,7 @@ const newFunction = `function renderHtmlPage(reqPath: string, host: string, prot
   const baseUrl = \`\${protocol}://\${host}\`;
   const cleanPath = reqPath.split('?')[0];
 
-  let title = "The Right Gear | Iconic Cars, Decoded";
+  let title = "The Right Gear | Iconic Cars and Motorbikes Decoded";
   let description = "Automotive Intelligence platform dedicated to iconic, collectible, and investment-relevant automobiles. Technical specs, production counts, and verified provenance.";
   let robots = "index, follow";
   let jsonLd: any = null;
@@ -53,7 +53,7 @@ const newFunction = `function renderHtmlPage(reqPath: string, host: string, prot
   \`;
 
   if (cleanPath === '/' || cleanPath === '') {
-    title = "The Right Gear | Iconic Cars, Decoded";
+    title = "The Right Gear | Iconic Cars and Motorbikes Decoded";
     description = "The Right Gear is the Automotive Intelligence platform for iconic, collectible and investment-relevant automobiles. Discover verified technical specs, production counts, and car provenance.";
     jsonLd = {
       "@context": "https://schema.org",
@@ -65,7 +65,7 @@ const newFunction = `function renderHtmlPage(reqPath: string, host: string, prot
     bodyHtml = \`
       \${headerHtml}
       <main>
-        <h1>The Right Gear | Iconic Cars, Decoded</h1>
+        <h1>The Right Gear | Iconic Cars and Motorbikes Decoded</h1>
         <p>Automotive Intelligence & Provenance for collectible and investment-relevant automobiles.</p>
         <section>
           <h2>Featured Automotive Entities</h2>

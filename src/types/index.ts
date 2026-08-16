@@ -1,8 +1,64 @@
+
+export type SpotlightTargetType = 'CAR' | 'MOTORCYCLE' | 'DESIGNER' | 'ENGINEER' | 'RACING_FIGURE' | 'EVENT' | 'EDITORIAL';
+
+export interface HomepageSpotlight {
+  id: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  order: number;
+  contentType: SpotlightTargetType;
+  title: string;
+  eyebrow: string;
+  summary: string;
+  image: string;
+  imageAlt: string;
+  targetType: SpotlightTargetType;
+  targetId?: string;
+  targetUrl?: string;
+  startAt?: string;
+  endAt?: string;
+  published: boolean;
+}
+
+export interface EditorialStory {
+  id: string;
+  slug: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  title: string;
+  subtitle: string;
+  excerpt: string;
+  body: string;
+  heroImage: string;
+  imageAlt: string;
+  author: string;
+  publishedAt: string;
+  relatedMakers?: string[];
+  relatedMachines?: string[];
+  relatedPeople?: string[];
+  relatedEngines?: string[];
+  featured: boolean;
+  homepageOrder: number;
+}
+
+export type PersonRole = 'Designer' | 'Engineer' | 'Test Driver' | 'Founder' | 'Racing Driver' | 'Racing Figure';
+
+export interface CanonicalEngine {
+  id: string;
+  slug: string;
+  canonical_name: string;
+  engine_code: string;
+  family_name?: string;
+  manufacturer_id?: string;
+  specs: EngineSpec;
+  data_status: DataStatus;
+  is_ui_fixture?: boolean;
+  catalogue_status: CatalogueStatus;
+}
 export type CatalogueStatus = 'IN_RESEARCH' | 'IN_REVIEW' | 'APPROVED' | 'PUBLISHED' | 'ARCHIVED';
 
 export type CatalogueTier = 'HERO' | 'CORE' | 'DISCOVERY';
 
 export interface Maker {
+  is_ui_fixture?: boolean;
   id: string;
   slug: string;
   canonical_name: string;
@@ -17,6 +73,7 @@ export interface Maker {
 }
 
 export interface Model {
+  is_ui_fixture?: boolean;
   id: string;
   maker_id: string;
   canonical_name: string;
@@ -31,6 +88,7 @@ export interface Model {
 }
 
 export interface Generation {
+  is_ui_fixture?: boolean;
   id: string;
   model_id: string;
   generation_code: string;
@@ -122,18 +180,14 @@ export interface VehicleGeneration {
 }
 
 export interface EngineSpec {
-  id: string;
-  manufacturer_id: string;
-  engine_code: string;
-  family_name: string;
-  architecture: string; // e.g., 'V12', 'Flat-6', 'V8 Twin Turbo'
-  cylinders: number;
-  displacement_cc: number;
-  aspiration: 'Naturally Aspirated' | 'Turbocharged' | 'Twin-Turbocharged' | 'Quad-Turbocharged' | 'Supercharged';
-  fuel_type: 'Petrol' | 'Hybrid' | 'E-Fuel Compatible';
-  power_kw: number;
-  power_hp: number;
-  torque_nm: number;
+  architecture?: string; // e.g., 'V12', 'Flat-6', 'V8 Twin Turbo'
+  cylinders?: number | null;
+  displacement_cc?: number | null;
+  aspiration?: string | null;
+  fuel_type?: string | null;
+  power_kw?: number | null;
+  power_hp?: number | null;
+  torque_nm?: number | null;
   compression_ratio?: string;
   bore_mm?: number;
   stroke_mm?: number;
@@ -278,7 +332,6 @@ export interface VehicleEdition {
   investment_score?: number;
   price_range_eur?: string;
   median_price_eur?: number;
-  engine_code?: string;
   body_style?: string;
   image_url?: string;
 }
@@ -319,7 +372,8 @@ export interface Person {
   id: string;
   full_name: string;
   nationality: string;
-  role: 'Designer' | 'Engineer' | 'Test Driver' | 'Founder' | 'Racing Driver';
+  roles: PersonRole[];
+  role?: PersonRole; // Legacy compatibility
   biography_it: string;
   biography_en: string;
   avatar_url?: string;
@@ -355,6 +409,7 @@ export interface VehicleVariant {
   model_name: string;
   slug: string;
   variant_name: string;
+  technical_identifiers?: string[];
   in_primo_piano?: boolean;
   tier?: 'Hero' | 'Core' | 'Discovery';
   category?: CategoryType;
@@ -369,6 +424,7 @@ export interface VehicleVariant {
   production_total?: number | null;
   original_list_price_eur?: number | null;
   data_status: DataStatus;
+  is_ui_fixture?: boolean;
   dataStatus?: DataStatus;
   catalogue_status?: CatalogueStatus;
   catalogueStatus?: CatalogueStatus;
@@ -376,6 +432,7 @@ export interface VehicleVariant {
   gallery_images?: string[];
   
   // Detailed specs
+  canonical_engine_id?: string | null;
   engine?: EngineSpec | null;
   transmission?: TransmissionSpec | null;
   specs?: TechnicalSpecs | null;
@@ -394,6 +451,7 @@ export interface VehicleVariant {
   history_en?: string | null;
   designers?: Person[];
   engineers?: Person[];
+  related_entities?: GraphRelationship[];
   production_site?: string | null;
   known_issues?: KnownIssue[];
   maintenance_complexity?: 'Very High' | 'High' | 'Moderate' | 'Low' | null;
@@ -463,6 +521,11 @@ export interface GraphRelationship {
     | 'SHARES_ENGINE_WITH'
     | 'SHARES_PLATFORM_WITH'
     | 'ASSOCIATED_WITH_EVENT'
+    | 'DROVE'
+    | 'RODE'
+    | 'TESTED'
+    | 'DEVELOPED_WITH'
+    | 'ASSOCIATED_WITH'
     | string;
   object_entity_id: string;
   confidence_score: number; // 0-100
@@ -485,8 +548,63 @@ export interface DataAssertion {
   verification_status: VerificationStatus;
 }
 
+export type SearchEntityType = 'MAKER' | 'MODEL' | 'GENERATION' | 'VARIANT' | 'ENGINE' | 'PERSON' | 'ORGANIZATION';
+
+export interface DiscoveryAction {
+  id: string;
+  url: string;
+  title: string;
+}
+
+export interface SearchResult {
+  id: string;
+  type: SearchEntityType;
+  title: string;
+  subtitle?: string;
+  url: string;
+  thumbnail?: string;
+  canonicalName?: string;
+  makerSlug?: string;
+  modelSlug?: string;
+  generationSlug?: string;
+  variantSlug?: string;
+  action?: () => void;
+}
+
+export type SearchKeyKind = 
+  | 'CANONICAL_NAME'
+  | 'DISPLAY_NAME'
+  | 'TECHNICAL_CODE'
+  | 'GENERATION_CODE'
+  | 'ENGINE_CODE'
+  | 'CHASSIS_CODE'
+  | 'PLATFORM_CODE'
+  | 'MARKET_DESIGNATION'
+  | 'ALIAS'
+  | 'RELATIONAL_CONTEXT';
+
+export interface SearchKey {
+  value: string;
+  kind: SearchKeyKind;
+}
+
+export interface SearchIndexEntry {
+  id: string;
+  entityType: SearchEntityType;
+  searchKeys: SearchKey[];
+  canonicalUrl: string;
+  title: string;
+  subtitle?: string;
+  thumbnail?: string;
+  makerSlug?: string;
+  modelSlug?: string;
+  generationSlug?: string;
+  variantSlug?: string;
+}
+
 export interface SearchFilters {
   query?: string;
+  entityTypes?: SearchEntityType[];
   category?: CategoryType | 'All';
   manufacturerId?: string;
   yearMin?: number;
@@ -663,3 +781,20 @@ export interface VehicleGenerationHierarchy {
   heroImageUrl: string;
 }
 
+
+export type AssetStatus = 'RESOLVED' | 'UNAVAILABLE' | 'INVALID' | 'AMBIGUOUS';
+
+export type SourceProvider = 'WIKIMEDIA' | 'OFFICIAL';
+
+export interface MakerLogoAsset {
+  maker_id: string;
+  source_provider: SourceProvider;
+  wikidata_entity_id?: string;
+  source_file_name?: string;
+  source_url?: string;
+  source_page_url?: string;
+  retrieved_at: string;
+  mime_type?: string;
+  asset_status: AssetStatus;
+  internal_asset_url?: string;
+}

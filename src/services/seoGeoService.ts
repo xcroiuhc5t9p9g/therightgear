@@ -180,13 +180,13 @@ export function generateVehicleJsonLd(variant: VehicleVariant, canonicalUrl: str
         '@type': 'ListItem',
         position: 2,
         name: 'Catalogo Vetture',
-        item: getAbsolutePageUrl('/explore')
+        item: getAbsolutePageUrl('/')
       },
       {
         '@type': 'ListItem',
         position: 3,
         name: variant.manufacturer_name,
-        item: getAbsolutePageUrl(`/explore?manufacturer=${variant.manufacturer_id}`)
+        item: getAbsolutePageUrl(`/brands/${variant.manufacturer_id}`)
       },
       {
         '@type': 'ListItem',
