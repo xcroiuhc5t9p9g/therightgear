@@ -530,57 +530,6 @@ app.get('/api/v1/categories', (req: Request, res: Response) => {
   ]);
 });
 
-// Authentication Endpoints
-app.post('/api/v1/auth/register', (req: Request, res: Response) => {
-  const { fullName, email, password, role = 'registered_user', companyOrTitle } = req.body;
-  if (!email || !fullName) {
-    return res.status(400).json({ error: 'Nome e Indirizzo Email sono obbligatori.' });
-  }
-
-  const isRiccardo = email.trim().toLowerCase() === 'riccardo.monaco@gmail.com';
-  const assignedRole = isRiccardo ? 'admin' : role;
-
-  const user = {
-    id: `usr-${Date.now()}`,
-    fullName,
-    email,
-    role: assignedRole,
-    companyOrTitle: companyOrTitle || (assignedRole === 'admin' ? 'Amministratore Capo' : 'Utente Registrato'),
-    createdAt: new Date().toISOString()
-  };
-
-  res.json({
-    success: true,
-    user,
-    token: `jwt-token-${Date.now()}`,
-    message: `Registrazione completata con successo! Benvenuto ${fullName}.`
-  });
-});
-
-app.post('/api/v1/auth/login', (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  if (!email) {
-    return res.status(400).json({ error: 'Indirizzo Email obbligatorio.' });
-  }
-
-  const isRiccardo = email.trim().toLowerCase() === 'riccardo.monaco@gmail.com';
-  const role = isRiccardo ? 'admin' : 'registered_user';
-
-  const user = {
-    id: isRiccardo ? 'usr-1' : `usr-${Date.now()}`,
-    fullName: isRiccardo ? 'Riccardo Monaco' : 'Utente ' + email.split('@')[0],
-    email,
-    role,
-    companyOrTitle: isRiccardo ? 'Amministratore Capo di Sistema' : 'Collezionista Registrato'
-  };
-
-  res.json({
-    success: true,
-    user,
-    token: `jwt-token-${Date.now()}`,
-    message: `Autenticazione effettuata con successo.`
-  });
-});
 
 // Mass Import & Multi-Source Extraction Endpoint
 app.post('/api/v1/import/extract-vehicle', async (req: Request, res: Response) => {
