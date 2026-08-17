@@ -345,15 +345,17 @@ app.get('/api/v1/generations/:generationId/variants', (req: Request, res: Respon
     return res.status(404).json({ success: false, error: 'GENERATION_NOT_FOUND' });
   }
 
+  const manufacturerIds = new Set<string>();
   const manufacturers = new Set<string>();
   const models = new Set<string>();
   
   genVehicles.forEach(mv => {
+    if (mv.manufacturer_id) manufacturerIds.add(mv.manufacturer_id);
     if (mv.manufacturer_name) manufacturers.add(mv.manufacturer_name);
     if (mv.model_name) models.add(mv.model_name);
   });
 
-  if (manufacturers.size > 1 || models.size > 1) {
+  if (manufacturerIds.size > 1 || manufacturers.size > 1 || models.size > 1) {
     return res.status(409).json({ success: false, error: 'INTEGRITY_CONFLICT' });
   }
 
