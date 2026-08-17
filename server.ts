@@ -732,15 +732,23 @@ const requireImportLabAuth = (req: Request, res: Response, next: any) => {
   const userRole = req.headers['x-user-role'] as string;
   const apiKey = req.headers['x-import-lab-key'] as string;
 
-  // Reject unauthorized calls lacking admin/editor role or valid token/API key
-  if (userRole === 'guest' || userRole === 'unauthenticated') {
-    return res.status(403).json({
-      error: 'Forbidden: Import Lab operations require server-side AUTHORIZATION (admin/editor permission required).'
+  // FAIL CLOSED by default
+  const configuredSecret = process.env.IMPORT_LAB_SECRET;
+  
+  if (configuredSecret && apiKey === configuredSecret) {
+    return next();
+  }
+
+  if (!authHeader) {
+    return res.status(401).json({
+      error: 'Unauthorized: Missing authentication credentials.'
     });
   }
 
-  // Authorize request
-  next();
+  // Without Firebase Admin verification implemented, we must not blindly trust the token or user role.
+  return res.status(401).json({
+    error: 'Unauthorized: BLOCKED_PENDING_FIREBASE_VERIFICATION. Server-side Firebase Admin token verification is required.'
+  });
 };
 
 app.use('/api/v1/import-lab', requireImportLabAuth);
