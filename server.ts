@@ -200,12 +200,156 @@ app.get('/api/v1/models/:modelId', (req: Request, res: Response) => {
 
 // GET Generations for Model
 app.get('/api/v1/models/:modelId/generations', (req: Request, res: Response) => {
-  res.json([]);
+  const { modelId } = req.params;
+  const resolved = CATALOG_DATABASE.find(x => x.slug === modelId || x.id === modelId);
+  if (!resolved) {
+    return res.status(404).json({ success: false, error: 'MODEL_NOT_FOUND' });
+  }
+
+  const modelVehicles = CATALOG_DATABASE.filter(x => x.manufacturer_name === resolved.manufacturer_name && x.model_name === resolved.model_name);
+
+  const generationGroups = new Map<string, typeof modelVehicles>();
+  modelVehicles.forEach(mv => {
+    if (mv.generation_id) {
+      if (!generationGroups.has(mv.generation_id)) {
+        generationGroups.set(mv.generation_id, []);
+      }
+      generationGroups.get(mv.generation_id).push(mv);
+    }
+  });
+
+  const generations = Array.from(generationGroups.entries()).map(([genId, vehicles]) => {
+    let minYear: number | null = null;
+    let maxYear: number | null = null;
+    const variantIds = new Set<string>();
+
+    vehicles.forEach(mv => {
+      if (mv.id) variantIds.add(mv.id);
+      
+      if (mv.model_year_from != null) {
+        if (minYear === null || mv.model_year_from < minYear) minYear = mv.model_year_from;
+        if (maxYear === null || mv.model_year_from > maxYear) maxYear = mv.model_year_from;
+        if (mv.model_year_to != null) {
+          if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
+        }
+      } else if (mv.model_year_to != null) {
+        if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
+      }
+    });
+
+    let yearsRange: string | null = null;
+    if (minYear !== null) {
+      if (maxYear !== null && maxYear !== minYear) {
+        yearsRange = `${minYear}–${maxYear}`;
+      } else {
+        yearsRange = `${minYear}`;
+      }
+    } else if (maxYear !== null) {
+      yearsRange = `${maxYear}`;
+    }
+
+    return {
+      id: genId,
+      slug: genId,
+      code: genId,
+      name: null,
+      yearsRange,
+      variantsCount: variantIds.size,
+      _startYear: minYear !== null ? minYear : 9999
+    };
+  });
+
+  generations.sort((a, b) => {
+    if (a._startYear !== b._startYear) {
+      return a._startYear - b._startYear;
+    }
+    return a.id.localeCompare(b.id);
+  });
+
+  const result = generations.map(g => {
+    const { _startYear, ...rest } = g;
+    return rest;
+  });
+
+  res.json(result);
 });
 
 // GET Generation details
 app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
-  res.status(404).json({ error: 'Generation not found' });
+  const { generationId } = req.params;
+  
+  const genVehicles = CATALOG_DATABASE.filter(x => x.generation_id === generationId);
+  if (genVehicles.length === 0) {
+    return res.status(404).json({ success: false, error: 'GENERATION_NOT_FOUND' });
+  }
+
+  const manufacturers = new Set<string>();
+  const models = new Set<string>();
+  
+  let minYear: number | null = null;
+  let maxYear: number | null = null;
+  let minHp: number | null = null;
+  let maxHp: number | null = null;
+  
+  const variantIds = new Set<string>();
+
+  genVehicles.forEach(mv => {
+    if (mv.manufacturer_name) manufacturers.add(mv.manufacturer_name);
+    if (mv.model_name) models.add(mv.model_name);
+    if (mv.id) variantIds.add(mv.id);
+    
+    if (mv.model_year_from != null) {
+      if (minYear === null || mv.model_year_from < minYear) minYear = mv.model_year_from;
+      if (maxYear === null || mv.model_year_from > maxYear) maxYear = mv.model_year_from;
+      if (mv.model_year_to != null) {
+        if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
+      }
+    } else if (mv.model_year_to != null) {
+      if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
+    }
+
+    const hp = mv.engine?.power_hp;
+    if (hp != null) {
+      if (minHp === null || hp < minHp) minHp = hp;
+      if (maxHp === null || hp > maxHp) maxHp = hp;
+    }
+  });
+
+  if (manufacturers.size > 1 || models.size > 1) {
+    return res.status(409).json({ success: false, error: 'INTEGRITY_CONFLICT' });
+  }
+
+  const manufacturerName = manufacturers.values().next().value ?? null;
+  const modelName = models.values().next().value ?? null;
+  const sample = genVehicles[0];
+
+  let yearsRange: string | null = null;
+  if (minYear !== null) {
+    if (maxYear !== null && maxYear !== minYear) {
+      yearsRange = `${minYear}–${maxYear}`;
+    } else {
+      yearsRange = `${minYear}`;
+    }
+  } else if (maxYear !== null) {
+    yearsRange = `${maxYear}`;
+  }
+
+  const powerHpRange: [number, number] | null = (minHp !== null && maxHp !== null) ? [minHp, maxHp] : null;
+
+  res.json({
+    generationId,
+    manufacturerId: sample?.manufacturer_id ?? null,
+    manufacturerName,
+    modelName,
+    modelId: null,
+    modelSlug: null,
+    yearsRange,
+    totalVariantsCount: variantIds.size,
+    powerHpRange,
+    heroImageUrl: null,
+    historicSummaryIt: null,
+    historicSummaryEn: null,
+  });
 });
 
 // GET Variants for Generation
