@@ -34,9 +34,9 @@ export async function fetchManufacturers(): Promise<Manufacturer[]> {
       id: m.id,
       slug: m.slug,
       official_name: m.canonical_name || m.official_name || m.slug,
-      country_code: m.country_code || 'IT',
-      founded_year: m.founded_year || 1900,
-      active: m.active ?? true,
+      country_code: m.country_code as unknown as string,
+      founded_year: m.founded_year as unknown as number,
+      active: m.active ?? true, // Cannot represent unknown safely due to UI boolean type constraint (true/false)
       logo_url: m.logo_url || ''
     }));
   }

@@ -109,7 +109,7 @@ export interface VehicleInstance {
   chassis_number_masked?: string;
   build_date?: string;
   production_sequence?: number;
-  current_country_code?: string;
+  current_country_code: string;
   current_mileage_km?: number;
   originality_status?: string;
   public_visibility: 'PUBLIC' | 'REGISTERED' | 'PREMIUM' | 'EDITORIAL' | 'PRIVATE';
