@@ -64,7 +64,7 @@ app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, error: 'MODEL_NAVIGATION_NOT_FOUND' });
   }
 
-  const modelVehicles = CATALOG_DATABASE.filter(v => v.model_name === vehicle.model_name);
+  const modelVehicles = CATALOG_DATABASE.filter(v => v.model_name === vehicle.model_name && v.manufacturer_name === vehicle.manufacturer_name);
 
   const mName = vehicle.manufacturer_name;
   const modelName = vehicle.model_name;
@@ -91,7 +91,6 @@ app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
         years: v.model_year_from ? `${v.model_year_from}–${v.model_year_to || ''}` : null,
         limitedEdition: v.limited_edition ?? null,
         productionTotal: v.production_total ?? null,
-        active: true,
         powerHp: v.engine?.power_hp ?? null
       });
     }

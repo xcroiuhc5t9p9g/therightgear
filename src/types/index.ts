@@ -656,7 +656,7 @@ export interface VariantNavigationItem {
   years: string;
   limitedEdition: boolean;
   productionTotal?: number;
-  active: boolean;
+  active?: boolean | null;
   powerHp?: number;
 }
 
