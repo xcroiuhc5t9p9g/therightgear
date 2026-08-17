@@ -73,8 +73,8 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
 
   // Hierarchical Navigation state
   const [currentLevel, setCurrentLevel] = useState<'model' | 'generation' | 'variant'>('variant');
-  const [activeGenId, setActiveGenId] = useState<string>('bmw-m3-e30');
-  const [activeVarId, setActiveVarId] = useState<string>('bmw-m3-e30-sport-evolution');
+  const [activeGenId, setActiveGenId] = useState<string | undefined>();
+  const [activeVarId, setActiveVarId] = useState<string | undefined>();
   const [navData, setNavData] = useState<VehicleFamilyNavigation | null>(null);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
 
@@ -85,11 +85,15 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
       const filteredData = data ? filterVehicleForPublic(data) : null;
       setVehicle(filteredData);
 
-      const modelKey = filteredData ? filteredData.model_name.toLowerCase() : 'bmw-m3';
-      const hierarchyNav = await fetchModelNavigation(modelKey);
-      setNavData(hierarchyNav);
-
+      if (!filteredData) {
+        setNavData(null);
+      }
       if (filteredData) {
+        const modelKey = filteredData.model_name.toLowerCase();
+        const hierarchyNav = await fetchModelNavigation(modelKey);
+        setNavData(hierarchyNav);
+
+
         setActiveImage(filteredData.hero_image_url);
         if (filteredData.generation_id) {
           setActiveGenId(filteredData.generation_id);
