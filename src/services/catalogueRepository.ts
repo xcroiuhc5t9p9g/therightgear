@@ -423,12 +423,7 @@ export class CatalogueRepository {
     const s = variantSlug.toLowerCase();
     return this.variants.find(v => 
       v.slug === s || 
-      v.id === s ||
-      v.slug.endsWith(s) ||
-      v.id.endsWith(s) ||
-      (s === 'evolution-ii' && (v.slug.includes('evolution') || v.id.includes('evolution'))) ||
-      (s === 'sport-evolution' && v.slug.includes('sport-evolution')) ||
-      (s === 'm3-2-3' && (v.slug.includes('2-3') || v.id.includes('2-3')))
+      v.id === s
     );
   }
 
