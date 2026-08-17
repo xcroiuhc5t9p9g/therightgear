@@ -163,8 +163,7 @@ export async function fetchModelDetails(modelId: string) {
     if (!res.ok) throw new Error('Failed to fetch model details');
     return await res.json();
   } catch (e) {
-    const { BMW_M3_MODEL_HIERARCHY } = await import('../data/vehicleHierarchyData');
-    return BMW_M3_MODEL_HIERARCHY;
+    return null;
   }
 }
 
@@ -174,8 +173,7 @@ export async function fetchGenerationDetails(generationId: string) {
     if (!res.ok) throw new Error('Failed to fetch generation details');
     return await res.json();
   } catch (e) {
-    const { BMW_M3_GENERATIONS_HIERARCHY } = await import('../data/vehicleHierarchyData');
-    return BMW_M3_GENERATIONS_HIERARCHY.find(g => g.generationId === generationId || g.generationSlug === generationId) || BMW_M3_GENERATIONS_HIERARCHY[0];
+    return null;
   }
 }
 
