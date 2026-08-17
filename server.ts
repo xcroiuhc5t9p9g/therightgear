@@ -405,11 +405,40 @@ app.get('/api/v1/generations/:generationId/variants', (req: Request, res: Respon
 // GET Single Variant
 app.get('/api/v1/variants/:variantId', (req: Request, res: Response) => {
   const { variantId } = req.params;
+  
+  // MATCH EXACT IDENTITY ONLY
   const found = CATALOG_DATABASE.find(v => v.id === variantId || v.slug === variantId);
-  if (found) {
-    return res.json(found);
+  
+  if (!found) {
+    return res.status(404).json({ success: false, error: 'VARIANT_NOT_FOUND' });
   }
-  res.status(404).json({ error: 'Variant not found' });
+  
+  // STRIP OUT LEGACY / DEMO / MARKET DATA
+  // We only return truthful automotive data
+  const {
+    current_median_price_eur,
+    price_change_1y_pct,
+    price_change_3y_pct,
+    liquidity_score,
+    volatility_score,
+    avg_days_on_market,
+    scores,
+    collector_score,
+    investment_score,
+    auctions,
+    listings,
+    historical_events,
+    price_history,
+    ...safeVariantFields
+  } = found as any;
+
+  res.json({
+    ...safeVariantFields,
+    limited_edition: safeVariantFields.limited_edition ?? null,
+    production_total: safeVariantFields.production_total ?? null,
+    model_year_from: safeVariantFields.model_year_from ?? null,
+    model_year_to: safeVariantFields.model_year_to ?? null,
+  });
 });
 
 // GET Specs for Variant
