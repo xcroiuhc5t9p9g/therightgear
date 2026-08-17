@@ -219,43 +219,40 @@ app.get('/api/v1/models/:modelId/generations', (req: Request, res: Response) => 
   });
 
   const generations = Array.from(generationGroups.entries()).map(([genId, vehicles]) => {
-    let minYear: number | null = null;
-    let maxYear: number | null = null;
+    let minStartYear: number | null = null;
+    let maxKnownEndYear: number | null = null;
     const variantIds = new Set<string>();
 
     vehicles.forEach(mv => {
       if (mv.id) variantIds.add(mv.id);
       
       if (mv.model_year_from != null) {
-        if (minYear === null || mv.model_year_from < minYear) minYear = mv.model_year_from;
-        if (maxYear === null || mv.model_year_from > maxYear) maxYear = mv.model_year_from;
-        if (mv.model_year_to != null) {
-          if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
-        }
-      } else if (mv.model_year_to != null) {
-        if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
+        if (minStartYear === null || mv.model_year_from < minStartYear) minStartYear = mv.model_year_from;
+      }
+      if (mv.model_year_to != null) {
+        if (maxKnownEndYear === null || mv.model_year_to > maxKnownEndYear) maxKnownEndYear = mv.model_year_to;
       }
     });
 
     let yearsRange: string | null = null;
-    if (minYear !== null) {
-      if (maxYear !== null && maxYear !== minYear) {
-        yearsRange = `${minYear}–${maxYear}`;
+    if (minStartYear !== null) {
+      if (maxKnownEndYear !== null && maxKnownEndYear !== minStartYear) {
+        yearsRange = `${minStartYear}–${maxKnownEndYear}`;
       } else {
-        yearsRange = `${minYear}`;
+        yearsRange = `${minStartYear}`;
       }
-    } else if (maxYear !== null) {
-      yearsRange = `${maxYear}`;
+    } else if (maxKnownEndYear !== null) {
+      yearsRange = `${maxKnownEndYear}`;
     }
 
     return {
       id: genId,
       slug: genId,
-      code: genId,
+      code: null,
       name: null,
       yearsRange,
       variantsCount: variantIds.size,
-      _startYear: minYear !== null ? minYear : 9999
+      _startYear: minStartYear !== null ? minStartYear : 9999
     };
   });
 
@@ -286,8 +283,8 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
   const manufacturers = new Set<string>();
   const models = new Set<string>();
   
-  let minYear: number | null = null;
-  let maxYear: number | null = null;
+  let minStartYear: number | null = null;
+  let maxKnownEndYear: number | null = null;
   let minHp: number | null = null;
   let maxHp: number | null = null;
   
@@ -299,13 +296,10 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
     if (mv.id) variantIds.add(mv.id);
     
     if (mv.model_year_from != null) {
-      if (minYear === null || mv.model_year_from < minYear) minYear = mv.model_year_from;
-      if (maxYear === null || mv.model_year_from > maxYear) maxYear = mv.model_year_from;
-      if (mv.model_year_to != null) {
-        if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
-      }
-    } else if (mv.model_year_to != null) {
-      if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
+      if (minStartYear === null || mv.model_year_from < minStartYear) minStartYear = mv.model_year_from;
+    }
+    if (mv.model_year_to != null) {
+      if (maxKnownEndYear === null || mv.model_year_to > maxKnownEndYear) maxKnownEndYear = mv.model_year_to;
     }
 
     const hp = mv.engine?.power_hp;
@@ -324,14 +318,14 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
   const sample = genVehicles[0];
 
   let yearsRange: string | null = null;
-  if (minYear !== null) {
-    if (maxYear !== null && maxYear !== minYear) {
-      yearsRange = `${minYear}–${maxYear}`;
+  if (minStartYear !== null) {
+    if (maxKnownEndYear !== null && maxKnownEndYear !== minStartYear) {
+      yearsRange = `${minStartYear}–${maxKnownEndYear}`;
     } else {
-      yearsRange = `${minYear}`;
+      yearsRange = `${minStartYear}`;
     }
-  } else if (maxYear !== null) {
-    yearsRange = `${maxYear}`;
+  } else if (maxKnownEndYear !== null) {
+    yearsRange = `${maxKnownEndYear}`;
   }
 
   const powerHpRange: [number, number] | null = (minHp !== null && maxHp !== null) ? [minHp, maxHp] : null;
