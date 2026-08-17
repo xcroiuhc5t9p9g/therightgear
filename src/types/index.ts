@@ -109,7 +109,7 @@ export interface VehicleInstance {
   chassis_number_masked?: string;
   build_date?: string;
   production_sequence?: number;
-  current_country_code: string;
+  current_country_code?: string;
   current_mileage_km?: number;
   originality_status?: string;
   public_visibility: 'PUBLIC' | 'REGISTERED' | 'PREMIUM' | 'EDITORIAL' | 'PRIVATE';
@@ -143,9 +143,9 @@ export interface Manufacturer {
   id: string;
   slug: string;
   official_name: string;
-  country_code: string;
-  founded_year: number;
-  active: boolean;
+  country_code?: string | null;
+  founded_year?: number | null;
+  active?: boolean | null;
   logo_url: string;
   website_url?: string;
   created_at?: string;
