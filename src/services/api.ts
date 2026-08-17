@@ -152,8 +152,7 @@ export async function fetchModelNavigation(modelId: string) {
     if (!res.ok) throw new Error('Failed to fetch navigation');
     return await res.json();
   } catch (e) {
-    const { getVehicleFamilyNavigation } = await import('../data/vehicleHierarchyData');
-    return getVehicleFamilyNavigation(modelId);
+    return null;
   }
 }
 

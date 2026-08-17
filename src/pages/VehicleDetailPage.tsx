@@ -33,7 +33,7 @@ import { catalogueRepository, isPublicCanonicalFact, filterVehicleForPublic } fr
 import { Locale, translations } from '../data/translations';
 import { VersionNavigator } from '../components/VersionNavigator';
 import { VariantCompareModal } from '../components/VariantCompareModal';
-import { getVehicleFamilyNavigation, BMW_M3_FAMILY_NAV } from '../data/vehicleHierarchyData';
+import { getVehicleFamilyNavigation } from '../data/vehicleHierarchyData';
 import { generateVehicleJsonLd, injectSeoGeoMetadata, getAbsolutePageUrl } from '../services/seoGeoService';
 import { AeoDirectAnswerCard } from '../components/AeoDirectAnswerCard';
 import { AuthPromptReason } from '../components/AuthPromptModal';
@@ -75,7 +75,7 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
   const [currentLevel, setCurrentLevel] = useState<'model' | 'generation' | 'variant'>('variant');
   const [activeGenId, setActiveGenId] = useState<string>('bmw-m3-e30');
   const [activeVarId, setActiveVarId] = useState<string>('bmw-m3-e30-sport-evolution');
-  const [navData, setNavData] = useState<VehicleFamilyNavigation>(BMW_M3_FAMILY_NAV);
+  const [navData, setNavData] = useState<VehicleFamilyNavigation | null>(null);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
     let targetVarId = varId;
 
     if (level === 'model') {
-      const firstGen = navData.generations[0];
+      const firstGen = navData?.generations[0];
       if (firstGen) {
         targetGenId = firstGen.id;
         if (firstGen.variants.length > 0) {
@@ -148,7 +148,7 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
         }
       }
     } else if (level === 'generation' && targetGenId) {
-      const matchingGen = navData.generations.find(g => g.id === targetGenId);
+      const matchingGen = navData?.generations.find(g => g.id === targetGenId);
       if (matchingGen && matchingGen.variants.length > 0 && !targetVarId) {
         targetVarId = matchingGen.variants[0].id;
       }
@@ -192,7 +192,7 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
   const isWatchlist = watchlistIds.includes(vehicle.id);
 
   // Active generation item from navigation tree
-  const activeGenItem = navData.generations.find(g => g.id === activeGenId) || navData.generations[0];
+  const activeGenItem = navData?.generations.find(g => g.id === activeGenId) || navData?.generations[0];
 
   const chartData = (vehicle.price_history || []).map(p => ({
     period: p.period || String(p.year),
@@ -204,7 +204,7 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
     <Container className="space-y-8 pb-16 pt-8">
       
       {/* 1. UNIFIED BREADCRUMB NAVIGATOR: Casa Costruttrice > Modello > Generazioni > Varianti */}
-      <VersionNavigator
+      {navData && <VersionNavigator
         navigationData={navData}
         activeGenerationId={activeGenId}
         activeVariantId={activeVarId}
@@ -212,7 +212,7 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
         locale={locale}
         onSelectLevel={handleHierarchySelect}
         onCompareTrigger={() => setIsCompareModalOpen(true)}
-      />
+      />}
 
       {/* UNIFIED SINGLE-PAGE VEHICLE RECORD */}
       <div className="space-y-8 animate-in fade-in duration-200">
@@ -667,13 +667,13 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
       </div>
 
       {/* VARIANT COMPARISON MODAL */}
-      <VariantCompareModal
+      {navData && <VariantCompareModal
         navigationData={navData}
         isOpen={isCompareModalOpen}
         onClose={() => setIsCompareModalOpen(false)}
         locale={locale}
         initialVariantId={activeVarId}
-      />
+      />}
 
     </Container>
   );
