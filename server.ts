@@ -58,35 +58,51 @@ app.get('/api/v1/manufacturers', (req: Request, res: Response) => {
 app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
   const { modelId } = req.params;
 
-  // Fallback for other vehicles
   const vehicle = CATALOG_DATABASE.find(v => v.slug === modelId || v.id === modelId || v.model_name.toLowerCase().replace(/\s+/g, '-') === modelId);
-  const mName = vehicle ? vehicle.manufacturer_name : 'Manufacturer';
-  const modelName = vehicle ? vehicle.model_name : 'Model';
   
+  if (!vehicle) {
+    return res.status(404).json({ success: false, error: 'MODEL_NAVIGATION_NOT_FOUND' });
+  }
+
+  const modelVehicles = CATALOG_DATABASE.filter(v => v.model_name === vehicle.model_name);
+
+  const mName = vehicle.manufacturer_name;
+  const modelName = vehicle.model_name;
+  
+  const generations: any[] = [];
+  const genMap = new Map<string, any>();
+  
+  modelVehicles.forEach(v => {
+    if (v.generation_id) {
+      if (!genMap.has(v.generation_id)) {
+        genMap.set(v.generation_id, {
+          id: v.generation_id,
+          code: v.generation_id,
+          name: v.generation_id,
+          years: null,
+          slug: v.generation_id,
+          variants: []
+        });
+      }
+      genMap.get(v.generation_id).variants.push({
+        id: v.id,
+        slug: v.slug,
+        name: v.variant_name,
+        years: v.model_year_from ? `${v.model_year_from}–${v.model_year_to || ''}` : null,
+        limitedEdition: v.limited_edition ?? null,
+        productionTotal: v.production_total ?? null,
+        active: true,
+        powerHp: v.engine?.power_hp ?? null
+      });
+    }
+  });
+
+  genMap.forEach(gen => generations.push(gen));
+
   return res.json({
     manufacturer: { id: `m-${mName.toLowerCase()}`, name: mName, slug: mName.toLowerCase() },
-    model: { id: modelId, name: modelName, slug: modelId, years: vehicle ? `${vehicle.model_year_from}–${vehicle.model_year_to || 'Pres.'}` : '1990–2000' },
-    generations: [
-      {
-        id: `gen-${modelId}`,
-        code: 'Gen 1',
-        name: `${modelName} Series`,
-        years: vehicle ? `${vehicle.model_year_from}–${vehicle.model_year_to || ''}` : '1990–2000',
-        slug: 'gen-1',
-        variants: [
-          {
-            id: vehicle?.id || modelId,
-            slug: vehicle?.slug || modelId,
-            name: vehicle?.variant_name || modelName,
-            years: vehicle ? `${vehicle.model_year_from}–${vehicle.model_year_to || ''}` : '1990–2000',
-            limitedEdition: vehicle?.limited_edition || false,
-            productionTotal: vehicle?.production_total || 1000,
-            active: true,
-            powerHp: vehicle?.engine.power_hp || 400
-          }
-        ]
-      }
-    ]
+    model: { id: modelId, name: modelName, slug: modelId, years: vehicle.model_year_from ? `${vehicle.model_year_from}–${vehicle.model_year_to || 'Pres.'}` : null },
+    generations
   });
 });
 
