@@ -129,9 +129,9 @@ export async function askAiAdvisor(prompt: string, locale: 'it' | 'en'): Promise
   } catch (e: any) {
     return {
       answer: locale === 'it' 
-        ? 'Impossibile connettersi al servizio AI Advisor. Sulla base del catalogo interno, la Ferrari F40 ed il McLaren F1 rappresentano i riferimenti di maggior valore e stabilità finanziaria.'
-        : 'Unable to reach AI Advisor service. Based on internal catalog benchmarks, the Ferrari F40 and McLaren F1 represent the highest value and financial stability reference points.',
-      referenced_slugs: ['ferrari-f40', 'mclaren-f1']
+        ? 'Il servizio AI Advisor non è momentaneamente disponibile.'
+        : 'The AI Advisor service is currently unavailable.',
+      referenced_slugs: []
     };
   }
 }
