@@ -247,7 +247,7 @@ app.get('/api/v1/models/:modelId/generations', (req: Request, res: Response) => 
 
     return {
       id: genId,
-      slug: genId,
+      slug: null,
       code: null,
       name: null,
       yearsRange,
@@ -325,8 +325,9 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
     manufacturerId: sample?.manufacturer_id ?? null,
     manufacturerName,
     modelName,
-    generationSlug: generationId,
-    generationCode: generationId,
+    generationSlug: null,
+    generationCode: null,
+    generationName: null,
     yearsRange,
     totalVariantsCount: variantIds.size
   });
