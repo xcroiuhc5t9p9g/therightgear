@@ -296,83 +296,18 @@ app.get('/api/v1/graph/full', (req: Request, res: Response) => {
 
 // AI Advisor Endpoint (Gemini 3.6 Flash Server-Side Grounded AI)
 app.post('/api/v1/ai/advisor', async (req: Request, res: Response) => {
-  const { prompt, locale = 'it', conversationHistory = [] } = req.body;
+  const { prompt } = req.body;
 
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
 
-  if (!aiClient) {
-    // Graceful fallback if GEMINI_API_KEY is not configured
-    const isIt = locale === 'it';
-    const fallbackAnswer = isIt
-      ? `[Analisi offline] Nessun dato vettura disponibile.`
-      : `[Offline Analysis] No vehicle data available.`;
-    
-    return res.json({
-      answer: fallbackAnswer,
-      referenced_slugs: [],
-      confidence: 'Medium (Grounding Fallback)'
-    });
-  }
-
-  try {
-    // Grounding Context: Create a lean summary of the top Hero cars for Gemini context
-    const heroContext = CATALOG_DATABASE.slice(0, 10).map(v => ({
-      name: `${v.manufacturer_name} ${v.model_name}`,
-      slug: v.slug,
-      median_price_eur: v.current_median_price_eur,
-      growth_1y: `${v.price_change_1y_pct}%`,
-      collector_score: v.scores.collector_score.overall_score,
-      investment_score: v.scores.investment_score.overall_score,
-      production: v.production_total,
-      history_snippet: v.history_en
-    }));
-
-    const systemInstruction = `
-You are the AI Automotive Advisor for the Automotive Intelligence Platform.
-You assist collectors, investors, and dealers with technical, financial, and historical insights on iconic cars .
-
-Strict rules:
-1. Respond in the requested language: ${locale === 'it' ? 'Italian' : 'English'}.
-2. Use precise automotive intelligence terminology, collector metrics, and financial terminology (e.g. median prices, liquidity score, auction hammer prices).
-3. Be professional, direct, scannable, and objective. Never invent fictitious facts outside the domain.
-4. Ground your insights on the provided database context when referencing market valuations.
-
-Provided Hero Database Context:
-${JSON.stringify(heroContext, null, 2)}
-`;
-
-    const response = await aiClient.models.generateContent({
-      model: 'gemini-3.6-flash',
-      contents: prompt,
-      config: {
-        systemInstruction,
-        temperature: 0.3
-      }
-    });
-
-    const answerText = response.text || (locale === 'it' ? 'Nessuna risposta generata.' : 'No response generated.');
-
-    // Extract referenced vehicle slugs if mentioned in response or prompt
-    const promptLower = prompt.toLowerCase();
-    const referencedSlugs = CATALOG_DATABASE
-      .filter(v => promptLower.includes(v.manufacturer_name.toLowerCase()) || promptLower.includes(v.model_name.toLowerCase()) || promptLower.includes(v.slug))
-      .slice(0, 4)
-      .map(v => v.slug);
-
-    res.json({
-      answer: answerText,
-      referenced_slugs: referencedSlugs,
-      confidence: 'High'
-    });
-  } catch (error: any) {
-    console.error('Gemini API Error:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate AI Advisor response',
-      details: error.message 
-    });
-  }
+  return res.status(503).json({
+    error: "AI_ADVISOR_GROUNDING_UNAVAILABLE",
+    answer: null,
+    referenced_slugs: [],
+    confidence: null
+  });
 });
 
 // Dealer Listings Endpoint
