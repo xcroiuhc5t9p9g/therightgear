@@ -285,8 +285,6 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
   
   let minStartYear: number | null = null;
   let maxKnownEndYear: number | null = null;
-  let minHp: number | null = null;
-  let maxHp: number | null = null;
   
   const variantIds = new Set<string>();
 
@@ -300,12 +298,6 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
     }
     if (mv.model_year_to != null) {
       if (maxKnownEndYear === null || mv.model_year_to > maxKnownEndYear) maxKnownEndYear = mv.model_year_to;
-    }
-
-    const hp = mv.engine?.power_hp;
-    if (hp != null) {
-      if (minHp === null || hp < minHp) minHp = hp;
-      if (maxHp === null || hp > maxHp) maxHp = hp;
     }
   });
 
@@ -328,21 +320,15 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
     yearsRange = `${maxKnownEndYear}`;
   }
 
-  const powerHpRange: [number, number] | null = (minHp !== null && maxHp !== null) ? [minHp, maxHp] : null;
-
   res.json({
     generationId,
     manufacturerId: sample?.manufacturer_id ?? null,
     manufacturerName,
     modelName,
-    modelId: null,
-    modelSlug: null,
+    generationSlug: generationId,
+    generationCode: generationId,
     yearsRange,
-    totalVariantsCount: variantIds.size,
-    powerHpRange,
-    heroImageUrl: null,
-    historicSummaryIt: null,
-    historicSummaryEn: null,
+    totalVariantsCount: variantIds.size
   });
 });
 
