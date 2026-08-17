@@ -120,7 +120,6 @@ app.get('/api/v1/models/:modelId', (req: Request, res: Response) => {
   
   let minYear: number | null = null;
   let maxYear: number | null = null;
-  let hasOngoing = false;
 
   let minHp: number | null = null;
   let maxHp: number | null = null;
@@ -136,9 +135,7 @@ app.get('/api/v1/models/:modelId', (req: Request, res: Response) => {
       if (minYear === null || mv.model_year_from < minYear) minYear = mv.model_year_from;
       if (maxYear === null || mv.model_year_from > maxYear) maxYear = mv.model_year_from;
       
-      if (mv.model_year_to == null) {
-        hasOngoing = true;
-      } else {
+      if (mv.model_year_to != null) {
         if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
       }
     } else if (mv.model_year_to != null) {
@@ -159,13 +156,11 @@ app.get('/api/v1/models/:modelId', (req: Request, res: Response) => {
   });
 
   const totalGenerationsCount = generationIds.size;
-  const totalVariantsCount = variantIds.size > 0 ? variantIds.size : modelVehicles.length;
+  const totalVariantsCount = variantIds.size;
 
   let yearsRange: string | null = null;
   if (minYear !== null) {
-    if (hasOngoing) {
-      yearsRange = `${minYear}–Presente`;
-    } else if (maxYear !== null && maxYear !== minYear) {
+    if (maxYear !== null && maxYear !== minYear) {
       yearsRange = `${minYear}–${maxYear}`;
     } else {
       yearsRange = `${minYear}`;

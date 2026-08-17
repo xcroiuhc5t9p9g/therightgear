@@ -757,7 +757,7 @@ export interface VehicleModelHierarchy {
   powerHpRange?: [number, number] | null;
   collectorScoreOverall?: number | null;
   investmentScoreOverall?: number | null;
-  priceRangeEur?: { min: number; max: number } | null;
+  priceRangeEur?: string | { min: number; max: number } | null;
   heroImageUrl?: string | null;
   competitors?: { name: string; slug: string; manufacturer: string; image_url: string }[];
 }
