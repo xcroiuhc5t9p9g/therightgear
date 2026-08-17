@@ -348,7 +348,58 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
 
 // GET Variants for Generation
 app.get('/api/v1/generations/:generationId/variants', (req: Request, res: Response) => {
-  res.json([]);
+  const { generationId } = req.params;
+  
+  const genVehicles = CATALOG_DATABASE.filter(x => x.generation_id === generationId);
+  
+  if (genVehicles.length === 0) {
+    return res.status(404).json({ success: false, error: 'GENERATION_NOT_FOUND' });
+  }
+
+  const manufacturers = new Set<string>();
+  const models = new Set<string>();
+  
+  genVehicles.forEach(mv => {
+    if (mv.manufacturer_name) manufacturers.add(mv.manufacturer_name);
+    if (mv.model_name) models.add(mv.model_name);
+  });
+
+  if (manufacturers.size > 1 || models.size > 1) {
+    return res.status(409).json({ success: false, error: 'INTEGRITY_CONFLICT' });
+  }
+
+  const uniqueVariantsMap = new Map<string, typeof CATALOG_DATABASE[0]>();
+  
+  genVehicles.forEach(mv => {
+    if (mv.id && !uniqueVariantsMap.has(mv.id)) {
+      uniqueVariantsMap.set(mv.id, mv);
+    }
+  });
+
+  const variantsList = Array.from(uniqueVariantsMap.values()).map(mv => {
+    let yearsRange: string | null = null;
+    if (mv.model_year_from != null) {
+      if (mv.model_year_to != null && mv.model_year_to !== mv.model_year_from) {
+        yearsRange = `${mv.model_year_from}–${mv.model_year_to}`;
+      } else {
+        yearsRange = `${mv.model_year_from}`;
+      }
+    } else if (mv.model_year_to != null) {
+      yearsRange = `${mv.model_year_to}`;
+    }
+
+    return {
+      id: mv.id,
+      slug: mv.slug,
+      name: mv.variant_name ?? null,
+      yearsRange,
+      limitedEdition: mv.limited_edition ?? null,
+      productionTotal: mv.production_total ?? null,
+      powerHp: mv.engine?.power_hp ?? null
+    };
+  });
+
+  res.json(variantsList);
 });
 
 // GET Single Variant
