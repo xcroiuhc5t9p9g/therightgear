@@ -414,30 +414,69 @@ app.get('/api/v1/variants/:variantId', (req: Request, res: Response) => {
   }
   
   // STRIP OUT LEGACY / DEMO / MARKET DATA
-  // We only return truthful automotive data
-  const {
-    current_median_price_eur,
-    price_change_1y_pct,
-    price_change_3y_pct,
-    liquidity_score,
-    volatility_score,
-    avg_days_on_market,
-    scores,
-    collector_score,
-    investment_score,
-    auctions,
-    listings,
-    historical_events,
-    price_history,
-    ...safeVariantFields
-  } = found as any;
-
+  // We only return truthful automotive data via an explicit allowlist
   res.json({
-    ...safeVariantFields,
-    limited_edition: safeVariantFields.limited_edition ?? null,
-    production_total: safeVariantFields.production_total ?? null,
-    model_year_from: safeVariantFields.model_year_from ?? null,
-    model_year_to: safeVariantFields.model_year_to ?? null,
+    // IDENTITY
+    id: found.id,
+    generation_id: found.generation_id,
+    manufacturer_id: found.manufacturer_id,
+    manufacturer_name: found.manufacturer_name,
+    model_name: found.model_name,
+    slug: found.slug,
+    variant_name: found.variant_name,
+    technical_identifiers: found.technical_identifiers ?? null,
+    in_primo_piano: found.in_primo_piano ?? null,
+    tier: found.tier ?? null,
+    category: found.category ?? null,
+    market_code: found.market_code ?? null,
+    
+    // PRODUCTION / CLASSIFICATION
+    model_year_from: found.model_year_from ?? null,
+    model_year_to: found.model_year_to ?? null,
+    production_start_year: found.production_start_year ?? null,
+    steering_side: found.steering_side ?? null,
+    body_style: found.body_style ?? null,
+    limited_edition: found.limited_edition ?? null,
+    numbered_series: found.numbered_series ?? null,
+    production_total: found.production_total ?? null,
+    original_list_price_eur: found.original_list_price_eur ?? null,
+    
+    // INTERNAL STATUS / METADATA
+    data_status: found.data_status,
+    is_ui_fixture: found.is_ui_fixture ?? null,
+    dataStatus: found.dataStatus ?? null,
+    catalogue_status: found.catalogue_status ?? null,
+    catalogueStatus: found.catalogueStatus ?? null,
+    
+    // MEDIA
+    hero_image_url: found.hero_image_url ?? null,
+    gallery_images: found.gallery_images ?? null,
+    
+    // TECHNICAL
+    canonical_engine_id: found.canonical_engine_id ?? null,
+    engine: found.engine ?? null,
+    transmission: found.transmission ?? null,
+    specs: found.specs ?? null,
+    
+    // HISTORY / PROVENANCE
+    history_it: found.history_it ?? null,
+    history_en: found.history_en ?? null,
+    designers: found.designers ?? null,
+    engineers: found.engineers ?? null,
+    related_entities: found.related_entities ?? null,
+    production_site: found.production_site ?? null,
+    known_issues: found.known_issues ?? null,
+    maintenance_complexity: found.maintenance_complexity ?? null,
+    annual_est_maintenance_eur: found.annual_est_maintenance_eur ?? null,
+    youtube_video_ids: found.youtube_video_ids ?? null,
+    
+    // BREAKDOWNS
+    variant_editions: found.variant_editions ?? null,
+    extended_variant_editions: found.extended_variant_editions ?? null,
+    generations_summary: found.generations_summary ?? null,
+    factory_colors: found.factory_colors ?? null,
+    production_breakdown_notes_it: found.production_breakdown_notes_it ?? null,
+    production_breakdown_notes_en: found.production_breakdown_notes_en ?? null
   });
 });
 
