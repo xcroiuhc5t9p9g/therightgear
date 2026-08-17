@@ -541,70 +541,23 @@ app.post('/api/v1/import/extract-vehicle', async (req: Request, res: Response) =
 
   // Pluggable provider handling architecture
   if (provider === 'paid_carquery_api' || provider === 'paid_mobile_de_api' || provider === 'paid_vincario_vin_api') {
-    return res.json({
-      success: true,
+    return res.status(503).json({
+      success: false,
       provider,
-      architecture_notice: `[Architettura Pronta] Provider commerciale "${provider}" selezionato. Le chiavi API di produzione e gli SDK ufficiali possono essere collegati nei Secret di ambiente per abilitare la sincronizzazione in tempo reale con i database enterprise.`,
-      records: [
-        {
-          id: `ext-paid-${Date.now()}-1`,
-          slug: `auto-paid-${Date.now()}`,
-          manufacturer_name: query.split(' ')[0] || 'Brand',
-          model_name: query.split(' ').slice(1).join(' ') || 'Specifica Enterprise API',
-          variant_name: 'Versione Verificata API Commerciale',
-          category: 'Supercar',
-          model_year_from: 2024,
-          production_total: 500,
-          power_hp: 720,
-          price_new_eur: 320000,
-          estimated_market_value_eur: 380000,
-          hero_image_url: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=1200&auto=format&fit=crop',
-          data_status: 'verified',
-          technical_description: `Record simulato generato da connettore API enterprise (${provider}).`,
-          source_references: [`${provider} Enterprise Registry v2.4`]
-        }
-      ],
-      groundingSources: [{ title: `${provider} Official API Docs`, uri: 'https://api.carqueryapi.com' }]
+      error: 'PROVIDER_NOT_CONFIGURED',
+      message: 'Connettore API commerciale non configurato.',
+      records: []
     });
   }
 
-  // Active Default: Gemini Google Search Grounding for Authoritative Web Sources
+  // Active Default: Gemini Google Search Grounding
   if (!aiClient) {
-    // Offline/Fallback generator if GEMINI_API_KEY is missing
-    const items = query.split('\n').filter((q: string) => q.trim().length > 0);
-    const mockExtracted = items.map((q: string, idx: number) => {
-      const parts = q.trim().split(' ');
-      const brand = parts[0] || 'Auto';
-      const model = parts.slice(1).join(' ') || 'Modello Speciale';
-      return {
-        id: `ext-${Date.now()}-${idx}`,
-        slug: `${brand.toLowerCase()}-${model.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-        manufacturer_name: brand,
-        model_name: model,
-        variant_name: `${model} Performance Spec`,
-        category: 'Supercar',
-        model_year_from: 2023,
-        production_total: 1000,
-        power_hp: 650,
-        price_new_eur: 250000,
-        estimated_market_value_eur: 290000,
-        hero_image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&auto=format&fit=crop',
-        data_status: 'imported',
-        technical_description: `Scheda recuperata da fonti web pubbliche per ${brand} ${model}.`,
-        key_features: ['Motore V8/V12', 'Telaio in Carbonio', 'Edizione Limitata'],
-        source_references: ['Wikipedia Auto', 'UltimateSpecs Free Database']
-      };
-    });
-
-    return res.json({
-      success: true,
+    return res.status(503).json({
+      success: false,
       provider: 'free_web_fallback',
-      message: 'Estrazione completata con dataset offline. Configura GEMINI_API_KEY per abilitare la ricerca live con Google Grounding.',
-      records: mockExtracted,
-      groundingSources: [
-        { title: 'Ultimate Specs Free Database', uri: 'https://www.ultimatespecs.com' },
-        { title: 'Wikipedia Automotive Portal', uri: 'https://it.wikipedia.org/wiki/Portale:Automobili' }
-      ]
+      error: 'GEMINI_UNAVAILABLE',
+      message: 'Configura GEMINI_API_KEY per abilitare l\'estrazione live. Estrazione offline simulata disabilitata per Data Integrity.',
+      records: []
     });
   }
 
@@ -614,7 +567,7 @@ Sei l'agente specializzato nell'estrazione dati della banca dati automobilistica
 Ricerca sul web tramite Google Search informazioni aggiornate, ufficiali e autorevoli per i seguenti veicoli richiesti dall'amministratore:
 "${query}"
 
-Per ciascun veicolo trovato, estrai una scheda tecnica completa rispettando TASSATIVAMENTE la seguente struttura JSON (incluso un array JSON denominato "vehicles"):
+Per ciascun veicolo trovato, estrai una scheda tecnica completa rispettando TASSATIVAMENTE la seguente struttura JSON (incluso un array JSON denominato "vehicles"). IMPORTANTE: NON INVENTARE DATI. Se un dato tecnico o di mercato non è disponibile nelle fonti, restituisci null anziché stimarlo:
 
 \`\`\`json
 {
@@ -636,7 +589,7 @@ Per ciascun veicolo trovato, estrai una scheda tecnica completa rispettando TASS
       "acceleration_0_100": 2.9,
       "price_new_eur": 320000,
       "estimated_market_value_eur": 380000,
-      "hero_image_url": "URL immagine rappresentativa reale o Unsplash automotive se non disponibile",
+      "hero_image_url": "URL immagine rappresentativa reale o null se non disponibile",
       "key_features": ["Caratteristica 1", "Caratteristica 2", "Caratteristica 3"],
       "technical_description": "Breve descrizione tecnica e storica ufficiale del modello."
     }
@@ -680,28 +633,28 @@ Fornisci ESCLUSIVAMENTE il blocco di codice JSON valido contenente la lista dei 
     const formattedRecords = parsedVehicles.map((v: any, idx: number) => ({
       id: `ext-gemini-${Date.now()}-${idx}`,
       slug: `${(v.manufacturer_name || 'Auto').toLowerCase()}-${(v.model_name || 'modello').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now().toString().slice(-4)}`,
-      manufacturer_name: v.manufacturer_name || 'Produttore',
-      model_name: v.model_name || 'Modello',
-      variant_name: v.variant_name || 'Specifica Standard',
-      category: v.category || 'Supercar',
-      model_year_from: Number(v.model_year_from) || 2024,
+      manufacturer_name: v.manufacturer_name || 'Costruttore Sconosciuto',
+      model_name: v.model_name || 'Modello Sconosciuto',
+      variant_name: v.variant_name || null,
+      category: v.category || null,
+      model_year_from: v.model_year_from ? Number(v.model_year_from) : null,
       model_year_to: v.model_year_to ? Number(v.model_year_to) : null,
-      production_total: Number(v.production_total) || 500,
-      power_hp: Number(v.power_hp) || 600,
-      torque_nm: Number(v.torque_nm) || 650,
-      engine_cc: Number(v.engine_cc) || 3000,
-      engine_layout: v.engine_layout || 'Centrale Posteriore',
-      transmission: v.transmission || 'Automatico 8-Rapporti',
-      top_speed_kmh: Number(v.top_speed_kmh) || 320,
-      acceleration_0_100: Number(v.acceleration_0_100) || 3.2,
-      price_new_eur: Number(v.price_new_eur) || 250000,
-      estimated_market_value_eur: Number(v.estimated_market_value_eur) || 280000,
+      production_total: v.production_total ? Number(v.production_total) : null,
+      power_hp: v.power_hp ? Number(v.power_hp) : null,
+      torque_nm: v.torque_nm ? Number(v.torque_nm) : null,
+      engine_cc: v.engine_cc ? Number(v.engine_cc) : null,
+      engine_layout: v.engine_layout || null,
+      transmission: v.transmission || null,
+      top_speed_kmh: v.top_speed_kmh ? Number(v.top_speed_kmh) : null,
+      acceleration_0_100: v.acceleration_0_100 ? Number(v.acceleration_0_100) : null,
+      price_new_eur: v.price_new_eur ? Number(v.price_new_eur) : null,
+      estimated_market_value_eur: v.estimated_market_value_eur ? Number(v.estimated_market_value_eur) : null,
       hero_image_url: v.hero_image_url && v.hero_image_url.startsWith('http') 
-        ? v.hero_image_url 
-        : 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=1200&auto=format&fit=crop',
+         ? v.hero_image_url 
+         : null,
       data_status: 'imported',
-      technical_description: v.technical_description || 'Record importato da fonti aperte via Gemini Web Search.',
-      key_features: Array.isArray(v.key_features) ? v.key_features : ['Importato via Gemini API'],
+      technical_description: v.technical_description || null,
+      key_features: Array.isArray(v.key_features) ? v.key_features : [],
       source_references: groundingSources.map((s: any) => s.title).slice(0, 3)
     }));
 
