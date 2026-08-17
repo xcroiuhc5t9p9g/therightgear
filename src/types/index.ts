@@ -748,18 +748,18 @@ export interface VehicleModelHierarchy {
   manufacturerSlug: string;
   modelName: string;
   modelSlug: string;
-  category: CategoryType;
-  yearsRange: string;
-  totalGenerationsCount: number;
-  totalVariantsCount: number;
-  historicSummaryIt: string;
-  historicSummaryEn: string;
-  powerHpRange: [number, number];
-  collectorScoreOverall: number;
-  investmentScoreOverall: number;
-  priceRangeEur: string;
-  heroImageUrl: string;
-  competitors: { name: string; slug: string; manufacturer: string; image_url: string }[];
+  category?: CategoryType | null;
+  yearsRange?: string | null;
+  totalGenerationsCount?: number | null;
+  totalVariantsCount?: number | null;
+  historicSummaryIt?: string | null;
+  historicSummaryEn?: string | null;
+  powerHpRange?: [number, number] | null;
+  collectorScoreOverall?: number | null;
+  investmentScoreOverall?: number | null;
+  priceRangeEur?: { min: number; max: number } | null;
+  heroImageUrl?: string | null;
+  competitors?: { name: string; slug: string; manufacturer: string; image_url: string }[];
 }
 
 export interface VehicleGenerationHierarchy {

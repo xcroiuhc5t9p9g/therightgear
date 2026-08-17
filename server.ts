@@ -108,28 +108,98 @@ app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
 // GET Model details
 app.get('/api/v1/models/:modelId', (req: Request, res: Response) => {
   const { modelId } = req.params;
-  const v = CATALOG_DATABASE.find(x => x.slug === modelId || x.id === modelId);
-  if (!v) {
+  const resolved = CATALOG_DATABASE.find(x => x.slug === modelId || x.id === modelId);
+  if (!resolved) {
     return res.status(404).json({ error: 'Model not found' });
   }
+
+  const modelVehicles = CATALOG_DATABASE.filter(x => x.manufacturer_name === resolved.manufacturer_name && x.model_name === resolved.model_name);
+
+  const generationIds = new Set<string>();
+  const variantIds = new Set<string>();
+  
+  let minYear: number | null = null;
+  let maxYear: number | null = null;
+  let hasOngoing = false;
+
+  let minHp: number | null = null;
+  let maxHp: number | null = null;
+  
+  let minPrice: number | null = null;
+  let maxPrice: number | null = null;
+
+  modelVehicles.forEach(mv => {
+    if (mv.generation_id) generationIds.add(mv.generation_id);
+    if (mv.id) variantIds.add(mv.id);
+
+    if (mv.model_year_from != null) {
+      if (minYear === null || mv.model_year_from < minYear) minYear = mv.model_year_from;
+      if (maxYear === null || mv.model_year_from > maxYear) maxYear = mv.model_year_from;
+      
+      if (mv.model_year_to == null) {
+        hasOngoing = true;
+      } else {
+        if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
+      }
+    } else if (mv.model_year_to != null) {
+      if (maxYear === null || mv.model_year_to > maxYear) maxYear = mv.model_year_to;
+    }
+
+    const hp = mv.engine?.power_hp;
+    if (hp != null) {
+      if (minHp === null || hp < minHp) minHp = hp;
+      if (maxHp === null || hp > maxHp) maxHp = hp;
+    }
+
+    const price = mv.current_median_price_eur;
+    if (price != null) {
+      if (minPrice === null || price < minPrice) minPrice = price;
+      if (maxPrice === null || price > maxPrice) maxPrice = price;
+    }
+  });
+
+  const totalGenerationsCount = generationIds.size;
+  const totalVariantsCount = variantIds.size > 0 ? variantIds.size : modelVehicles.length;
+
+  let yearsRange: string | null = null;
+  if (minYear !== null) {
+    if (hasOngoing) {
+      yearsRange = `${minYear}–Presente`;
+    } else if (maxYear !== null && maxYear !== minYear) {
+      yearsRange = `${minYear}–${maxYear}`;
+    } else {
+      yearsRange = `${minYear}`;
+    }
+  } else if (maxYear !== null) {
+    yearsRange = `${maxYear}`;
+  }
+
+  const powerHpRange: [number, number] | null = (minHp !== null && maxHp !== null) ? [minHp, maxHp] : null;
+  
+  const priceRangeEur = (minPrice !== null && maxPrice !== null) ? { min: minPrice, max: maxPrice } : null;
+
+  // No explicit methodology exists for model-level collector/investment score
+  const collectorScoreOverall = null;
+  const investmentScoreOverall = null;
+
   res.json({
-    modelId: v.id,
-    manufacturerId: v.manufacturer_id,
-    manufacturerName: v.manufacturer_name,
-    manufacturerSlug: v.manufacturer_name.toLowerCase(),
-    modelName: v.model_name,
-    modelSlug: v.slug,
-    category: v.category,
-    yearsRange: `${v.model_year_from}–${v.model_year_to || 'Presente'}`,
-    totalGenerationsCount: 1,
-    totalVariantsCount: 1,
-    powerHpRange: [v.engine.power_hp, v.engine.power_hp],
-    collectorScoreOverall: v.scores.collector_score.overall_score,
-    investmentScoreOverall: v.scores.investment_score.overall_score,
-    priceRangeEur: `€${v.current_median_price_eur.toLocaleString()}`,
-    heroImageUrl: v.hero_image_url,
-    historicSummaryIt: v.history_it,
-    historicSummaryEn: v.history_en
+    modelId: resolved.id,
+    manufacturerId: resolved.manufacturer_id,
+    manufacturerName: resolved.manufacturer_name,
+    manufacturerSlug: resolved.manufacturer_name.toLowerCase(),
+    modelName: resolved.model_name,
+    modelSlug: resolved.slug,
+    category: resolved.category ?? null,
+    yearsRange,
+    totalGenerationsCount,
+    totalVariantsCount,
+    powerHpRange,
+    collectorScoreOverall,
+    investmentScoreOverall,
+    priceRangeEur,
+    heroImageUrl: resolved.hero_image_url ?? null,
+    historicSummaryIt: resolved.history_it ?? null,
+    historicSummaryEn: resolved.history_en ?? null
   });
 });
 

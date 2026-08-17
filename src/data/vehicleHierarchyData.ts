@@ -38,7 +38,7 @@ export const BMW_M3_MODEL_HIERARCHY: VehicleModelHierarchy = {
   powerHpRange: [195, 550],
   collectorScoreOverall: 94,
   investmentScoreOverall: 91,
-  priceRangeEur: '€25.000 - €350.000+',
+  priceRangeEur: { min: 25000, max: 350000 },
   heroImageUrl: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1200&auto=format&fit=crop',
   competitors: [
     { name: '190E 2.5-16 Evolution II', slug: 'mercedes-190e-evo2', manufacturer: 'Mercedes-Benz', image_url: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&auto=format&fit=crop' },
