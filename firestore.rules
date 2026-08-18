@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() { return request.auth != null; }
+    function isOwner(uid) { return isAuthenticated() && request.auth.uid == uid; }
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function hasRole(role) {
+      return isAuthenticated() && getRole() == role;
+    }
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId) || hasRole('super_admin') || hasRole('editor');
+      
+      allow create: if isOwner(userId)
+        && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'private_user')
+        && !request.resource.data.keys().hasAny(['capabilities', 'accountStatus', 'verificationStatus']);
+        
+      allow update: if (isOwner(userId) 
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'capabilities', 'accountStatus', 'verificationStatus']))
+        || hasRole('super_admin');
+    }
+    
+    match /watchlists/{userId} {
+      allow read, write: if isOwner(userId) || hasRole('super_admin');
+    }
+    
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

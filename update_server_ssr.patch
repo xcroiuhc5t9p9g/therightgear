@@ -1,0 +1,177 @@
+--- server.ts
++++ server.ts
+@@ -1521,95 +1521,29 @@
+         <h1>Data Partnerships & Provider Ecosystem</h1>
+         <p>The Right Gear provides a partner-ready architecture designed for integration with automotive data providers, auction platforms, and OEM archives.</p>
+       </main>
+       ${footerHtml}
+     `;
+-  } else if (cleanPath.startsWith('/cars/bmw/m3/e30/sport-evolution') || cleanPath.endsWith('/sport-evolution')) {
+-    title = "BMW M3 E30 Sport Evolution (238 hp) | The Right Gear";
+-    description = "Official technical specifications, production history, and verified provenance for the BMW M3 E30 Sport Evolution (Evo III). 2.5L S14B25 238 hp engine, 600 units produced from Dec 1989 to Mar 1990.";
+-    jsonLd = {
+-      "@context": "https://schema.org",
+-      "@type": "Car",
+-      "name": "BMW M3 E30 Sport Evolution",
+-      "manufacturer": { "@type": "Organization", "name": "BMW" },
+-      "model": "M3",
+-      "vehicleModelDate": "1990",
+-      "productionDate": "1989-12 to 1990-03",
+-      "description": description,
+-      "url": `${baseUrl}/cars/bmw/m3/e30/sport-evolution`
+-    };
+-    bodyHtml = `
+-      ${headerHtml}
+-      <main>
+-        <nav aria-label="Breadcrumb">
+-          <ol>
+-            <li><a href="/">Home</a></li>
+-            <li><a href="/brands/bmw">BMW</a></li>
+-            <li><a href="/cars/bmw/m3">M3</a></li>
+-            <li><a href="/cars/bmw/m3/e30">E30 Generation</a></li>
+-            <li>BMW M3 E30 Sport Evolution</li>
+-          </ol>
+-        </nav>
+-        <h1>BMW M3 E30 Sport Evolution</h1>
+-        <p class="subtitle">2.5L S14B25 Inline-4 | 238 hp / 175 kW | 600 Units Produced</p>
+-        <section>
+-          <h2>Overview & Historical Significance</h2>
+-          <p>Produced in exactly 600 units between December 1989 and March 1990 to homologate the 2.5-liter engine upgrade for Group A DTM racing. Features adjustable 3-position front splitter, adjustable rear wing, thinner glass, and lightweight bodywork.</p>
+-        </section>
+-        <section>
+-          <h2>Technical Specifications</h2>
+-          <dl>
+-            <dt>Engine Code</dt><dd>S14B25</dd>
+-            <dt>Displacement</dt><dd>2,467 cc (2.5L)</dd>
+-            <dt>Power Output</dt><dd>238 hp (175 kW) @ 7,000 rpm</dd>
+-            <dt>Max Torque</dt><dd>240 Nm @ 4,750 rpm</dd>
+-            <dt>Transmission</dt><dd>Getrag 265/5 5-Speed Manual Dog-Leg</dd>
+-            <dt>Top Speed</dt><dd>248 km/h</dd>
+-            <dt>Acceleration 0–100 km/h</dt><dd>6.1 seconds</dd>
+-            <dt>Kerb Weight</dt><dd>1,200 kg</dd>
+-            <dt>Original German Price</dt><dd>DM 85,000</dd>
+-            <dt>Production Total</dt><dd>600 units (12/1989 – 03/1990)</dd>
+-            <dt>Official Colours</dt><dd>Jet Black (Glanzschwarz) & Brilliant Red (Brillantrot)</dd>
+-            <dt>FIA Homologation</dt><dd>Group A Homologation 5327 (02/03/1987)</dd>
+-          </dl>
+-        </section>
+-        <section>
+-          <h2>Source Provenance</h2>
+-          <p>Primary Data Source: BMW Group Classic Archives & FIA Historic Database Homologation A-5327.</p>
+-        </section>
+-      </main>
+-      ${footerHtml}
+-    `;
+-  } else if (cleanPath.startsWith('/cars/bmw/m3/e30/evolution-ii') || cleanPath.endsWith('/evolution-ii')) {
+-    title = "BMW M3 E30 Evolution II (220 hp) | The Right Gear";
+-    description = "Official technical specifications, production history, and verified provenance for the BMW M3 E30 Evolution II (Evo 2). 2.3L S14B23 Evo II 220 hp engine, 500 units produced from Apr 1988 to Jun 1988.";
+-    jsonLd = {
+-      "@context": "https://schema.org",
+-      "@type": "Car",
+-      "name": "BMW M3 E30 Evolution II",
+-      "manufacturer": { "@type": "Organization", "name": "BMW" },
+-      "model": "M3",
+-      "vehicleModelDate": "1988",
+-      "description": description,
+-      "url": `${baseUrl}/cars/bmw/m3/e30/evolution-ii`
+-    };
+-    bodyHtml = `
+-      ${headerHtml}
+-      <main>
+-        <nav aria-label="Breadcrumb">
+-          <ol>
+-            <li><a href="/">Home</a></li>
+-            <li><a href="/brands/bmw">BMW</a></li>
+-            <li><a href="/cars/bmw/m3">M3</a></li>
+-            <li><a href="/cars/bmw/m3/e30">E30 Generation</a></li>
+-            <li>BMW M3 E30 Evolution II</li>
+-          </ol>
+-        </nav>
+-        <h1>BMW M3 E30 Evolution II</h1>
+-        <p class="subtitle">2.3L S14B23 Evo II Inline-4 | 220 hp / 162 kW | 500 Units Produced</p>
+-        <section>
+-          <h2>Overview & Historical Significance</h2>
+-          <p>Produced in 500 units between April and June 1988. Upgraded with higher compression pistons, revised camshafts, deeper front spoiler, rear spoiler lip, and lighter trunk lid.</p>
+-        </section>
+-        <section>
+-          <h2>Technical Specifications</h2>
+-          <dl>
+-            <dt>Engine Code</dt><dd>S14B23 Evo II</dd>
+-            <dt>Displacement</dt><dd>2,302 cc (2.3L)</dd>
+-            <dt>Power Output</dt><dd>220 hp (162 kW) @ 6,750 rpm</dd>
+-            <dt>Max Torque</dt><dd>245 Nm @ 4,750 rpm</dd>
+-            <dt>Transmission</dt><dd>Getrag 265 5-Speed Manual Dog-Leg</dd>
+-            <dt>Top Speed</dt><dd>243 km/h</dd>
+-            <dt>Acceleration 0–100 km/h</dt><dd>6.7 seconds</dd>
+-            <dt>Kerb Weight</dt><dd>1,200 kg</dd>
+-            <dt>Original German Price</dt><dd>DM 75,000</dd>
+-            <dt>Production Total</dt><dd>500 units (04/1988 – 06/1988)</dd>
+-          </dl>
+-        </section>
+-      </main>
+-      ${footerHtml}
+-    `;
+-  } else if (cleanPath.startsWith('/cars/bmw/m3/e30/m3-2-3') || cleanPath.endsWith('/m3-2-3')) {
+-    title = "BMW M3 E30 2.3 (195/200 hp) | The Right Gear";
+-    description = "Official technical specifications, production history, and verified provenance for the standard BMW M3 E30. 2.3L S14B23 195 - 200 hp engine, 17,970 units produced.";
+-    jsonLd = {
+-      "@context": "https://schema.org",
+-      "@type": "Car",
+-      "name": "BMW M3 E30 2.3",
+-      "manufacturer": { "@type": "Organization", "name": "BMW" },
+-      "model": "M3",
+-      "vehicleModelDate": "1986",
+-      "description": description,
+-      "url": `${baseUrl}/cars/bmw/m3/e30/m3-2-3`
+-    };
+-    bodyHtml = `
+-      ${headerHtml}
+-      <main>
+-        <nav aria-label="Breadcrumb">
+-          <ol>
+-            <li><a href="/">Home</a></li>
+-            <li><a href="/brands/bmw">BMW</a></li>
+-            <li><a href="/cars/bmw/m3">M3</a></li>
+-            <li><a href="/cars/bmw/m3/e30">E30 Generation</a></li>
+-            <li>BMW M3 E30 2.3</li>
+-          </ol>
+-        </nav>
+-        <h1>BMW M3 E30 2.3</h1>
+-        <p class="subtitle">2.3L S14B23 Inline-4 | 195 - 200 hp | 17,970 Units Produced</p>
+-        <section>
+-          <h2>Overview & Historical Significance</h2>
+-          <p>The original E30 M3 homologation model that established the M3 lineage. Produced in high volumes to satisfy Group A regulations.</p>
+-        </section>
+-      </main>
+-      ${footerHtml}
+-    `;
++  } else if (cleanPath.startsWith('/cars/') || cleanPath.startsWith('/vehicle/')) {
++    const slugParts = cleanPath.split('/');
++    const targetSlug = slugParts[slugParts.length - 1];
++    const vehicle = CATALOG_DATABASE.find(v => v.slug === targetSlug || v.id === targetSlug);
++    if (vehicle) {
++      const s = vehicle.data_status?.toLowerCase();
++      const isPublic = s === 'verified' || s === 'licensed' || s === 'approved';
++      
++      title = \`\${vehicle.manufacturer_name} \${vehicle.model_name} \${vehicle.variant_name} | The Right Gear\`;
++      description = \`Automotive details for \${vehicle.manufacturer_name} \${vehicle.model_name} \${vehicle.variant_name}.\`;
++      
++      jsonLd = {
++        "@context": "https://schema.org",
++        "@type": "Car",
++        "name": \`\${vehicle.manufacturer_name} \${vehicle.model_name} \${vehicle.variant_name}\`,
++        "manufacturer": { "@type": "Organization", "name": vehicle.manufacturer_name },
++        "model": vehicle.model_name,
++        "url": \`\${baseUrl}\${cleanPath}\`
++      };
++
++      bodyHtml = \`
++        \${headerHtml}
++        <main>
++          <h1>\${vehicle.manufacturer_name} \${vehicle.model_name} \${vehicle.variant_name}</h1>
++          \${!isPublic ? '<p>Data currently under research.</p>' : \`<p>Engine: \${vehicle.engine?.type_code || 'N/A'}, \${vehicle.engine?.power_hp ? vehicle.engine.power_hp + ' HP' : 'N/A'}</p>\`}
++        </main>
++        \${footerHtml}
++      \`;
++    }
+   } else if (cleanPath === '/cars/bmw/m3/e30' || cleanPath === '/cars/bmw/m3/e30/') {

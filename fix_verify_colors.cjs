@@ -1,0 +1,14 @@
+const fs = require('fs');
+let code = fs.readFileSync('src/pages/VerifyEmailPage.tsx', 'utf8');
+code = code.replace(/bg-slate-900/g, 'bg-trg-carbon');
+code = code.replace(/hover:bg-slate-800/g, 'hover:bg-trg-graphite');
+code = code.replace(/text-slate-900/g, 'text-trg-carbon');
+code = code.replace(/text-slate-800/g, 'text-trg-carbon');
+code = code.replace(/text-slate-700/g, 'text-trg-gray-700');
+code = code.replace(/text-slate-600/g, 'text-trg-gray-500');
+code = code.replace(/text-slate-500/g, 'text-trg-gray-400');
+code = code.replace(/hover:text-slate-700/g, 'hover:text-trg-carbon');
+code = code.replace(/bg-slate-50/g, 'bg-trg-gray-100');
+code = code.replace(/border-slate-200/g, 'border-trg-gray-200');
+code = code.replace(/hover:bg-slate-50/g, 'hover:bg-trg-gray-100');
+fs.writeFileSync('src/pages/VerifyEmailPage.tsx', code);

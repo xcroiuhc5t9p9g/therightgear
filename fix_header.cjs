@@ -1,0 +1,310 @@
+const fs = require('fs');
+let code = fs.readFileSync('src/components/Header.tsx', 'utf8');
+
+const returnStart = code.indexOf('  return (');
+const headerStart = code.slice(0, returnStart);
+
+const newReturn = `  return (
+    <header className="bg-white border-b border-trg-gray-200 sticky top-0 z-40 h-16">
+      <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        
+        {/* LOGO */}
+        <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => onNavigate('home')}>
+          <div className="flex flex-col">
+            <span className="text-xl font-black tracking-tighter text-trg-carbon uppercase leading-none">The Right Gear</span>
+            <span className="text-[9px] font-bold tracking-widest text-trg-red uppercase mt-0.5">Automotive Intelligence</span>
+          </div>
+        </div>
+
+        {/* SEARCH BAR (Desktop) */}
+        <div ref={searchContainerRef} className="hidden md:flex flex-1 max-w-2xl mx-8 relative">
+          <div className="relative w-full">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-trg-gray-400" />
+            </div>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSearchFocused(true);
+                setSelectedIndex(-1);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+                    handleSuggestionClick(suggestions[selectedIndex].action);
+                  } else if (query.trim()) {
+                    onSearch(query.trim());
+                    setSearchFocused(false);
+                    searchInputRef.current?.blur();
+                  }
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSelectedIndex(prev => Math.min(prev + 1, suggestions.length - 1));
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSelectedIndex(prev => Math.max(prev - 1, -1));
+                } else if (e.key === 'Escape') {
+                  setSearchFocused(false);
+                  searchInputRef.current?.blur();
+                }
+              }}
+              onFocus={() => setSearchFocused(true)}
+              placeholder="Search maker, model, generation or variant"
+              className="w-full bg-white text-sm text-trg-carbon placeholder-trg-gray-400 pl-11 pr-4 py-2.5 rounded-lg border border-trg-gray-300 focus:outline-none focus:border-trg-red focus:ring-1 focus:ring-trg-red transition-all"
+            />
+          </div>
+          
+          {/* Search Suggestions Dropdown */}
+          {searchFocused && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg border border-trg-gray-200 shadow-xl overflow-hidden py-2 z-50 max-h-96 overflow-y-auto">
+              {suggestions.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleSuggestionClick(suggestion.action)}
+                  className={\`w-full text-left px-4 py-3 flex items-center justify-between group \${idx === selectedIndex ? 'bg-trg-gray-100' : 'hover:bg-trg-gray-50'}\`}
+                >
+                  <div className="flex items-center gap-3">
+                    {suggestion.thumbnail && (
+                      <img src={suggestion.thumbnail} alt="" className="w-10 h-10 object-contain bg-white rounded border border-trg-gray-100" />
+                    )}
+                    <div>
+                      <div className="font-medium text-trg-carbon">{suggestion.title}</div>
+                      {suggestion.subtitle && <div className="text-xs text-trg-gray-500 mt-0.5">{suggestion.subtitle}</div>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-trg-gray-400">{suggestion.type}</span>
+                    <ArrowRight className={\`w-4 h-4 transition-colors \${idx === selectedIndex ? 'text-trg-red' : 'text-trg-gray-300 group-hover:text-trg-red'}\`} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* NAVIGATION (Desktop) */}
+        <nav className="hidden md:flex items-center gap-8">
+          <button 
+            onClick={() => onNavigate('explore')}
+            className="text-sm font-semibold text-trg-carbon hover:text-trg-red tracking-wide uppercase transition-colors"
+          >
+            Explore
+          </button>
+          
+          <div ref={userMenuRef} className="relative">
+            <button 
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="w-10 h-10 rounded-full bg-trg-gray-200 flex items-center justify-center cursor-pointer hover:bg-trg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-trg-red"
+            >
+              <User className="w-5 h-5 text-trg-carbon" />
+            </button>
+            
+            {userMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-trg-gray-200 shadow-xl py-2 z-50">
+                {isAuthenticated ? (
+                  !emailVerified ? (
+                    <>
+                      <div className="px-4 py-3 border-b border-trg-gray-100 bg-slate-50">
+                        <p className="text-sm text-trg-carbon font-medium truncate">{currentUser?.email}</p>
+                        <p className="text-xs text-amber-600 font-bold mt-1">Email verification required</p>
+                      </div>
+                      <div className="py-1">
+                        <button onClick={() => { onNavigate('verify-email'); setUserMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-trg-gray-50 text-trg-carbon font-medium text-sm">Verify email</button>
+                      </div>
+                      <div className="border-t border-trg-gray-100 mt-1"></div>
+                      <button onClick={() => { signOut(); setUserMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-red-50 text-trg-red font-bold text-sm pt-2">Sign out</button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="px-4 py-3 border-b border-trg-gray-100 bg-slate-50">
+                        <p className="text-sm text-trg-carbon font-medium truncate">{currentUser?.email}</p>
+                        <p className="text-xs text-trg-gray-500 font-bold capitalize mt-1">
+                          {actualRole === 'super_admin' ? 'Super Admin' : actualRole?.replace('_', ' ')}
+                        </p>
+                      </div>
+                      <div className="py-1">
+                        <button onClick={() => { onNavigate('profile'); setUserMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-trg-gray-50 text-trg-carbon font-medium text-sm">Profile</button>
+                        <button onClick={() => { onNavigate('watchlist'); setUserMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-trg-gray-50 text-trg-carbon font-medium text-sm flex justify-between items-center">
+                          Watchlist 
+                          {watchlistCount > 0 && <span className="bg-trg-red text-white text-[10px] px-1.5 py-0.5 rounded font-bold">{watchlistCount}</span>}
+                        </button>
+                      </div>
+                      {actualRole === 'super_admin' && (
+                        <>
+                          <div className="border-t border-trg-gray-100 my-1"></div>
+                          <div className="px-4 py-1">
+                            <p className="text-[10px] font-bold text-trg-gray-400 uppercase tracking-wider mb-1">Administration</p>
+                          </div>
+                          <button onClick={() => { onNavigate('super_admin'); setUserMenuOpen(false); }} className="w-full text-left px-4 py-1.5 hover:bg-trg-gray-50 text-trg-carbon font-medium text-sm">Users & Roles</button>
+                        </>
+                      )}
+                      {(actualRole === 'super_admin' || actualRole === 'editor') && (
+                        <>
+                          <div className="border-t border-trg-gray-100 my-1"></div>
+                          <div className="px-4 py-1">
+                            <p className="text-[10px] font-bold text-trg-gray-400 uppercase tracking-wider mb-1">Editorial</p>
+                          </div>
+                          <button onClick={() => { onNavigate('editorial'); setUserMenuOpen(false); }} className="w-full text-left px-4 py-1.5 hover:bg-trg-gray-50 text-trg-carbon font-medium text-sm">Editorial</button>
+                          {actualRole === 'super_admin' && (
+                            <button onClick={() => { onNavigate('import-lab'); setUserMenuOpen(false); }} className="w-full text-left px-4 py-1.5 hover:bg-trg-gray-50 text-trg-carbon font-medium text-sm">Import Lab</button>
+                          )}
+                        </>
+                      )}
+                      {actualRole === 'super_admin' && (
+                        <>
+                          <div className="border-t border-trg-gray-100 my-1"></div>
+                          <div className="px-4 py-1">
+                            <p className="text-[10px] font-bold text-trg-gray-400 uppercase tracking-wider mb-1">View As</p>
+                          </div>
+                          {['visitor', 'private_user', 'corporate_user', 'editor', 'super_admin'].map((role) => {
+                            const isCurrent = previewRole ? previewRole === role : (role === 'super_admin');
+                            return (
+                              <button
+                                key={role}
+                                onClick={() => {
+                                  setPreviewRole(role === 'super_admin' ? null : role);
+                                  setUserMenuOpen(false);
+                                }}
+                                className={\`w-full text-left px-4 py-1.5 hover:bg-trg-gray-50 font-medium text-sm \${isCurrent ? 'text-trg-red font-bold' : 'text-trg-carbon'}\`}
+                              >
+                                {role.replace('_', ' ')}
+                              </button>
+                            );
+                          })}
+                        </>
+                      )}
+                      <div className="border-t border-trg-gray-100 mt-1"></div>
+                      <button onClick={() => { signOut(); setUserMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-red-50 text-trg-red font-bold text-sm pt-2">Sign out</button>
+                    </>
+                  )
+                ) : (
+                  <div className="py-1">
+                    <button onClick={() => { onNavigate('register'); setUserMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-trg-gray-50 text-trg-carbon font-medium text-sm">Sign in</button>
+                    <button onClick={() => { onNavigate('register'); setUserMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-trg-gray-50 text-trg-carbon font-medium text-sm">Create account</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </nav>
+
+        {/* MOBILE MENU BUTTON */}
+        <div className="md:hidden flex items-center gap-4">
+          <button
+            onClick={() => {
+              setSearchFocused(false);
+              setMobileMenuOpen(!mobileMenuOpen);
+            }}
+            className="w-10 h-10 flex items-center justify-center text-trg-carbon hover:bg-trg-gray-100 rounded-full transition-colors"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
+      </div>
+
+      {/* MOBILE MENU OVERLAY */}
+      {mobileMenuOpen && (
+        <div className="md:hidden absolute top-16 left-0 right-0 bg-white border-b border-trg-gray-200 shadow-xl overflow-y-auto" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
+          <div className="p-4 flex flex-col gap-6">
+            
+            {/* Mobile Search */}
+            <div className="relative w-full">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-trg-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && query.trim()) {
+                    onSearch(query.trim());
+                    setMobileMenuOpen(false);
+                  }
+                }}
+                placeholder="Search cars..."
+                className="w-full bg-trg-gray-50 text-sm text-trg-carbon placeholder-trg-gray-500 pl-11 pr-4 py-3 rounded-lg border border-trg-gray-200 focus:outline-none focus:border-trg-red focus:bg-white transition-all"
+              />
+            </div>
+
+            <nav className="flex flex-col gap-2">
+              <button onClick={() => { onNavigate('explore'); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-carbon py-2 border-b border-trg-gray-100">Explore</button>
+              
+              {isAuthenticated ? (
+                !emailVerified ? (
+                  <>
+                    <div className="py-2 border-b border-trg-gray-100">
+                      <p className="text-sm text-trg-carbon font-medium truncate">{currentUser?.email}</p>
+                      <p className="text-xs text-amber-600 font-bold mt-1">Email verification required</p>
+                    </div>
+                    <button onClick={() => { onNavigate('verify-email'); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-carbon py-2">Verify email</button>
+                    <button onClick={() => { signOut(); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-red py-2 mt-2 w-full block">Sign out</button>
+                  </>
+                ) : (
+                  <>
+                    <div className="py-2 border-b border-trg-gray-100 mb-2">
+                      <p className="text-sm text-trg-carbon font-medium truncate">{currentUser?.email}</p>
+                      <p className="text-xs text-trg-gray-500 font-bold capitalize mt-1">
+                        {actualRole === 'super_admin' ? 'Super Admin' : actualRole?.replace('_', ' ')}
+                      </p>
+                    </div>
+                    
+                    <button onClick={() => { onNavigate('profile'); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-carbon py-2">Profile</button>
+                    <button onClick={() => { onNavigate('watchlist'); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-carbon py-2 flex justify-between items-center w-full">
+                      Watchlist
+                      {watchlistCount > 0 && <span className="bg-trg-red text-white text-xs px-2 py-0.5 rounded font-bold">{watchlistCount}</span>}
+                    </button>
+
+                    {actualRole === 'super_admin' && (
+                      <>
+                        <div className="border-t border-trg-gray-200 mt-2 pt-2"></div>
+                        <span className="text-xs font-bold uppercase text-trg-gray-400 block mb-1">Administration</span>
+                        <button onClick={() => { onNavigate('super_admin'); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-carbon py-2 block w-full">Users & Roles</button>
+                      </>
+                    )}
+
+                    {(actualRole === 'super_admin' || actualRole === 'editor') && (
+                      <>
+                        <div className="border-t border-trg-gray-200 mt-2 pt-2"></div>
+                        <span className="text-xs font-bold uppercase text-trg-gray-400 block mb-1">Editorial</span>
+                        <button onClick={() => { onNavigate('editorial'); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-carbon py-2 block w-full">Editorial</button>
+                        {actualRole === 'super_admin' && (
+                          <button onClick={() => { onNavigate('import-lab'); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-carbon py-2 block w-full">Import Lab</button>
+                        )}
+                      </>
+                    )}
+                    
+                    {actualRole === 'super_admin' && (
+                       <div className="border-t border-trg-gray-200 mt-2 pt-2 flex flex-col gap-2">
+                         <span className="text-xs font-bold uppercase text-trg-gray-400 block mb-1">View As</span>
+                         {(['visitor', 'private_user', 'corporate_user', 'editor', 'super_admin'] as const).map(role => (
+                           <button key={role} onClick={() => { setPreviewRole(role === 'super_admin' ? null : role); setMobileMenuOpen(false); }} className={\`text-left font-bold text-lg py-1 \${previewRole === role || (role === 'super_admin' && !previewRole) ? 'text-trg-red' : 'text-trg-carbon'}\`}>
+                             <span className="capitalize">{role.replace('_', ' ')}</span>
+                           </button>
+                         ))}
+                       </div>
+                    )}
+                    
+                    <button onClick={() => { signOut(); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-red py-2 border-t border-trg-gray-200 mt-4 w-full block">Sign out</button>
+                  </>
+                )
+              ) : (
+                <>
+                  <button onClick={() => { onNavigate('register'); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-carbon py-2">Sign in</button>
+                  <button onClick={() => { onNavigate('register'); setMobileMenuOpen(false); }} className="text-left font-bold text-lg text-trg-carbon py-2">Create account</button>
+                </>
+              )}
+            </nav>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+};
+`;
+
+fs.writeFileSync('src/components/Header.tsx', headerStart + newReturn);

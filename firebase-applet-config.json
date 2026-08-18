@@ -1,0 +1,12 @@
+{
+  "projectId": "automotive-ai-platform",
+  "appId": "1:853788383628:web:135e95c5f7e88dc7b49ea9",
+  "apiKey": "AIzaSyCP6OK3BSOfltCtmLopC9QsZ84FzGzw1Rc",
+  "authDomain": "automotive-ai-platform.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-therightgear-952d4703-659f-4be3-b072-f12d1aae0de8",
+  "storageBucket": "automotive-ai-platform.firebasestorage.app",
+  "messagingSenderId": "853788383628",
+  "measurementId": "",
+  "oAuthClientId": "853788383628-uioa4rkmvussdfc00nct9p8n0tmkv0q4.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
+}
