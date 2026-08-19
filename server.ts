@@ -717,54 +717,74 @@ app.get('/sitemap.xml', (req: Request, res: Response) => {
 
   const staticUrls = [
     '/',
-    '/explore',
+    '/cars',
+    '/motorcycles',
+    '/events',
     '/market',
     '/about',
     '/faq',
     '/methodology',
     '/data-partnerships',
-    '/compare',
-    '/graph',
-    '/editorial',
+    '/contact',
+    '/privacy',
+    '/terms',
     '/llms.txt'
   ];
 
-  const categories = [
-    'supercar',
-    'hypercar',
-    'youngtimer',
-    'gt-classic',
-    'homologation-special'
-  ];
+  const urls: string[] = [...staticUrls];
 
-  const manufacturers = [
-    'porsche',
-    'lamborghini',
-    'mclaren',
-    'bugatti',
-    'lancia',
-    'alfa-romeo'
-  ];
+  // Canonical Maker routes (/brands/:maker)
+  const makerSlugs = new Set<string>();
+  MANUFACTURERS.forEach(m => {
+    if (m.slug) makerSlugs.add(m.slug);
+  });
+  CATALOG_DATABASE.forEach(v => {
+    if (v.manufacturer_name) {
+      const slug = v.manufacturer_name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      if (slug) makerSlugs.add(slug);
+    }
+  });
+  makerSlugs.forEach(slug => {
+    urls.push(`/brands/${slug}`);
+  });
 
-  const lastMod = new Date().toISOString().split('T')[0];
+  // Canonical Model, Generation, and Variant routes
+  const modelUrls = new Set<string>();
+  const generationUrls = new Set<string>();
+  const variantUrls = new Set<string>();
+
+  CATALOG_DATABASE.forEach(v => {
+    if (!v.manufacturer_name || !v.model_name) return;
+    const isMotorcycle = (v.category as string) === 'motorcycle' || (v as any).vehicle_type === 'motorcycle';
+    if (isMotorcycle) return;
+
+    const makerSlug = v.manufacturer_name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const modelSlug = v.model_name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+    if (!makerSlug || !modelSlug) return;
+
+    modelUrls.add(`/cars/${makerSlug}/${modelSlug}`);
+
+    if (v.generation_id && typeof v.generation_id === 'string' && v.generation_id.trim().length > 0) {
+      const genSlug = v.generation_id.trim();
+      generationUrls.add(`/cars/${makerSlug}/${modelSlug}/${genSlug}`);
+
+      if (v.slug && typeof v.slug === 'string' && v.slug.trim().length > 0) {
+        const varSlug = v.slug.trim();
+        variantUrls.add(`/cars/${makerSlug}/${modelSlug}/${genSlug}/${varSlug}`);
+      }
+    }
+  });
+
+  modelUrls.forEach(u => urls.push(u));
+  generationUrls.forEach(u => urls.push(u));
+  variantUrls.forEach(u => urls.push(u));
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
   xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
-  staticUrls.forEach(path => {
-    xml += `  <url>\n    <loc>${baseUrl}${path}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>${path === '/' ? '1.0' : '0.8'}</priority>\n  </url>\n`;
-  });
-
-  categories.forEach(cat => {
-    xml += `  <url>\n    <loc>${baseUrl}/category/${cat}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n`;
-  });
-
-  manufacturers.forEach(m => {
-    xml += `  <url>\n    <loc>${baseUrl}/manufacturer/${m}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n`;
-  });
-
-  CATALOG_DATABASE.forEach(v => {
-    xml += `  <url>\n    <loc>${baseUrl}/vehicle/${v.slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+  urls.forEach(path => {
+    xml += `  <url>\n    <loc>${baseUrl}${path}</loc>\n  </url>\n`;
   });
 
   xml += `</urlset>`;
