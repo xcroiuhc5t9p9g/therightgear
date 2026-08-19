@@ -52,7 +52,7 @@ app.get('/api/v1/manufacturers', (req: Request, res: Response) => {
 
 // Internal helper to resolve model and scoped vehicles
 function resolveModelVehicles(modelId: string) {
-  const resolved = CATALOG_DATABASE.find(x => x.slug === modelId || x.id === modelId || x.model_name.toLowerCase().replace(/\s+/g, '-') === modelId);
+  const resolved = CATALOG_DATABASE.find(x => x.slug === modelId || x.id === modelId);
   if (!resolved) {
     return null;
   }
@@ -92,11 +92,23 @@ app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
           variants: []
         });
       }
+
+      let variantYears: string | null = null;
+      if (v.model_year_from != null) {
+        if (v.model_year_to != null && v.model_year_to !== v.model_year_from) {
+          variantYears = `${v.model_year_from}–${v.model_year_to}`;
+        } else {
+          variantYears = `${v.model_year_from}`;
+        }
+      } else if (v.model_year_to != null) {
+        variantYears = `${v.model_year_to}`;
+      }
+
       genMap.get(v.generation_id).variants.push({
         id: v.id,
         slug: v.slug,
         name: v.variant_name,
-        years: v.model_year_from ? `${v.model_year_from}–${v.model_year_to || ''}` : null,
+        years: variantYears,
         limitedEdition: v.limited_edition ?? null,
         productionTotal: v.production_total ?? null,
         powerHp: v.engine?.power_hp ?? null
@@ -106,9 +118,20 @@ app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
 
   genMap.forEach(gen => generations.push(gen));
 
+  let modelYears: string | null = null;
+  if (vehicle.model_year_from != null) {
+    if (vehicle.model_year_to != null && vehicle.model_year_to !== vehicle.model_year_from) {
+      modelYears = `${vehicle.model_year_from}–${vehicle.model_year_to}`;
+    } else {
+      modelYears = `${vehicle.model_year_from}`;
+    }
+  } else if (vehicle.model_year_to != null) {
+    modelYears = `${vehicle.model_year_to}`;
+  }
+
   return res.json({
     manufacturer: { id: `m-${mName.toLowerCase()}`, name: mName, slug: mName.toLowerCase() },
-    model: { id: modelId, name: modelName, slug: modelId, years: vehicle.model_year_from ? `${vehicle.model_year_from}–${vehicle.model_year_to || 'Pres.'}` : null },
+    model: { id: modelId, name: modelName, slug: modelId, years: modelYears },
     generations
   });
 });
