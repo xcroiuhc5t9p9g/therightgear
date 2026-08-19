@@ -33,7 +33,6 @@ import { catalogueRepository, isPublicCanonicalFact, filterVehicleForPublic } fr
 import { Locale, translations } from '../data/translations';
 import { VersionNavigator } from '../components/VersionNavigator';
 import { VariantCompareModal } from '../components/VariantCompareModal';
-import { getVehicleFamilyNavigation } from '../data/vehicleHierarchyData';
 import { generateVehicleJsonLd, injectSeoGeoMetadata, getAbsolutePageUrl } from '../services/seoGeoService';
 import { AeoDirectAnswerCard } from '../components/AeoDirectAnswerCard';
 import { AuthPromptReason } from '../components/AuthPromptModal';
@@ -232,10 +231,14 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
                 </span>
                 <span className="text-trg-gray-400">·</span>
                 <span className="text-trg-carbon font-bold">{vehicle.model_name}</span>
-                <span className="text-trg-gray-400">·</span>
-                <span className="text-[#D71920] font-mono font-extrabold bg-trg-warm-white px-2 py-0.5 rounded border border-trg-gray-200">
-                  Gen {activeGenItem?.code || 'E30'}
-                </span>
+                {activeGenItem && (activeGenItem.code || activeGenItem.name) && (
+                  <>
+                    <span className="text-trg-gray-400">·</span>
+                    <span className="text-[#D71920] font-mono font-extrabold bg-trg-warm-white px-2 py-0.5 rounded border border-trg-gray-200">
+                      {activeGenItem.code || activeGenItem.name}
+                    </span>
+                  </>
+                )}
                 {vehicle.limited_edition && (
                   <span className="bg-emerald-500/15 text-emerald-400 px-2.5 py-0.5 rounded-full font-bold border border-emerald-500/30">
                     Limited Edition

@@ -10,11 +10,26 @@ import {
   Layers, 
   Check, 
   ArrowLeft, 
-  ArrowRight,
+  ArrowRight, 
   ShieldCheck
 } from 'lucide-react';
 import { VehicleFamilyNavigation, GenerationNavigationItem, VariantNavigationItem } from '../types';
 import { Locale } from '../data/translations';
+
+function getGenerationDisplayLabel(gen?: GenerationNavigationItem | null, index?: number): string {
+  if (!gen) return 'Generation';
+  if (gen.code && gen.name) return `${gen.code} · ${gen.name}`;
+  if (gen.code) return gen.code;
+  if (gen.name) return gen.name;
+  return typeof index === 'number' && index >= 0 ? `Generation ${index + 1}` : 'Generation';
+}
+
+function getGenerationCodeLabel(gen?: GenerationNavigationItem | null, index?: number): string {
+  if (!gen) return 'Gen';
+  if (gen.code) return gen.code;
+  if (gen.name) return gen.name;
+  return typeof index === 'number' && index >= 0 ? `Gen ${index + 1}` : 'Gen';
+}
 
 interface VersionNavigatorProps {
   navigationData: VehicleFamilyNavigation;
@@ -85,12 +100,18 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
     }
   }, [mobileDrawerOpen]);
 
-  // Filtered variants inside drawer
-  const filteredGenerations = navigationData.generations.map(gen => {
+  // Filtered variants inside drawer (fully null-safe)
+  const filteredGenerations = navigationData.generations.map((gen, idx) => {
+    const q = drawerSearchQuery.toLowerCase().trim();
+    if (!q) return gen;
+    const genCodeLabel = getGenerationCodeLabel(gen, idx).toLowerCase();
     const filteredVars = gen.variants.filter(v => 
-      v.name.toLowerCase().includes(drawerSearchQuery.toLowerCase()) ||
-      v.years.toLowerCase().includes(drawerSearchQuery.toLowerCase()) ||
-      gen.code.toLowerCase().includes(drawerSearchQuery.toLowerCase())
+      (v.name && v.name.toLowerCase().includes(q)) ||
+      (v.years && v.years.toLowerCase().includes(q)) ||
+      (gen.code && gen.code.toLowerCase().includes(q)) ||
+      (gen.name && gen.name.toLowerCase().includes(q)) ||
+      (gen.years && gen.years.toLowerCase().includes(q)) ||
+      genCodeLabel.includes(q)
     );
     return { ...gen, variants: filteredVars };
   }).filter(gen => gen.variants.length > 0);
@@ -103,6 +124,9 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
       </div>
     );
   }
+
+  const activeGenIndex = activeGen ? navigationData.generations.indexOf(activeGen) : -1;
+  const activeGenCodeDisplay = activeGen ? getGenerationCodeLabel(activeGen, activeGenIndex) : 'Tutte';
 
   return (
     <nav className="w-full bg-[#121622]/90 backdrop-blur-md border border-[#22293a] rounded-2xl p-3.5 sm:p-4 shadow-xl mb-6">
@@ -122,7 +146,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
               onClick={() => onSelectLevel('model')}
               className="font-extrabold text-white hover:text-red-400 transition-colors"
             >
-              {navigationData.manufacturer.name}
+              {navigationData.manufacturer.name ?? 'Manufacturer'}
             </button>
           </div>
 
@@ -135,7 +159,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
               onClick={() => onSelectLevel('model')}
               className="font-extrabold text-red-400 hover:underline transition-colors"
             >
-              {navigationData.model.name}
+              {navigationData.model.name ?? 'Model'}
             </button>
           </div>
 
@@ -154,7 +178,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
               aria-label="Seleziona Generazione"
             >
               <span className="text-slate-400 font-normal">Generazione:</span>
-              <span className="font-black text-red-300">{activeGen?.code || 'Tutte'}</span>
+              <span className="font-black text-red-300">{activeGenCodeDisplay}</span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
@@ -164,7 +188,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
                   <span>Available Generations</span>
                   <span className="text-slate-500 font-mono">{navigationData.generations.length} totali</span>
                 </div>
-                {navigationData.generations.map(gen => (
+                {navigationData.generations.map((gen, index) => (
                   <button
                     key={gen.id}
                     onClick={() => {
@@ -179,10 +203,10 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
                   >
                     <div>
                       <div className="font-bold flex items-center gap-1.5">
-                        <span className="text-red-400">{gen.code}</span>
-                        <span className="text-slate-300">· {gen.name}</span>
+                        <span className="text-red-400">{getGenerationCodeLabel(gen, index)}</span>
+                        {gen.name && <span className="text-slate-300">· {gen.name}</span>}
                       </div>
-                      <div className="text-[10px] text-slate-400">{gen.years} · {gen.variants.length} versioni</div>
+                      <div className="text-[10px] text-slate-400">{gen.years ? `${gen.years} · ` : ''}{gen.variants.length} versioni</div>
                     </div>
                     {gen.id === activeGen?.id && <Check className="w-4 h-4 text-red-400" />}
                   </button>
@@ -213,8 +237,8 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
             {variantDropdownOpen && (
               <div className="absolute left-0 mt-2 w-80 bg-[#141926] border border-[#2b354d] rounded-2xl shadow-2xl z-50 p-2 max-h-80 overflow-y-auto space-y-1 custom-scrollbar">
                 <div className="text-[10px] uppercase tracking-wider font-extrabold text-red-400 px-2.5 py-1.5 flex items-center justify-between border-b border-[#20283b]">
-                  <span>Variants {activeGen?.code}</span>
-                  <span className="text-slate-500 font-mono">{activeGen?.variants.length} versioni</span>
+                  <span>Variants {activeGenCodeDisplay}</span>
+                  <span className="text-slate-500 font-mono">{activeGen?.variants.length ?? 0} versioni</span>
                 </div>
                 {activeGen?.variants.map(varItem => (
                   <button
@@ -236,7 +260,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
                           <span className="text-[9px] bg-red-500/20 text-red-300 px-1 py-0.2 rounded font-mono">L.E.</span>
                         )}
                       </div>
-                      <div className="text-[10px] text-slate-400">{varItem.years} {varItem.powerHp ? `· ${varItem.powerHp} CV` : ''}</div>
+                      <div className="text-[10px] text-slate-400">{varItem.years ? `${varItem.years} ` : ''}{varItem.powerHp ? `· ${varItem.powerHp} CV` : ''}</div>
                     </div>
                     {varItem.id === activeVar?.id && <Check className="w-4 h-4 text-red-400 shrink-0" />}
                   </button>
@@ -264,7 +288,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
             disabled={!prevVariant}
             onClick={() => prevVariant && onSelectLevel('variant', prevVariant.generationId, prevVariant.id)}
             className="px-2.5 py-2 rounded-xl bg-[#171d2b] hover:bg-[#202738] disabled:opacity-30 disabled:pointer-events-none text-slate-200 border border-[#2b354d] text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-            title={prevVariant ? `Precedente: ${prevVariant.name}` : ''}
+            title={prevVariant ? `Precedente: ${prevVariant.name ?? ''}` : ''}
             aria-label="Previous Variant"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-red-400" />
@@ -275,7 +299,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
             disabled={!nextVariant}
             onClick={() => nextVariant && onSelectLevel('variant', nextVariant.generationId, nextVariant.id)}
             className="px-2.5 py-2 rounded-xl bg-[#171d2b] hover:bg-[#202738] disabled:opacity-30 disabled:pointer-events-none text-slate-200 border border-[#2b354d] text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-            title={nextVariant ? `Successiva: ${nextVariant.name}` : ''}
+            title={nextVariant ? `Successiva: ${nextVariant.name ?? ''}` : ''}
             aria-label="Next Variant"
           >
             <span className="hidden xl:inline">Successiva</span>
@@ -294,14 +318,14 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <span>{navigationData.manufacturer.name}</span>
+              <span>{navigationData.manufacturer.name ?? 'Manufacturer'}</span>
               <span>·</span>
               <button onClick={() => onSelectLevel('model')} className="text-white hover:underline">
-                {navigationData.model.name}
+                {navigationData.model.name ?? 'Model'}
               </button>
             </div>
             <div className="text-sm font-extrabold text-red-400 flex items-center gap-1.5 mt-0.5">
-              <span>{activeGen?.code}</span>
+              <span>{activeGenCodeDisplay}</span>
               <span className="text-slate-500">·</span>
               <span className="truncate max-w-[200px]">{activeVar?.name}</span>
             </div>
@@ -341,7 +365,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-[#202738]">
               <div>
                 <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                  <span>{navigationData.manufacturer.name} {navigationData.model.name}</span>
+                  <span>{navigationData.manufacturer.name ?? ''} {navigationData.model.name ?? ''}</span>
                   <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded font-mono">
                     {navigationData.generations.length} {isIt ? 'gen' : 'generations'}
                   </span>
@@ -392,7 +416,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
 
             {/* Generations & Variants List */}
             <div className="flex-1 overflow-y-auto space-y-4 pr-1 custom-scrollbar">
-              {filteredGenerations.map(gen => (
+              {filteredGenerations.map((gen, idx) => (
                 <div key={gen.id} className="bg-[#171d2b] rounded-2xl border border-[#232d42] p-3">
                   
                   <div className="flex items-center justify-between pb-2 border-b border-[#232d42]">
@@ -404,10 +428,10 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
                       className="text-left group"
                     >
                       <div className="text-xs font-black text-red-400 group-hover:underline flex items-center gap-1.5">
-                        <span>{gen.code}</span>
-                        <span className="text-slate-400 font-normal">· {gen.name}</span>
+                        <span>{getGenerationCodeLabel(gen, idx)}</span>
+                        {gen.name && <span className="text-slate-400 font-normal">· {gen.name}</span>}
                       </div>
-                      <div className="text-[10px] text-slate-400">{gen.years}</div>
+                      <div className="text-[10px] text-slate-400">{gen.years ?? ''}</div>
                     </button>
 
                     <button
@@ -445,7 +469,7 @@ export const VersionNavigator: React.FC<VersionNavigatorProps> = ({
                                 <span className="text-[9px] bg-red-500/20 text-red-300 px-1 py-0.2 rounded font-mono">L.E.</span>
                               )}
                             </div>
-                            <div className="text-[10px] text-slate-400">{v.years} {v.powerHp ? `· ${v.powerHp} CV` : ''}</div>
+                            <div className="text-[10px] text-slate-400">{v.years ? `${v.years} ` : ''}{v.powerHp ? `· ${v.powerHp} CV` : ''}</div>
                           </div>
 
                           {isActive && (

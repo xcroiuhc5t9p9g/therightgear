@@ -634,38 +634,38 @@ export interface ChatMessage {
 // -------------------------------------------------------------
 
 export interface ManufacturerSummary {
-  id: string;
-  name: string;
-  slug: string;
+  id: string | null;
+  name: string | null;
+  slug: string | null;
   logoUrl?: string;
   countryCode?: string;
 }
 
 export interface VehicleModelSummary {
-  id: string;
-  name: string;
-  slug: string;
-  years: string;
+  id: string | null;
+  name: string | null;
+  slug: string | null;
+  years: string | null;
   category?: string;
 }
 
 export interface VariantNavigationItem {
   id: string;
   slug: string;
-  name: string;
-  years: string;
-  limitedEdition: boolean;
-  productionTotal?: number;
+  name: string | null;
+  years: string | null;
+  limitedEdition: boolean | null;
+  productionTotal?: number | null;
   active?: boolean | null;
-  powerHp?: number;
+  powerHp?: number | null;
 }
 
 export interface GenerationNavigationItem {
   id: string;
-  code: string;
-  name: string;
-  years: string;
-  slug: string;
+  code: string | null;
+  name: string | null;
+  years: string | null;
+  slug: string | null;
   variants: VariantNavigationItem[];
 }
 

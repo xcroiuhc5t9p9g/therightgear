@@ -74,23 +74,98 @@ app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
   }
 
   const { resolved: vehicle, modelVehicles } = modelScope;
-  const mName = vehicle.manufacturer_name;
-  const modelName = vehicle.model_name;
-  
-  const generations: any[] = [];
-  const genMap = new Map<string, any>();
+
+  // Group integrity check across resolved model records
+  const manufacturerIds = new Set<string>();
+  const manufacturerNames = new Set<string>();
+  const modelNames = new Set<string>();
+
+  modelVehicles.forEach(v => {
+    if (v.manufacturer_id) manufacturerIds.add(v.manufacturer_id);
+    if (v.manufacturer_name) manufacturerNames.add(v.manufacturer_name);
+    if (v.model_name) modelNames.add(v.model_name);
+  });
+
+  if (manufacturerIds.size > 1 || manufacturerNames.size > 1 || modelNames.size > 1) {
+    return res.status(409).json({ success: false, error: 'INTEGRITY_CONFLICT' });
+  }
+
+  const mName = vehicle.manufacturer_name ?? null;
+  const m = MANUFACTURERS.find(x => (vehicle.manufacturer_id && x.id === vehicle.manufacturer_id) || (mName && x.official_name === mName));
+  const manufacturer = {
+    id: m?.id ?? vehicle.manufacturer_id ?? null,
+    name: m?.official_name ?? mName,
+    slug: m?.slug ?? null,
+    logoUrl: m?.logo_url ?? undefined,
+    countryCode: m?.country_code ?? undefined
+  };
+
+  // Model year aggregation across all variants belonging to the model
+  let modelMinYear: number | null = null;
+  let modelMaxYear: number | null = null;
+  modelVehicles.forEach(v => {
+    if (v.model_year_from != null && !isNaN(v.model_year_from)) {
+      if (modelMinYear === null || v.model_year_from < modelMinYear) modelMinYear = v.model_year_from;
+    }
+    if (v.model_year_to != null && !isNaN(v.model_year_to)) {
+      if (modelMaxYear === null || v.model_year_to > modelMaxYear) modelMaxYear = v.model_year_to;
+    }
+  });
+
+  let modelYears: string | null = null;
+  if (modelMinYear !== null) {
+    if (modelMaxYear !== null && modelMaxYear !== modelMinYear) {
+      modelYears = `${modelMinYear}–${modelMaxYear}`;
+    } else {
+      modelYears = `${modelMinYear}`;
+    }
+  } else if (modelMaxYear !== null) {
+    modelYears = `${modelMaxYear}`;
+  }
+
+  const model = {
+    id: vehicle.id ?? modelId,
+    name: vehicle.model_name ?? null,
+    slug: vehicle.slug ?? null,
+    years: modelYears,
+    category: vehicle.category ?? undefined
+  };
+
+  const genMap = new Map<string, {
+    id: string;
+    code: string | null;
+    name: string | null;
+    slug: string | null;
+    variants: any[];
+    _startYear: number | null;
+    _endYear: number | null;
+  }>();
   
   modelVehicles.forEach(v => {
     if (v.generation_id) {
       if (!genMap.has(v.generation_id)) {
         genMap.set(v.generation_id, {
           id: v.generation_id,
-          code: v.generation_id,
-          name: v.generation_id,
-          years: null,
-          slug: v.generation_id,
-          variants: []
+          code: null,
+          name: null,
+          slug: null,
+          variants: [],
+          _startYear: null,
+          _endYear: null
         });
+      }
+
+      const genEntry = genMap.get(v.generation_id)!;
+
+      if (v.model_year_from != null && !isNaN(v.model_year_from)) {
+        if (genEntry._startYear === null || v.model_year_from < genEntry._startYear) {
+          genEntry._startYear = v.model_year_from;
+        }
+      }
+      if (v.model_year_to != null && !isNaN(v.model_year_to)) {
+        if (genEntry._endYear === null || v.model_year_to > genEntry._endYear) {
+          genEntry._endYear = v.model_year_to;
+        }
       }
 
       let variantYears: string | null = null;
@@ -104,35 +179,66 @@ app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
         variantYears = `${v.model_year_to}`;
       }
 
-      genMap.get(v.generation_id).variants.push({
+      genEntry.variants.push({
         id: v.id,
         slug: v.slug,
-        name: v.variant_name,
+        name: v.variant_name ?? null,
         years: variantYears,
         limitedEdition: v.limited_edition ?? null,
         productionTotal: v.production_total ?? null,
-        powerHp: v.engine?.power_hp ?? null
+        powerHp: v.engine?.power_hp ?? null,
+        _startYear: v.model_year_from ?? null
       });
     }
   });
 
-  genMap.forEach(gen => generations.push(gen));
-
-  let modelYears: string | null = null;
-  if (vehicle.model_year_from != null) {
-    if (vehicle.model_year_to != null && vehicle.model_year_to !== vehicle.model_year_from) {
-      modelYears = `${vehicle.model_year_from}–${vehicle.model_year_to}`;
-    } else {
-      modelYears = `${vehicle.model_year_from}`;
+  const generations = Array.from(genMap.values()).map(gen => {
+    let genYears: string | null = null;
+    if (gen._startYear !== null) {
+      if (gen._endYear !== null && gen._endYear !== gen._startYear) {
+        genYears = `${gen._startYear}–${gen._endYear}`;
+      } else {
+        genYears = `${gen._startYear}`;
+      }
+    } else if (gen._endYear !== null) {
+      genYears = `${gen._endYear}`;
     }
-  } else if (vehicle.model_year_to != null) {
-    modelYears = `${vehicle.model_year_to}`;
-  }
+
+    // Deterministic sorting of variants inside generation
+    gen.variants.sort((a, b) => {
+      const yA = a._startYear ?? 9999;
+      const yB = b._startYear ?? 9999;
+      if (yA !== yB) return yA - yB;
+      return (a.name || '').localeCompare(b.name || '') || a.id.localeCompare(b.id);
+    });
+
+    const cleanedVariants = gen.variants.map(({ _startYear, ...v }) => v);
+
+    return {
+      id: gen.id,
+      code: gen.code,
+      name: gen.name,
+      years: genYears,
+      slug: gen.slug,
+      variants: cleanedVariants,
+      _startYear: gen._startYear
+    };
+  });
+
+  // Deterministic sorting of generations by earliest start year, with ID as tiebreaker
+  generations.sort((a, b) => {
+    const yA = a._startYear ?? 9999;
+    const yB = b._startYear ?? 9999;
+    if (yA !== yB) return yA - yB;
+    return a.id.localeCompare(b.id);
+  });
+
+  const cleanedGenerations = generations.map(({ _startYear, ...g }) => g);
 
   return res.json({
-    manufacturer: { id: `m-${mName.toLowerCase()}`, name: mName, slug: mName.toLowerCase() },
-    model: { id: modelId, name: modelName, slug: modelId, years: modelYears },
-    generations
+    manufacturer,
+    model,
+    generations: cleanedGenerations
   });
 });
 
