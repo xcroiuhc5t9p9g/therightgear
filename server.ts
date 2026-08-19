@@ -473,17 +473,64 @@ app.get('/api/v1/variants/:variantId', (req: Request, res: Response) => {
 
 // GET Specs for Variant
 app.get('/api/v1/variants/:variantId/specifications', (req: Request, res: Response) => {
-  res.status(404).json({ error: 'Specifications not found' });
+  const { variantId } = req.params;
+  const found = CATALOG_DATABASE.find(v => v.id === variantId || v.slug === variantId);
+  if (!found) {
+    return res.status(404).json({ success: false, error: 'VARIANT_NOT_FOUND' });
+  }
+
+  res.json({
+    variantId: found.id,
+    canonical_engine_id: found.canonical_engine_id ?? null,
+    engine: found.engine ?? null,
+    transmission: found.transmission ?? null,
+    specs: found.specs ?? null,
+    technical_identifiers: found.technical_identifiers ?? null
+  });
 });
 
 // GET Production Record for Variant
 app.get('/api/v1/variants/:variantId/production', (req: Request, res: Response) => {
-  res.status(404).json({ error: 'Production record not found' });
+  const { variantId } = req.params;
+  const found = CATALOG_DATABASE.find(v => v.id === variantId || v.slug === variantId);
+  if (!found) {
+    return res.status(404).json({ success: false, error: 'VARIANT_NOT_FOUND' });
+  }
+
+  res.json({
+    variantId: found.id,
+    model_year_from: found.model_year_from ?? null,
+    model_year_to: found.model_year_to ?? null,
+    production_start_year: found.production_start_year ?? null,
+    production_total: found.production_total ?? null,
+    limited_edition: found.limited_edition ?? null,
+    numbered_series: found.numbered_series ?? null,
+    steering_side: found.steering_side ?? null,
+    body_style: found.body_style ?? null,
+    production_site: found.production_site ?? null,
+    original_list_price_eur: found.original_list_price_eur ?? null,
+    production_breakdown_notes_it: found.production_breakdown_notes_it ?? null,
+    production_breakdown_notes_en: found.production_breakdown_notes_en ?? null,
+    variant_editions: found.variant_editions ?? null,
+    extended_variant_editions: found.extended_variant_editions ?? null,
+    factory_colors: found.factory_colors ?? null
+  });
 });
 
 // GET Media Assets for Variant
 app.get('/api/v1/variants/:variantId/media', (req: Request, res: Response) => {
-  res.status(404).json({ error: 'Media not found' });
+  const { variantId } = req.params;
+  const found = CATALOG_DATABASE.find(v => v.id === variantId || v.slug === variantId);
+  if (!found) {
+    return res.status(404).json({ success: false, error: 'VARIANT_NOT_FOUND' });
+  }
+
+  res.json({
+    variantId: found.id,
+    hero_image_url: found.hero_image_url ?? null,
+    gallery_images: found.gallery_images ?? null,
+    youtube_video_ids: found.youtube_video_ids ?? null
+  });
 });
 
 // POST Variant Compare
