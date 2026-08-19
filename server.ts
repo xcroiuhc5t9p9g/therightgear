@@ -50,6 +50,16 @@ app.get('/api/v1/manufacturers', (req: Request, res: Response) => {
   res.json(MANUFACTURERS);
 });
 
+// Internal helper to resolve model and scoped vehicles
+function resolveModelVehicles(modelId: string) {
+  const resolved = CATALOG_DATABASE.find(x => x.slug === modelId || x.id === modelId || x.model_name.toLowerCase().replace(/\s+/g, '-') === modelId);
+  if (!resolved) {
+    return null;
+  }
+  const modelVehicles = CATALOG_DATABASE.filter(x => x.manufacturer_name === resolved.manufacturer_name && x.model_name === resolved.model_name);
+  return { resolved, modelVehicles };
+}
+
 // -------------------------------------------------------------
 // HIERARCHICAL MODEL, GENERATION & VARIANT ENDPOINTS
 // -------------------------------------------------------------
@@ -57,15 +67,13 @@ app.get('/api/v1/manufacturers', (req: Request, res: Response) => {
 // Model navigation structure (Single endpoint payload for VersionNavigator)
 app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
   const { modelId } = req.params;
-
-  const vehicle = CATALOG_DATABASE.find(v => v.slug === modelId || v.id === modelId || v.model_name.toLowerCase().replace(/\s+/g, '-') === modelId);
+  const modelScope = resolveModelVehicles(modelId);
   
-  if (!vehicle) {
+  if (!modelScope) {
     return res.status(404).json({ success: false, error: 'MODEL_NAVIGATION_NOT_FOUND' });
   }
 
-  const modelVehicles = CATALOG_DATABASE.filter(v => v.model_name === vehicle.model_name && v.manufacturer_name === vehicle.manufacturer_name);
-
+  const { resolved: vehicle, modelVehicles } = modelScope;
   const mName = vehicle.manufacturer_name;
   const modelName = vehicle.model_name;
   
@@ -108,12 +116,12 @@ app.get('/api/v1/models/:modelId/navigation', (req: Request, res: Response) => {
 // GET Model details
 app.get('/api/v1/models/:modelId', (req: Request, res: Response) => {
   const { modelId } = req.params;
-  const resolved = CATALOG_DATABASE.find(x => x.slug === modelId || x.id === modelId);
-  if (!resolved) {
+  const modelScope = resolveModelVehicles(modelId);
+  if (!modelScope) {
     return res.status(404).json({ error: 'Model not found' });
   }
 
-  const modelVehicles = CATALOG_DATABASE.filter(x => x.manufacturer_name === resolved.manufacturer_name && x.model_name === resolved.model_name);
+  const { resolved, modelVehicles } = modelScope;
 
   const generationIds = new Set<string>();
   const variantIds = new Set<string>();
@@ -201,12 +209,12 @@ app.get('/api/v1/models/:modelId', (req: Request, res: Response) => {
 // GET Generations for Model
 app.get('/api/v1/models/:modelId/generations', (req: Request, res: Response) => {
   const { modelId } = req.params;
-  const resolved = CATALOG_DATABASE.find(x => x.slug === modelId || x.id === modelId);
-  if (!resolved) {
+  const modelScope = resolveModelVehicles(modelId);
+  if (!modelScope) {
     return res.status(404).json({ success: false, error: 'MODEL_NOT_FOUND' });
   }
 
-  const modelVehicles = CATALOG_DATABASE.filter(x => x.manufacturer_name === resolved.manufacturer_name && x.model_name === resolved.model_name);
+  const { modelVehicles } = modelScope;
 
   const generationGroups = new Map<string, typeof modelVehicles>();
   modelVehicles.forEach(mv => {
@@ -271,7 +279,149 @@ app.get('/api/v1/models/:modelId/generations', (req: Request, res: Response) => 
   res.json(result);
 });
 
-// GET Generation details
+// GET Scoped Generation details (Scoped to Model)
+app.get('/api/v1/models/:modelId/generations/:generationId', (req: Request, res: Response) => {
+  const { modelId, generationId } = req.params;
+  const modelScope = resolveModelVehicles(modelId);
+  if (!modelScope) {
+    return res.status(404).json({ success: false, error: 'MODEL_NOT_FOUND' });
+  }
+
+  const { resolved, modelVehicles } = modelScope;
+  const genVehicles = modelVehicles.filter(x => x.generation_id === generationId);
+  if (genVehicles.length === 0) {
+    return res.status(404).json({ success: false, error: 'GENERATION_NOT_FOUND' });
+  }
+
+  const manufacturerIds = new Set<string>();
+  const manufacturers = new Set<string>();
+  const models = new Set<string>();
+  
+  let minStartYear: number | null = null;
+  let maxKnownEndYear: number | null = null;
+  
+  const variantIds = new Set<string>();
+  const powerValues: number[] = [];
+
+  genVehicles.forEach(mv => {
+    if (mv.manufacturer_id) manufacturerIds.add(mv.manufacturer_id);
+    if (mv.manufacturer_name) manufacturers.add(mv.manufacturer_name);
+    if (mv.model_name) models.add(mv.model_name);
+    if (mv.id) variantIds.add(mv.id);
+    
+    if (mv.model_year_from != null) {
+      if (minStartYear === null || mv.model_year_from < minStartYear) minStartYear = mv.model_year_from;
+    }
+    if (mv.model_year_to != null) {
+      if (maxKnownEndYear === null || mv.model_year_to > maxKnownEndYear) maxKnownEndYear = mv.model_year_to;
+    }
+
+    if (typeof mv.engine?.power_hp === 'number' && !isNaN(mv.engine.power_hp) && mv.engine.power_hp > 0) {
+      powerValues.push(mv.engine.power_hp);
+    }
+  });
+
+  if (manufacturerIds.size > 1 || manufacturers.size > 1 || models.size > 1) {
+    return res.status(409).json({ success: false, error: 'INTEGRITY_CONFLICT' });
+  }
+
+  const manufacturerName = manufacturers.values().next().value ?? resolved.manufacturer_name ?? null;
+  const modelName = models.values().next().value ?? resolved.model_name ?? null;
+  const sample = genVehicles[0];
+
+  let yearsRange: string | null = null;
+  if (minStartYear !== null) {
+    if (maxKnownEndYear !== null && maxKnownEndYear !== minStartYear) {
+      yearsRange = `${minStartYear}–${maxKnownEndYear}`;
+    } else {
+      yearsRange = `${minStartYear}`;
+    }
+  } else if (maxKnownEndYear !== null) {
+    yearsRange = `${maxKnownEndYear}`;
+  }
+
+  let powerHpRange: [number, number] | null = null;
+  if (powerValues.length > 0) {
+    powerHpRange = [Math.min(...powerValues), Math.max(...powerValues)];
+  }
+
+  res.json({
+    generationId,
+    manufacturerId: sample?.manufacturer_id ?? resolved.manufacturer_id ?? null,
+    manufacturerName,
+    modelName,
+    generationSlug: null,
+    generationCode: null,
+    generationName: null,
+    yearsRange,
+    totalVariantsCount: variantIds.size,
+    powerHpRange
+  });
+});
+
+// GET Scoped Variants for Generation (Scoped to Model)
+app.get('/api/v1/models/:modelId/generations/:generationId/variants', (req: Request, res: Response) => {
+  const { modelId, generationId } = req.params;
+  const modelScope = resolveModelVehicles(modelId);
+  if (!modelScope) {
+    return res.status(404).json({ success: false, error: 'MODEL_NOT_FOUND' });
+  }
+
+  const { modelVehicles } = modelScope;
+  const genVehicles = modelVehicles.filter(x => x.generation_id === generationId);
+  if (genVehicles.length === 0) {
+    return res.status(404).json({ success: false, error: 'GENERATION_NOT_FOUND' });
+  }
+
+  const manufacturerIds = new Set<string>();
+  const manufacturers = new Set<string>();
+  const models = new Set<string>();
+  
+  genVehicles.forEach(mv => {
+    if (mv.manufacturer_id) manufacturerIds.add(mv.manufacturer_id);
+    if (mv.manufacturer_name) manufacturers.add(mv.manufacturer_name);
+    if (mv.model_name) models.add(mv.model_name);
+  });
+
+  if (manufacturerIds.size > 1 || manufacturers.size > 1 || models.size > 1) {
+    return res.status(409).json({ success: false, error: 'INTEGRITY_CONFLICT' });
+  }
+
+  const uniqueVariantsMap = new Map<string, typeof CATALOG_DATABASE[0]>();
+  
+  genVehicles.forEach(mv => {
+    if (mv.id && !uniqueVariantsMap.has(mv.id)) {
+      uniqueVariantsMap.set(mv.id, mv);
+    }
+  });
+
+  const variantsList = Array.from(uniqueVariantsMap.values()).map(mv => {
+    let yearsRange: string | null = null;
+    if (mv.model_year_from != null) {
+      if (mv.model_year_to != null && mv.model_year_to !== mv.model_year_from) {
+        yearsRange = `${mv.model_year_from}–${mv.model_year_to}`;
+      } else {
+        yearsRange = `${mv.model_year_from}`;
+      }
+    } else if (mv.model_year_to != null) {
+      yearsRange = `${mv.model_year_to}`;
+    }
+
+    return {
+      id: mv.id,
+      slug: mv.slug,
+      name: mv.variant_name ?? null,
+      yearsRange,
+      limitedEdition: mv.limited_edition ?? null,
+      productionTotal: mv.production_total ?? null,
+      powerHp: mv.engine?.power_hp ?? null
+    };
+  });
+
+  res.json(variantsList);
+});
+
+// Legacy GET Generation details (Unscoped compatibility route)
 app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
   const { generationId } = req.params;
   
@@ -309,7 +459,7 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
   });
 
   if (manufacturerIds.size > 1 || manufacturers.size > 1 || models.size > 1) {
-    return res.status(409).json({ success: false, error: 'INTEGRITY_CONFLICT' });
+    return res.status(409).json({ success: false, error: 'GENERATION_ID_AMBIGUOUS' });
   }
 
   const manufacturerName = manufacturers.values().next().value ?? null;
@@ -346,7 +496,7 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
   });
 });
 
-// GET Variants for Generation
+// Legacy GET Variants for Generation (Unscoped compatibility route)
 app.get('/api/v1/generations/:generationId/variants', (req: Request, res: Response) => {
   const { generationId } = req.params;
   
@@ -367,7 +517,7 @@ app.get('/api/v1/generations/:generationId/variants', (req: Request, res: Respon
   });
 
   if (manufacturerIds.size > 1 || manufacturers.size > 1 || models.size > 1) {
-    return res.status(409).json({ success: false, error: 'INTEGRITY_CONFLICT' });
+    return res.status(409).json({ success: false, error: 'GENERATION_ID_AMBIGUOUS' });
   }
 
   const uniqueVariantsMap = new Map<string, typeof CATALOG_DATABASE[0]>();

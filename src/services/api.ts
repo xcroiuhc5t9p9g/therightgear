@@ -148,9 +148,27 @@ export async function fetchModelDetails(modelId: string) {
   }
 }
 
-export async function fetchGenerationDetails(generationId: string) {
+export async function fetchGenerationDetails(modelIdOrParams: string | { modelId: string; generationId: string }, generationIdArg?: string) {
   try {
-    const res = await fetch(`${API_BASE}/generations/${generationId}`);
+    let url: string;
+    if (typeof modelIdOrParams === 'object') {
+      url = `${API_BASE}/models/${modelIdOrParams.modelId}/generations/${modelIdOrParams.generationId}`;
+    } else if (generationIdArg) {
+      url = `${API_BASE}/models/${modelIdOrParams}/generations/${generationIdArg}`;
+    } else {
+      url = `${API_BASE}/generations/${modelIdOrParams}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch generation details');
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function fetchScopedGenerationDetails(modelId: string, generationId: string) {
+  try {
+    const res = await fetch(`${API_BASE}/models/${modelId}/generations/${generationId}`);
     if (!res.ok) throw new Error('Failed to fetch generation details');
     return await res.json();
   } catch (e) {
