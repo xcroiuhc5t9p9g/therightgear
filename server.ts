@@ -3,8 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
-import { CATALOG_DATABASE, MANUFACTURERS, MAKERS, MODELS, GENERATIONS, GRAPH_ENTITIES, GRAPH_RELATIONSHIPS } from './src/data/catalogData.js';
-import { Maker, Model, Generation } from './src/types/index.js';
+import { GRAPH_ENTITIES, GRAPH_RELATIONSHIPS } from './src/data/catalogData.js';
+import { catalogueRepository } from './src/services/catalogueRepository.js';
+import { Maker, Model, Generation, VehicleVariant } from './src/types/index.js';
 import { importLabStore } from './src/services/importLabStore.js';
 import { importEngine } from './src/services/importProviders/importEngine.js';
 
@@ -41,163 +42,25 @@ app.get('/api/v1/health', (req: Request, res: Response) => {
     status: 'ok',
     version: '0.2',
     timestamp: new Date().toISOString(),
-    catalog_count: CATALOG_DATABASE.length,
+    catalog_count: catalogueRepository.getVariants().length,
+    catalogue_provider: catalogueRepository.getProviderType(),
     gemini_configured: !!aiClient
   });
 });
 
 // Manufacturers
 app.get('/api/v1/manufacturers', (req: Request, res: Response) => {
-  res.json(MANUFACTURERS);
+  res.json(catalogueRepository.getManufacturers());
 });
 
 // Brands / Makers
 app.get('/api/v1/brands', (req: Request, res: Response) => {
-  res.json(MAKERS);
+  res.json(catalogueRepository.getMakers());
 });
 
 // Internal helper to resolve canonical Model context and hierarchy
-interface ResolvedModelContext {
-  maker: Maker | null;
-  model: Model;
-  generationContexts: Array<{
-    generation: Generation | null;
-    generationId: string;
-    variants: typeof CATALOG_DATABASE[0][];
-    _startYear: number | null;
-    _endYear: number | null;
-  }>;
-  allVariants: typeof CATALOG_DATABASE[0][];
-}
-
-function resolveModelContext(modelIdOrSlug: string): ResolvedModelContext | null {
-  if (!modelIdOrSlug) return null;
-  const q = modelIdOrSlug.toLowerCase().trim();
-
-  // 1. Resolve canonical Model directly
-  let resolvedModel = MODELS.find(m => 
-    m.id === modelIdOrSlug || 
-    m.id.toLowerCase() === q || 
-    m.slug.toLowerCase() === q || 
-    m.canonical_name.toLowerCase() === q
-  );
-
-  // 2. Fallback: resolve Model via Generation
-  if (!resolvedModel) {
-    const gen = GENERATIONS.find(g => 
-      g.id === modelIdOrSlug || 
-      g.id.toLowerCase() === q || 
-      g.slug.toLowerCase() === q
-    );
-    if (gen) {
-      resolvedModel = MODELS.find(m => m.id === gen.model_id);
-    }
-  }
-
-  // 3. Fallback: resolve Model via Variant
-  if (!resolvedModel) {
-    const variant = CATALOG_DATABASE.find(v => 
-      v.id === modelIdOrSlug || 
-      v.id.toLowerCase() === q || 
-      v.slug.toLowerCase() === q
-    );
-    if (variant) {
-      if (variant.generation_id) {
-        const gen = GENERATIONS.find(g => g.id === variant.generation_id);
-        if (gen) {
-          resolvedModel = MODELS.find(m => m.id === gen.model_id);
-        }
-      }
-      if (!resolvedModel && variant.model_name) {
-        resolvedModel = MODELS.find(m => m.canonical_name.toLowerCase() === variant.model_name.toLowerCase());
-      }
-    }
-  }
-
-  if (!resolvedModel) {
-    return null;
-  }
-
-  const maker = MAKERS.find(m => m.id === resolvedModel!.maker_id) ?? null;
-  const canonicalGenerations = GENERATIONS.filter(g => g.model_id === resolvedModel!.id);
-  const genIds = new Set(canonicalGenerations.map(g => g.id));
-
-  // Find all variants for this model
-  const allVariants = CATALOG_DATABASE.filter(v => 
-    (v.generation_id && genIds.has(v.generation_id)) || 
-    (v.model_name && v.model_name.toLowerCase() === resolvedModel!.canonical_name.toLowerCase())
-  );
-
-  const generationContexts: Array<{
-    generation: Generation | null;
-    generationId: string;
-    variants: typeof CATALOG_DATABASE[0][];
-    _startYear: number | null;
-    _endYear: number | null;
-  }> = [];
-
-  canonicalGenerations.forEach(gen => {
-    const genVars = allVariants.filter(v => v.generation_id === gen.id);
-    let startYr = gen.production_start ?? null;
-    let endYr = gen.production_end ?? null;
-    genVars.forEach(v => {
-      if (v.model_year_from != null && !isNaN(v.model_year_from)) {
-        if (startYr === null || v.model_year_from < startYr) startYr = v.model_year_from;
-      }
-      if (v.model_year_to != null && !isNaN(v.model_year_to)) {
-        if (endYr === null || v.model_year_to > endYr) endYr = v.model_year_to;
-      }
-    });
-    generationContexts.push({
-      generation: gen,
-      generationId: gen.id,
-      variants: genVars,
-      _startYear: startYr,
-      _endYear: endYr
-    });
-  });
-
-  // Include any orphan generation IDs present in variants
-  allVariants.forEach(v => {
-    if (v.generation_id && !genIds.has(v.generation_id)) {
-      let existing = generationContexts.find(g => g.generationId === v.generation_id);
-      if (!existing) {
-        const orphanGen = GENERATIONS.find(g => g.id === v.generation_id) || null;
-        existing = {
-          generation: orphanGen,
-          generationId: v.generation_id,
-          variants: [],
-          _startYear: orphanGen?.production_start ?? null,
-          _endYear: orphanGen?.production_end ?? null
-        };
-        generationContexts.push(existing);
-      }
-      if (!existing.variants.some(existingV => existingV.id === v.id)) {
-        existing.variants.push(v);
-        if (v.model_year_from != null && !isNaN(v.model_year_from)) {
-          if (existing._startYear === null || v.model_year_from < existing._startYear) existing._startYear = v.model_year_from;
-        }
-        if (v.model_year_to != null && !isNaN(v.model_year_to)) {
-          if (existing._endYear === null || v.model_year_to > existing._endYear) existing._endYear = v.model_year_to;
-        }
-      }
-    }
-  });
-
-  // Deterministic chronological sorting of generation contexts
-  generationContexts.sort((a, b) => {
-    const yA = a._startYear ?? 9999;
-    const yB = b._startYear ?? 9999;
-    if (yA !== yB) return yA - yB;
-    return a.generationId.localeCompare(b.generationId);
-  });
-
-  return {
-    maker,
-    model: resolvedModel,
-    generationContexts,
-    allVariants
-  };
+function resolveModelContext(modelIdOrSlug: string) {
+  return catalogueRepository.resolveModelHierarchy(modelIdOrSlug);
 }
 
 // -------------------------------------------------------------
@@ -526,20 +389,23 @@ app.get('/api/v1/models/:modelId/generations/:generationId/variants', (req: Requ
 app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
   const { generationId } = req.params;
   
-  const gen = GENERATIONS.find(g => g.id === generationId || g.slug === generationId);
-  let parentModel: Model | null = gen ? (MODELS.find(m => m.id === gen!.model_id) ?? null) : null;
+  const gen = catalogueRepository.getGenerationByIdOrSlug(generationId);
+  let parentModel: Model | null = gen ? catalogueRepository.getModelById(gen.model_id) : null;
   
-  const genVehicles = CATALOG_DATABASE.filter(x => x.generation_id === (gen ? gen.id : generationId));
+  const genVehicles = gen 
+    ? catalogueRepository.getVariantsByGeneration(gen.id) 
+    : catalogueRepository.getVariants().filter(x => x.generation_id === generationId);
+
   if (!gen && genVehicles.length === 0) {
     return res.status(404).json({ success: false, error: 'GENERATION_NOT_FOUND' });
   }
 
   if (!parentModel && genVehicles.length > 0) {
     const v = genVehicles[0];
-    parentModel = MODELS.find(m => m.canonical_name.toLowerCase() === (v.model_name || '').toLowerCase()) ?? null;
+    parentModel = catalogueRepository.getModels().find(m => m.canonical_name.toLowerCase() === (v.model_name || '').toLowerCase()) ?? null;
   }
 
-  const maker = parentModel ? (MAKERS.find(m => m.id === parentModel!.maker_id) ?? null) : null;
+  const maker = parentModel ? catalogueRepository.getMakerById(parentModel.maker_id) : null;
 
   let minStartYear: number | null = gen?.production_start ?? null;
   let maxKnownEndYear: number | null = gen?.production_end ?? null;
@@ -593,8 +459,10 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
 app.get('/api/v1/generations/:generationId/variants', (req: Request, res: Response) => {
   const { generationId } = req.params;
   
-  const gen = GENERATIONS.find(g => g.id === generationId || g.slug === generationId);
-  const genVehicles = CATALOG_DATABASE.filter(x => x.generation_id === (gen ? gen.id : generationId));
+  const gen = catalogueRepository.getGenerationByIdOrSlug(generationId);
+  const genVehicles = gen 
+    ? catalogueRepository.getVariantsByGeneration(gen.id) 
+    : catalogueRepository.getVariants().filter(x => x.generation_id === generationId);
   
   if (!gen && genVehicles.length === 0) {
     return res.status(404).json({ success: false, error: 'GENERATION_NOT_FOUND' });
@@ -638,7 +506,7 @@ app.get('/api/v1/variants/:variantId', (req: Request, res: Response) => {
   const { variantId } = req.params;
   
   // MATCH EXACT IDENTITY ONLY
-  const found = CATALOG_DATABASE.find(v => v.id === variantId || v.slug === variantId);
+  const found = catalogueRepository.getVariantByIdOrSlug(variantId);
   
   if (!found) {
     return res.status(404).json({ success: false, error: 'VARIANT_NOT_FOUND' });
@@ -701,7 +569,7 @@ app.get('/api/v1/variants/:variantId', (req: Request, res: Response) => {
 // GET Specs for Variant
 app.get('/api/v1/variants/:variantId/specifications', (req: Request, res: Response) => {
   const { variantId } = req.params;
-  const found = CATALOG_DATABASE.find(v => v.id === variantId || v.slug === variantId);
+  const found = catalogueRepository.getVariantByIdOrSlug(variantId);
   if (!found) {
     return res.status(404).json({ success: false, error: 'VARIANT_NOT_FOUND' });
   }
@@ -719,7 +587,7 @@ app.get('/api/v1/variants/:variantId/specifications', (req: Request, res: Respon
 // GET Production Record for Variant
 app.get('/api/v1/variants/:variantId/production', (req: Request, res: Response) => {
   const { variantId } = req.params;
-  const found = CATALOG_DATABASE.find(v => v.id === variantId || v.slug === variantId);
+  const found = catalogueRepository.getVariantByIdOrSlug(variantId);
   if (!found) {
     return res.status(404).json({ success: false, error: 'VARIANT_NOT_FOUND' });
   }
@@ -747,7 +615,7 @@ app.get('/api/v1/variants/:variantId/production', (req: Request, res: Response) 
 // GET Media Assets for Variant
 app.get('/api/v1/variants/:variantId/media', (req: Request, res: Response) => {
   const { variantId } = req.params;
-  const found = CATALOG_DATABASE.find(v => v.id === variantId || v.slug === variantId);
+  const found = catalogueRepository.getVariantByIdOrSlug(variantId);
   if (!found) {
     return res.status(404).json({ success: false, error: 'VARIANT_NOT_FOUND' });
   }
@@ -766,7 +634,7 @@ app.post('/api/v1/compare/variants', (req: Request, res: Response) => {
   if (!Array.isArray(variantIds)) {
     return res.status(400).json({ error: 'variantIds array required' });
   }
-  const results = CATALOG_DATABASE.filter(v => variantIds.includes(v.id) || variantIds.includes(v.slug));
+  const results = catalogueRepository.getVariants().filter(v => variantIds.includes(v.id) || variantIds.includes(v.slug));
   res.json(results);
 });
 
@@ -787,7 +655,7 @@ app.get('/api/v1/vehicles', (req: Request, res: Response) => {
     limitedOnly
   } = req.query;
 
-  let filtered = [...CATALOG_DATABASE];
+  let filtered = catalogueRepository.getVariants();
 
   if (query && typeof query === 'string') {
     const q = query.toLowerCase().trim();
@@ -796,9 +664,8 @@ app.get('/api/v1/vehicles', (req: Request, res: Response) => {
       v.model_name.toLowerCase().includes(q) ||
       v.variant_name.toLowerCase().includes(q) ||
       v.category.toLowerCase().includes(q) ||
-      
-      v.history_it.toLowerCase().includes(q) ||
-      v.history_en.toLowerCase().includes(q)
+      (v.history_it && v.history_it.toLowerCase().includes(q)) ||
+      (v.history_en && v.history_en.toLowerCase().includes(q))
     );
   }
 
@@ -807,7 +674,7 @@ app.get('/api/v1/vehicles', (req: Request, res: Response) => {
   }
 
   if (manufacturerId && typeof manufacturerId === 'string') {
-    filtered = filtered.filter(v => v.manufacturer_id === manufacturerId);
+    filtered = filtered.filter(v => v.manufacturer_id === manufacturerId || v.manufacturer_name.toLowerCase() === manufacturerId.toLowerCase());
   }
 
   if (tier && tier !== 'All' && typeof tier === 'string') {
@@ -815,31 +682,31 @@ app.get('/api/v1/vehicles', (req: Request, res: Response) => {
   }
 
   if (yearMin) {
-    filtered = filtered.filter(v => v.model_year_from >= Number(yearMin));
+    filtered = filtered.filter(v => (v.model_year_from ?? 0) >= Number(yearMin));
   }
 
   if (yearMax) {
-    filtered = filtered.filter(v => v.model_year_from <= Number(yearMax));
+    filtered = filtered.filter(v => ((v.model_year_to ?? v.model_year_from) ?? 9999) <= Number(yearMax));
   }
 
   if (priceMin) {
-    filtered = filtered.filter(v => v.current_median_price_eur >= Number(priceMin));
+    filtered = filtered.filter(v => (v.current_median_price_eur ?? 0) >= Number(priceMin));
   }
 
   if (priceMax) {
-    filtered = filtered.filter(v => v.current_median_price_eur <= Number(priceMax));
+    filtered = filtered.filter(v => (v.current_median_price_eur ?? 0) <= Number(priceMax));
   }
 
   if (collectorScoreMin) {
-    filtered = filtered.filter(v => v.scores.collector_score.overall_score >= Number(collectorScoreMin));
+    filtered = filtered.filter(v => (v.scores?.collector_score?.overall_score ?? 0) >= Number(collectorScoreMin));
   }
 
   if (investmentScoreMin) {
-    filtered = filtered.filter(v => v.scores.investment_score.overall_score >= Number(investmentScoreMin));
+    filtered = filtered.filter(v => (v.scores?.investment_score?.overall_score ?? 0) >= Number(investmentScoreMin));
   }
 
   if (drivetrain && drivetrain !== 'All' && typeof drivetrain === 'string') {
-    filtered = filtered.filter(v => v.transmission.drivetrain === drivetrain);
+    filtered = filtered.filter(v => v.transmission?.drivetrain === drivetrain);
   }
 
   if (limitedOnly === 'true') {
@@ -855,7 +722,7 @@ app.get('/api/v1/vehicles', (req: Request, res: Response) => {
 // Single Vehicle Detail
 app.get('/api/v1/vehicles/:slug', (req: Request, res: Response) => {
   const { slug } = req.params;
-  const vehicle = CATALOG_DATABASE.find(v => v.slug === slug || v.id === slug);
+  const vehicle = catalogueRepository.getVariantByIdOrSlug(slug);
   if (!vehicle) {
     return res.status(404).json({ error: 'Vehicle not found' });
   }
@@ -869,7 +736,7 @@ app.get('/api/v1/compare', (req: Request, res: Response) => {
     return res.json([]);
   }
   const ids = idsStr.split(',');
-  const vehicles = CATALOG_DATABASE.filter(v => ids.includes(v.id) || ids.includes(v.slug));
+  const vehicles = catalogueRepository.getVariants().filter(v => ids.includes(v.id) || ids.includes(v.slug));
   res.json(vehicles);
 });
 
@@ -899,7 +766,7 @@ app.post('/api/v1/ai/advisor', async (req: Request, res: Response) => {
 
 // Dealer Listings Endpoint
 app.get('/api/v1/dealer/listings', (req: Request, res: Response) => {
-  const allListings = CATALOG_DATABASE.flatMap(v => v.listings || []);
+  const allListings = catalogueRepository.getVariants().flatMap(v => v.listings || []);
   res.json(allListings);
 });
 
@@ -951,10 +818,10 @@ app.get('/sitemap.xml', (req: Request, res: Response) => {
 
   // Canonical Maker routes (/brands/:maker)
   const makerSlugs = new Set<string>();
-  MANUFACTURERS.forEach(m => {
+  catalogueRepository.getManufacturers().forEach(m => {
     if (m.slug) makerSlugs.add(m.slug);
   });
-  CATALOG_DATABASE.forEach(v => {
+  catalogueRepository.getVariants().forEach(v => {
     if (v.manufacturer_name) {
       const slug = v.manufacturer_name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       if (slug) makerSlugs.add(slug);
@@ -969,7 +836,7 @@ app.get('/sitemap.xml', (req: Request, res: Response) => {
   const generationUrls = new Set<string>();
   const variantUrls = new Set<string>();
 
-  CATALOG_DATABASE.forEach(v => {
+  catalogueRepository.getVariants().forEach(v => {
     if (!v.manufacturer_name || !v.model_name) return;
     const isMotorcycle = (v.category as string) === 'motorcycle' || (v as any).vehicle_type === 'motorcycle';
     if (isMotorcycle) return;
@@ -1060,7 +927,7 @@ The Automotive Intelligence Platform (AIP) on ${baseUrl} is an authoritative aut
 - Homologation Special (/category/homologation-special): Motorsport classification road cars (e.g., Porsche 911 GT1 Straßenversion)
 
 ## Featured Vehicles & Direct Datasheet Slugs
-${CATALOG_DATABASE.map(v => `- [${v.manufacturer_name} ${v.model_name} ${v.variant_name}](${baseUrl}/vehicle/${v.slug}): ${v.engine?.power_hp || 'N/A'} HP, ${v.engine?.torque_nm || 'N/A'} Nm, 0-100 km/h in ${v.specs?.acceleration_0_100 || 'N/A'}s. Market Valuation: € ${v.current_median_price_eur?.toLocaleString('en-US') || 'N/A'}`).join('\n')}
+${catalogueRepository.getVariants().map(v => `- [${v.manufacturer_name} ${v.model_name} ${v.variant_name}](${baseUrl}/vehicle/${v.slug}): ${v.engine?.power_hp || 'N/A'} HP, ${v.engine?.torque_nm || 'N/A'} Nm, 0-100 km/h in ${v.specs?.acceleration_0_100 || 'N/A'}s. Market Valuation: € ${v.current_median_price_eur?.toLocaleString('en-US') || 'N/A'}`).join('\n')}
 
 ## Knowledge Graph Entities (Designers, Engineers, Coachbuilders)
 ${GRAPH_ENTITIES.map(e => `- [${e.name} (${e.type})](${baseUrl}/entity/${(e as any).slug || e.id}): ${(e as any).roleTitle || (e as any).role || e.type}`).join('\n')}
@@ -1082,13 +949,19 @@ app.get('/.well-known/llms.txt', handleLlmsTxt);
 
 // Categories API Endpoint
 app.get('/api/v1/categories', (req: Request, res: Response) => {
+  const allVariants = catalogueRepository.getVariants();
   res.json([
-    { slug: 'supercar', name: 'Supercar', description: 'Vetture ad alte prestazioni ad elevata tecnologia e potenza.', count: CATALOG_DATABASE.filter(v => v.category === 'Supercar').length },
-    { slug: 'hypercar', name: 'Hypercar', description: 'Edizioni limite estreme, pinnacolo dell\'ingegneria automobilistica.', count: CATALOG_DATABASE.filter(v => v.category === 'Hypercar').length },
-    { slug: 'youngtimer', name: 'Youngtimer', description: 'Classiche moderne anni \'80, \'90 e 2000 ad alto valore collezionistico.', count: CATALOG_DATABASE.filter(v => v.category === 'Youngtimer').length },
-    { slug: 'gt-classic', name: 'GT Classic', description: 'Gran Turismo storiche e vetture sportive d\'epoca.', count: CATALOG_DATABASE.filter(v => (v.category as string) === 'Historic Classic' || (v.category as string) === 'GT / Grand Tourer').length },
-    { slug: 'homologation-special', name: 'Homologation Special', description: 'Modelli stradali prodotti per omologazione Motorsport.', count: CATALOG_DATABASE.filter(v => v.category === 'Homologation Special').length }
+    { slug: 'supercar', name: 'Supercar', description: 'Vetture ad alte prestazioni ad elevata tecnologia e potenza.', count: allVariants.filter(v => v.category === 'Supercar').length },
+    { slug: 'hypercar', name: 'Hypercar', description: 'Edizioni limite estreme, pinnacolo dell\'ingegneria automobilistica.', count: allVariants.filter(v => v.category === 'Hypercar').length },
+    { slug: 'youngtimer', name: 'Youngtimer', description: 'Classiche moderne anni \'80, \'90 e 2000 ad alto valore collezionistico.', count: allVariants.filter(v => v.category === 'Youngtimer').length },
+    { slug: 'gt-classic', name: 'GT Classic', description: 'Gran Turismo storiche e vetture sportive d\'epoca.', count: allVariants.filter(v => (v.category as string) === 'Historic Classic' || (v.category as string) === 'GT / Grand Tourer').length },
+    { slug: 'homologation-special', name: 'Homologation Special', description: 'Modelli stradali prodotti per omologazione Motorsport.', count: allVariants.filter(v => v.category === 'Homologation Special').length }
   ]);
+});
+
+// Catalogue Structural Validation Diagnostic Endpoint
+app.get('/api/v1/catalogue/validation', (req: Request, res: Response) => {
+  res.json(catalogueRepository.validate());
 });
 
 
