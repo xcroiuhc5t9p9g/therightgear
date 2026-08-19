@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
-import { CATALOG_DATABASE, MANUFACTURERS, GRAPH_ENTITIES, GRAPH_RELATIONSHIPS, DATA_ASSERTIONS_MOCK } from './src/data/catalogData.js';
+import { CATALOG_DATABASE, MANUFACTURERS, GRAPH_ENTITIES, GRAPH_RELATIONSHIPS } from './src/data/catalogData.js';
 import { importLabStore } from './src/services/importLabStore.js';
 import { importEngine } from './src/services/importProviders/importEngine.js';
 
@@ -689,16 +689,20 @@ app.get('/api/v1/dealer/listings', (req: Request, res: Response) => {
 
 // Editorial Assertions Queue
 app.get('/api/v1/editor/assertions', (req: Request, res: Response) => {
-  res.json(DATA_ASSERTIONS_MOCK);
+  res.status(503).json({
+    success: false,
+    error: 'EDITORIAL_ASSERTIONS_UNAVAILABLE',
+    assertions: []
+  });
 });
 
 // Admin Audit Log
 app.get('/api/v1/admin/audit-log', (req: Request, res: Response) => {
-  res.json([
-    { id: 'log-1', action: 'DATABASE_IMPORT', user: 'admin@platform.eu', timestamp: new Date().toISOString(), details: 'Seeded 300 iconic cars catalog (25 Hero / 75 Core / 200 Discovery)' },
-    { id: 'log-2', action: 'SCORE_RECALCULATION', user: 'system_cron', timestamp: new Date().toISOString(), details: 'Recalculated Collector and Investment scores across 300 vehicles' },
-    { id: 'log-3', action: 'DOMAIN_VERIFIED', user: 'riccardo.monaco@gmail.com', timestamp: new Date().toISOString(), details: 'Dominio therightgear.app verificato su Firebase (DNS Cloudflare OK)' }
-  ]);
+  res.status(503).json({
+    success: false,
+    error: 'ADMIN_AUDIT_LOG_UNAVAILABLE',
+    entries: []
+  });
 });
 
 // -------------------------------------------------------------
