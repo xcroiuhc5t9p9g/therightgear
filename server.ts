@@ -288,6 +288,7 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
   let maxKnownEndYear: number | null = null;
   
   const variantIds = new Set<string>();
+  const powerValues: number[] = [];
 
   genVehicles.forEach(mv => {
     if (mv.manufacturer_id) manufacturerIds.add(mv.manufacturer_id);
@@ -300,6 +301,10 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
     }
     if (mv.model_year_to != null) {
       if (maxKnownEndYear === null || mv.model_year_to > maxKnownEndYear) maxKnownEndYear = mv.model_year_to;
+    }
+
+    if (typeof mv.engine?.power_hp === 'number' && !isNaN(mv.engine.power_hp) && mv.engine.power_hp > 0) {
+      powerValues.push(mv.engine.power_hp);
     }
   });
 
@@ -322,6 +327,11 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
     yearsRange = `${maxKnownEndYear}`;
   }
 
+  let powerHpRange: [number, number] | null = null;
+  if (powerValues.length > 0) {
+    powerHpRange = [Math.min(...powerValues), Math.max(...powerValues)];
+  }
+
   res.json({
     generationId,
     manufacturerId: sample?.manufacturer_id ?? null,
@@ -331,7 +341,8 @@ app.get('/api/v1/generations/:generationId', (req: Request, res: Response) => {
     generationCode: null,
     generationName: null,
     yearsRange,
-    totalVariantsCount: variantIds.size
+    totalVariantsCount: variantIds.size,
+    powerHpRange
   });
 });
 
