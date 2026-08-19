@@ -588,7 +588,7 @@ app.get('/api/v1/variants/:variantId', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, error: 'VARIANT_NOT_FOUND' });
   }
   
-  // STRIP OUT LEGACY / DEMO / MARKET DATA
+  // STRIP OUT LEGACY / DEMO / MARKET DATA / INTERNAL WORKFLOW STATUS
   // We only return truthful automotive data via an explicit allowlist
   res.json({
     // IDENTITY
@@ -600,8 +600,6 @@ app.get('/api/v1/variants/:variantId', (req: Request, res: Response) => {
     slug: found.slug,
     variant_name: found.variant_name,
     technical_identifiers: found.technical_identifiers ?? null,
-    in_primo_piano: found.in_primo_piano ?? null,
-    tier: found.tier ?? null,
     category: found.category ?? null,
     market_code: found.market_code ?? null,
     
@@ -616,16 +614,10 @@ app.get('/api/v1/variants/:variantId', (req: Request, res: Response) => {
     production_total: found.production_total ?? null,
     original_list_price_eur: found.original_list_price_eur ?? null,
     
-    // INTERNAL STATUS / METADATA
-    data_status: found.data_status,
-    is_ui_fixture: found.is_ui_fixture ?? null,
-    dataStatus: found.dataStatus ?? null,
-    catalogue_status: found.catalogue_status ?? null,
-    catalogueStatus: found.catalogueStatus ?? null,
-    
     // MEDIA
     hero_image_url: found.hero_image_url ?? null,
     gallery_images: found.gallery_images ?? null,
+    youtube_video_ids: found.youtube_video_ids ?? null,
     
     // TECHNICAL
     canonical_engine_id: found.canonical_engine_id ?? null,
@@ -640,15 +632,10 @@ app.get('/api/v1/variants/:variantId', (req: Request, res: Response) => {
     engineers: found.engineers ?? null,
     related_entities: found.related_entities ?? null,
     production_site: found.production_site ?? null,
-    known_issues: found.known_issues ?? null,
-    maintenance_complexity: found.maintenance_complexity ?? null,
-    annual_est_maintenance_eur: found.annual_est_maintenance_eur ?? null,
-    youtube_video_ids: found.youtube_video_ids ?? null,
     
-    // BREAKDOWNS
+    // PRODUCTION BREAKDOWNS
     variant_editions: found.variant_editions ?? null,
     extended_variant_editions: found.extended_variant_editions ?? null,
-    generations_summary: found.generations_summary ?? null,
     factory_colors: found.factory_colors ?? null,
     production_breakdown_notes_it: found.production_breakdown_notes_it ?? null,
     production_breakdown_notes_en: found.production_breakdown_notes_en ?? null
