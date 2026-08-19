@@ -10,24 +10,37 @@ export const useSearchController = (onNavigate: (page: string, params?: any) => 
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   useEffect(() => {
-    const handler = setTimeout(() => {
+    let cancelled = false;
+    const handler = setTimeout(async () => {
       if (query.trim().length >= 2) {
-        const { results, discovery } = catalogueRepository.search(query);
-        setSuggestions(results.map(r => ({
-          ...r,
-          action: () => {
-            setSearchFocused(false);
-            onNavigate('search-result', r);
+        try {
+          const { results, discovery } = await catalogueRepository.search(query);
+          if (!cancelled) {
+            setSuggestions(results.map(r => ({
+              ...r,
+              action: () => {
+                setSearchFocused(false);
+                onNavigate('search-result', r);
+              }
+            })));
+            setDiscoveryActions(discovery);
           }
-        })));
-        setDiscoveryActions(discovery);
+        } catch (e) {
+          if (!cancelled) {
+            setSuggestions([]);
+            setDiscoveryActions([]);
+          }
+        }
       } else {
         setSuggestions([]);
         setDiscoveryActions([]);
       }
       setSelectedIndex(-1);
     }, 150);
-    return () => clearTimeout(handler);
+    return () => {
+      cancelled = true;
+      clearTimeout(handler);
+    };
   }, [query, onNavigate]);
 
   const handleSuggestionClick = (action: () => void) => {
@@ -76,7 +89,6 @@ export const useSearchController = (onNavigate: (page: string, params?: any) => 
     selectedIndex,
     setSelectedIndex,
     handleSuggestionClick,
-    handleSearchSubmit,
     handleKeyDown
   };
 };

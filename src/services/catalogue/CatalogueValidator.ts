@@ -1,16 +1,22 @@
-import { Maker, Model, Generation, VehicleVariant, CanonicalEngine } from '../../types/index.js';
-import { CatalogueValidationIssue, CatalogueValidationResult, ICatalogueProvider } from './types.js';
+import { 
+  ICatalogueProvider, 
+  CatalogueValidationResult, 
+  CatalogueValidationIssue,
+  CatalogueIntegrityError
+} from './types.js';
 
 export class CatalogueValidator {
-  public static validate(provider: ICatalogueProvider): CatalogueValidationResult {
+  public static async validate(provider: ICatalogueProvider, throwOnErrors: boolean = false): Promise<CatalogueValidationResult> {
     const errors: CatalogueValidationIssue[] = [];
     const warnings: CatalogueValidationIssue[] = [];
 
-    const makers = provider.getMakers();
-    const models = provider.getModels();
-    const generations = provider.getGenerations();
-    const variants = provider.getVariants();
-    const engines = provider.getCanonicalEngines();
+    const [makers, models, generations, variants, engines] = await Promise.all([
+      provider.getMakers(),
+      provider.getModels(),
+      provider.getGenerations(),
+      provider.getVariants(),
+      provider.getCanonicalEngines()
+    ]);
 
     const makerIds = new Set<string>();
     const makerSlugs = new Set<string>();
@@ -21,25 +27,25 @@ export class CatalogueValidator {
           entityType: 'MAKER',
           entityId: m.id,
           field: 'id',
-          message: `Duplicate Maker ID: '${m.id}'`
+          message: `Duplicate Maker ID: "${m.id}"`
         });
       }
       makerIds.add(m.id);
 
-      if (makerSlugs.has(m.slug)) {
+      if (makerSlugs.has(m.slug.toLowerCase())) {
         errors.push({
           severity: 'ERROR',
           entityType: 'MAKER',
           entityId: m.id,
           field: 'slug',
-          message: `Duplicate Maker slug: '${m.slug}'`
+          message: `Duplicate Maker slug: "${m.slug}"`
         });
       }
-      makerSlugs.add(m.slug);
+      makerSlugs.add(m.slug.toLowerCase());
     });
 
     const modelIds = new Set<string>();
-    const modelSlugsByMaker = new Map<string, Set<string>>();
+    const modelSlugs = new Set<string>();
     models.forEach(m => {
       if (modelIds.has(m.id)) {
         errors.push({
@@ -47,42 +53,35 @@ export class CatalogueValidator {
           entityType: 'MODEL',
           entityId: m.id,
           field: 'id',
-          message: `Duplicate Model ID: '${m.id}'`
+          message: `Duplicate Model ID: "${m.id}"`
         });
       }
       modelIds.add(m.id);
 
-      // Model relational check: maker_id must exist
+      const scopedSlug = `${m.maker_id}:${m.slug.toLowerCase()}`;
+      if (modelSlugs.has(scopedSlug)) {
+        errors.push({
+          severity: 'ERROR',
+          entityType: 'MODEL',
+          entityId: m.id,
+          field: 'slug',
+          message: `Duplicate Model slug within Maker "${m.maker_id}": "${m.slug}"`
+        });
+      }
+      modelSlugs.add(scopedSlug);
+
       if (!makerIds.has(m.maker_id)) {
         errors.push({
           severity: 'ERROR',
           entityType: 'MODEL',
           entityId: m.id,
           field: 'maker_id',
-          message: `Model '${m.id}' references nonexistent Maker ID '${m.maker_id}'`
+          message: `Model "${m.id}" references non-existent Maker "${m.maker_id}"`
         });
       }
-
-      // Check slug uniqueness per maker
-      let makerModelSlugs = modelSlugsByMaker.get(m.maker_id);
-      if (!makerModelSlugs) {
-        makerModelSlugs = new Set<string>();
-        modelSlugsByMaker.set(m.maker_id, makerModelSlugs);
-      }
-      if (makerModelSlugs.has(m.slug)) {
-        errors.push({
-          severity: 'ERROR',
-          entityType: 'MODEL',
-          entityId: m.id,
-          field: 'slug',
-          message: `Duplicate Model slug '${m.slug}' for Maker '${m.maker_id}'`
-        });
-      }
-      makerModelSlugs.add(m.slug);
     });
 
     const generationIds = new Set<string>();
-    const generationSlugsByModel = new Map<string, Set<string>>();
     generations.forEach(g => {
       if (generationIds.has(g.id)) {
         errors.push({
@@ -90,39 +89,19 @@ export class CatalogueValidator {
           entityType: 'GENERATION',
           entityId: g.id,
           field: 'id',
-          message: `Duplicate Generation ID: '${g.id}'`
+          message: `Duplicate Generation ID: "${g.id}"`
         });
       }
       generationIds.add(g.id);
 
-      // Generation relational check: model_id must exist
       if (!modelIds.has(g.model_id)) {
         errors.push({
           severity: 'ERROR',
           entityType: 'GENERATION',
           entityId: g.id,
           field: 'model_id',
-          message: `Generation '${g.id}' references nonexistent Model ID '${g.model_id}'`
+          message: `Generation "${g.id}" references non-existent Model "${g.model_id}"`
         });
-      }
-
-      // Check slug uniqueness per model
-      if (g.slug) {
-        let modelGenSlugs = generationSlugsByModel.get(g.model_id);
-        if (!modelGenSlugs) {
-          modelGenSlugs = new Set<string>();
-          generationSlugsByModel.set(g.model_id, modelGenSlugs);
-        }
-        if (modelGenSlugs.has(g.slug)) {
-          errors.push({
-            severity: 'ERROR',
-            entityType: 'GENERATION',
-            entityId: g.id,
-            field: 'slug',
-            message: `Duplicate Generation slug '${g.slug}' for Model '${g.model_id}'`
-          });
-        }
-        modelGenSlugs.add(g.slug);
       }
     });
 
@@ -134,7 +113,7 @@ export class CatalogueValidator {
           entityType: 'ENGINE',
           entityId: e.id,
           field: 'id',
-          message: `Duplicate Engine ID: '${e.id}'`
+          message: `Duplicate CanonicalEngine ID: "${e.id}"`
         });
       }
       engineIds.add(e.id);
@@ -149,52 +128,44 @@ export class CatalogueValidator {
           entityType: 'VARIANT',
           entityId: v.id,
           field: 'id',
-          message: `Duplicate Variant ID: '${v.id}'`
+          message: `Duplicate Variant ID: "${v.id}"`
         });
       }
       variantIds.add(v.id);
 
-      if (v.slug) {
-        if (variantSlugs.has(v.slug)) {
-          errors.push({
-            severity: 'ERROR',
-            entityType: 'VARIANT',
-            entityId: v.id,
-            field: 'slug',
-            message: `Duplicate Variant slug: '${v.slug}'`
-          });
-        }
-        variantSlugs.add(v.slug);
+      if (variantSlugs.has(v.slug.toLowerCase())) {
+        warnings.push({
+          severity: 'WARNING',
+          entityType: 'VARIANT',
+          entityId: v.id,
+          field: 'slug',
+          message: `Duplicate Variant global slug: "${v.slug}"`
+        });
+      }
+      variantSlugs.add(v.slug.toLowerCase());
+
+      if (v.generation_id && !generationIds.has(v.generation_id)) {
+        errors.push({
+          severity: 'ERROR',
+          entityType: 'VARIANT',
+          entityId: v.id,
+          field: 'generation_id',
+          message: `Variant "${v.id}" references non-existent Generation "${v.generation_id}"`
+        });
       }
 
-      // Variant relational check: generation_id
-      if (v.generation_id) {
-        if (!generationIds.has(v.generation_id)) {
-          warnings.push({
-            severity: 'WARNING',
-            entityType: 'VARIANT',
-            entityId: v.id,
-            field: 'generation_id',
-            message: `Variant '${v.id}' references unindexed/orphan Generation ID '${v.generation_id}'`
-          });
-        }
-      }
-
-      // Variant relational check: canonical_engine_id
-      if (v.canonical_engine_id) {
-        if (!engineIds.has(v.canonical_engine_id)) {
-          warnings.push({
-            severity: 'WARNING',
-            entityType: 'VARIANT',
-            entityId: v.id,
-            field: 'canonical_engine_id',
-            message: `Variant '${v.id}' references unindexed CanonicalEngine ID '${v.canonical_engine_id}'`
-          });
-        }
+      if (v.canonical_engine_id && !engineIds.has(v.canonical_engine_id)) {
+        warnings.push({
+          severity: 'WARNING',
+          entityType: 'VARIANT',
+          entityId: v.id,
+          field: 'canonical_engine_id',
+          message: `Variant "${v.id}" references non-existent CanonicalEngine "${v.canonical_engine_id}"`
+        });
       }
     });
 
-    return {
+    const result: CatalogueValidationResult = {
       valid: errors.length === 0,
       errors,
       warnings,
@@ -206,5 +177,14 @@ export class CatalogueValidator {
         enginesCount: engines.length
       }
     };
+
+    if (!result.valid && throwOnErrors) {
+      throw new CatalogueIntegrityError(
+        `Catalogue validation failed with ${errors.length} structural error(s).`,
+        errors
+      );
+    }
+
+    return result;
   }
 }

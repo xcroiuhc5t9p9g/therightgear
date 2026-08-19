@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bookmark, Trash2, ArrowUpRight, DollarSign, Award, ChevronRight } from 'lucide-react';
 import { catalogueRepository } from '../services/catalogueRepository';
 import { VehicleVariant } from '../types';
@@ -20,8 +20,25 @@ export const WatchlistPage: React.FC<WatchlistPageProps> = ({
   locale
 }) => {
   const t = translations[locale];
+  const [savedVehicles, setSavedVehicles] = useState<VehicleVariant[]>([]);
 
-  const savedVehicles: VehicleVariant[] = catalogueRepository.getAllVariants().vehicles.filter(v => watchlistIds.includes(v.id));
+  useEffect(() => {
+    let cancelled = false;
+    async function loadWatchlist() {
+      try {
+        const res = await catalogueRepository.getAllVariants();
+        if (!cancelled) {
+          setSavedVehicles(res.vehicles.filter(v => watchlistIds.includes(v.id)));
+        }
+      } catch (e) {
+        console.error('Failed to load watchlist vehicles:', e);
+      }
+    }
+    loadWatchlist();
+    return () => {
+      cancelled = true;
+    };
+  }, [watchlistIds]);
 
   const totalPortfolioValue = savedVehicles.reduce((acc, curr) => acc + (curr.current_median_price_eur || 0), 0);
   const scoredVehicles = savedVehicles.filter(v => v.scores?.collector_score?.overall_score != null);

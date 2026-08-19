@@ -1,15 +1,22 @@
-import { catalogueRepository } from '../src/services/catalogueRepository';
+import { catalogueRepository } from '../src/services/catalogueRepository.js';
 
-function validateCatalogue() {
+async function validateCatalogue() {
   console.log('--- RUNNING AUTOMATED CATALOGUE VALIDATION ---');
   
-  const hierarchy = catalogueRepository.getHierarchy();
+  const [makersList, modelsList, generationsList, variantsList, enginesList] = await Promise.all([
+    catalogueRepository.getMakers(),
+    catalogueRepository.getModels(),
+    catalogueRepository.getGenerations(),
+    catalogueRepository.getVariants(),
+    catalogueRepository.getEngines()
+  ]);
+
   // Filter out UI fixtures to check true canonical data
-  const makers = hierarchy.makers.filter(m => !(m as any).is_ui_fixture);
-  const models = hierarchy.models.filter(m => !(m as any).is_ui_fixture);
-  const generations = hierarchy.generations.filter(m => !(m as any).is_ui_fixture);
-  const variants = hierarchy.variants.filter(m => !m.is_ui_fixture);
-  const engines = hierarchy.engines.filter(m => !(m as any).is_ui_fixture);
+  const makers = makersList.filter(m => !(m as any).is_ui_fixture);
+  const models = modelsList.filter(m => !(m as any).is_ui_fixture);
+  const generations = generationsList.filter(m => !(m as any).is_ui_fixture);
+  const variants = variantsList.filter(m => !m.is_ui_fixture);
+  const engines = enginesList.filter(m => !(m as any).is_ui_fixture);
 
   console.log(`Makers count: ${makers.length} (Expected: 0)`);
   console.log(`Models count: ${models.length} (Expected: 0)`);

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { catalogueRepository } from '../services/catalogueRepository';
 import { ChevronRight } from 'lucide-react';
 import { Maker, Model, Generation } from '../types';
@@ -41,16 +41,55 @@ const normalizeOrdinal = (name: string) => {
 };
 
 export function ModelDetailPage({ makerSlug, modelSlug, onNavigate }: ModelDetailPageProps) {
-  const { maker, model, generations } = useMemo(() => {
-    const mk = catalogueRepository.getMakerBySlug(makerSlug);
-    const md = catalogueRepository.getModelBySlug(makerSlug, modelSlug);
-    const gens = md ? catalogueRepository.getGenerationsByModel(md.id) : [];
-    
-    // Sort generations by production start
-    gens.sort((a, b) => (a.production_start || 0) - (b.production_start || 0));
+  const [maker, setMaker] = useState<Maker | null>(null);
+  const [model, setModel] = useState<Model | null>(null);
+  const [generations, setGenerations] = useState<Generation[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    return { maker: mk, model: md, generations: gens };
+  useEffect(() => {
+    let cancelled = false;
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [mk, md] = await Promise.all([
+          catalogueRepository.getMakerBySlug(makerSlug),
+          catalogueRepository.getModelBySlug(makerSlug, modelSlug)
+        ]);
+        let gens: Generation[] = [];
+        if (md) {
+          gens = await catalogueRepository.getGenerationsByModel(md.id);
+          gens.sort((a, b) => (a.production_start || 0) - (b.production_start || 0));
+        }
+        if (!cancelled) {
+          setMaker(mk);
+          setModel(md);
+          setGenerations(gens);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setMaker(null);
+          setModel(null);
+          setGenerations([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+    loadData();
+    return () => {
+      cancelled = true;
+    };
   }, [makerSlug, modelSlug]);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-32 text-center text-gray-500 font-mono text-sm uppercase tracking-wider">
+        Loading Model Details...
+      </div>
+    );
+  }
 
   if (!model || !maker) {
     return (
@@ -67,7 +106,7 @@ export function ModelDetailPage({ makerSlug, modelSlug, onNavigate }: ModelDetai
 
   return (
     <div className="bg-[#F7F7F5] min-h-screen text-[#171A1F] pb-24">
-            <div className="max-w-7xl mx-auto px-4 md:px-8 pt-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-6">
         
         <EntityIntroLayout
           breadcrumb={
@@ -290,3 +329,4 @@ export function ModelDetailPage({ makerSlug, modelSlug, onNavigate }: ModelDetai
     </div>
   );
 }
+export default ModelDetailPage;

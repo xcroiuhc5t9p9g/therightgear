@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   User, 
   Building2, 
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { KEY_ENTITIES, KeyEntity } from '../data/entitiesData';
 import { catalogueRepository } from '../services/catalogueRepository';
+import { VehicleVariant } from '../types';
 import { Locale, translations } from '../data/translations';
 import { generatePersonJsonLd, injectSeoGeoMetadata, getAbsolutePageUrl } from '../services/seoGeoService';
 
@@ -32,8 +33,32 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
   onSelectVehicle
 }) => {
   const t = translations[locale];
+  const [associatedVehicles, setAssociatedVehicles] = useState<VehicleVariant[]>([]);
 
   const entity = KEY_ENTITIES.find(e => e.slug === entitySlug) || KEY_ENTITIES[0];
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadVehicles() {
+      try {
+        const res = await catalogueRepository.getAllVariants();
+        if (!cancelled) {
+          const matched = res.vehicles.filter(v => 
+            entity.associatedVehicleSlugs.includes(v.slug) ||
+            v.designers.some(d => d.full_name.toLowerCase().includes(entity.name.toLowerCase()) || entity.name.toLowerCase().includes(d.full_name.toLowerCase())) ||
+            v.engineers.some(e => e.full_name.toLowerCase().includes(entity.name.toLowerCase()) || entity.name.toLowerCase().includes(e.full_name.toLowerCase()))
+          );
+          setAssociatedVehicles(matched);
+        }
+      } catch (e) {
+        console.error('Failed to load associated vehicles for entity:', e);
+      }
+    }
+    loadVehicles();
+    return () => {
+      cancelled = true;
+    };
+  }, [entity]);
 
   useEffect(() => {
     const canonical = getAbsolutePageUrl(`/designer/${entity.slug}`);
@@ -53,14 +78,6 @@ export const EntityDetailPage: React.FC<EntityDetailPageProps> = ({
       keywords: [entity.name, entity.entityClass === 'PERSON' ? entity.roles[0] : entity.organizationType, 'Automotive Designer', 'Supercar Engineer', 'Automotive Intelligence']
     }, [personSchema]);
   }, [entity, locale]);
-
-  // Find vehicles linked to this entity
-  const allVars = catalogueRepository.getAllVariants().vehicles;
-  const associatedVehicles = allVars.filter(v => 
-    entity.associatedVehicleSlugs.includes(v.slug) ||
-    v.designers.some(d => d.full_name.toLowerCase().includes(entity.name.toLowerCase()) || entity.name.toLowerCase().includes(d.full_name.toLowerCase())) ||
-    v.engineers.some(e => e.full_name.toLowerCase().includes(entity.name.toLowerCase()) || entity.name.toLowerCase().includes(e.full_name.toLowerCase()))
-  );
 
   return (
     <div className="space-y-8 pb-16">

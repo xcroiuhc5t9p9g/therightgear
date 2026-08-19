@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, TrendingUp, Calendar, Users, ArrowRight } from 'lucide-react';
 import { catalogueRepository } from '../services/catalogueRepository';
+import { Maker } from '../types';
 import { HeroBlock, SectionHeader, ContentCard, EmptyStatePanel, Container } from '../components/ui-blocks';
 
 interface ExplorePageProps {
@@ -9,7 +10,25 @@ interface ExplorePageProps {
 
 export const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
   const [query, setQuery] = useState('');
-  const makers = catalogueRepository.getMakers();
+  const [makers, setMakers] = useState<Maker[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMakers() {
+      try {
+        const res = await catalogueRepository.getMakers();
+        if (!cancelled) {
+          setMakers(res);
+        }
+      } catch (e) {
+        console.error('Failed to load makers in explore page:', e);
+      }
+    }
+    loadMakers();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="w-full bg-white">

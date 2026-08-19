@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { X, SlidersHorizontal, Check, Shield, Zap, Gauge, Award, DollarSign, Wrench } from 'lucide-react';
-import { VehicleFamilyNavigation, VariantNavigationItem } from '../types';
+import React, { useState, useEffect } from 'react';
+import { X, SlidersHorizontal, Check } from 'lucide-react';
+import { VehicleFamilyNavigation, VariantNavigationItem, VehicleVariant } from '../types';
 import { Locale } from '../data/translations';
 import { catalogueRepository } from '../services/catalogueRepository';
 
@@ -34,6 +34,26 @@ export const VariantCompareModal: React.FC<VariantCompareModalProps> = ({
     return Array.from(new Set(defaultIds)).slice(0, 3);
   });
 
+  const [catalogVariants, setCatalogVariants] = useState<VehicleVariant[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCatalog() {
+      try {
+        const res = await catalogueRepository.getAllVariants();
+        if (!cancelled) {
+          setCatalogVariants(res.vehicles);
+        }
+      } catch (e) {
+        console.error('Failed to load catalogue variants in comparison modal:', e);
+      }
+    }
+    loadCatalog();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   if (!isOpen) return null;
 
   const toggleSelect = (id: string) => {
@@ -50,7 +70,7 @@ export const VariantCompareModal: React.FC<VariantCompareModalProps> = ({
 
   // Helper to fetch full or mock specs for variant
   const getVariantDetails = (vItem: VariantNavigationItem) => {
-    const catalogMatch = catalogueRepository.getVariantBySlug(vItem.slug) || catalogueRepository.getAllVariants().vehicles.find(x => x.id === vItem.id);
+    const catalogMatch = catalogVariants.find(x => x.slug === vItem.slug || x.id === vItem.id);
     if (catalogMatch) return catalogMatch;
 
     // Fallback benchmark for demo variants
@@ -254,3 +274,4 @@ export const VariantCompareModal: React.FC<VariantCompareModalProps> = ({
     </div>
   );
 };
+export default VariantCompareModal;

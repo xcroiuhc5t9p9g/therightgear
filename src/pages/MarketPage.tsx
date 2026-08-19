@@ -74,6 +74,8 @@ export const MarketPage: React.FC<MarketPageProps> = ({
   // Vehicles from Unified Vehicle Store
   const [vehicles, setVehicles] = useState<VehicleVariant[]>(unifiedVehicleStore.getAll());
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [allIntelVehicles, setAllIntelVehicles] = useState<VehicleVariant[]>([]);
+  const [intelMakers, setIntelMakers] = useState<any[]>([]);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
@@ -92,6 +94,28 @@ export const MarketPage: React.FC<MarketPageProps> = ({
       setVehicles(unifiedVehicleStore.getAll());
     });
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadIntelData() {
+      try {
+        const [variantsRes, makersRes] = await Promise.all([
+          catalogueRepository.getAllVariants(),
+          catalogueRepository.getMakers()
+        ]);
+        if (!cancelled) {
+          setAllIntelVehicles(variantsRes.vehicles);
+          setIntelMakers(makersRes);
+        }
+      } catch (e) {
+        console.error('Failed to load intel data in market page:', e);
+      }
+    }
+    loadIntelData();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Reset pagination & inject SEO/GEO Metadata when search or filters change
@@ -138,9 +162,6 @@ export const MarketPage: React.FC<MarketPageProps> = ({
   const paginatedVehicles = filteredVehicles.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   // Market Intelligence Data
-  const allIntelVehicles = catalogueRepository.getAllVariants().vehicles;
-  const intelMakers = catalogueRepository.getMakers();
-
   const filteredIntelVehicles = selectedBrandIntelligence === 'all'
     ? allIntelVehicles
     : allIntelVehicles.filter(v => v.manufacturer_name.toLowerCase() === selectedBrandIntelligence.toLowerCase());

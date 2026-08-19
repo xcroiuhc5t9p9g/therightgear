@@ -25,47 +25,65 @@ interface KnowledgeGraphPageProps {
 export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({ locale, onNavigate }) => {
   const t = translations[locale];
 
-  const { GRAPH_ENTITIES, GRAPH_RELATIONSHIPS } = React.useMemo(() => {
-    const entities: GraphEntity[] = [];
-    const relationships: GraphRelationship[] = [];
-    const hierarchy = catalogueRepository.getHierarchy();
-    
-    hierarchy.makers.forEach(maker => {
-      entities.push({ id: maker.id, name: maker.canonical_name || maker.official_name || maker.slug, type: 'MANUFACTURER', slug: maker.slug, attributes: { Country: maker.country_code || '' } });
-    });
-    hierarchy.models.forEach(model => {
-      entities.push({ id: model.id, name: model.canonical_name || (model as any).model_name || model.slug, type: 'MODEL', slug: model.slug, attributes: { Maker: model.maker_id } });
-      relationships.push({ id: `rel-${model.id}-${model.maker_id}`, subject_entity_id: model.id, predicate: 'MANUFACTURED_BY', object_entity_id: model.maker_id, confidence_score: 1.0 });
-    });
-    hierarchy.generations.forEach(gen => {
-      entities.push({ id: gen.id, name: gen.canonical_name || (gen as any).generation_name || gen.slug, type: 'GENERATION', slug: gen.slug, attributes: { Model: gen.model_id } });
-      relationships.push({ id: `rel-${gen.id}-${gen.model_id}`, subject_entity_id: gen.id, predicate: 'PART_OF_MODEL', object_entity_id: gen.model_id, confidence_score: 1.0 });
-    });
-    hierarchy.variants.forEach(v => {
-      entities.push({ id: v.id, name: `${v.manufacturer_name} ${v.variant_name}`, type: 'VARIANT', slug: v.slug, attributes: { Year: String(v.model_year_from || '') } });
-      relationships.push({ id: `rel-${v.id}-${v.generation_id}`, subject_entity_id: v.id, predicate: 'PART_OF_GENERATION', object_entity_id: v.generation_id, confidence_score: 1.0 });
-    });
-
-    return { GRAPH_ENTITIES: entities, GRAPH_RELATIONSHIPS: relationships };
-  }, []);
-
-  const [selectedEntityId, setSelectedEntityId] = useState<string>(GRAPH_ENTITIES[0]?.id || 'bmw');
+  const [graphData, setGraphData] = useState<{ entities: GraphEntity[]; relationships: GraphRelationship[] }>({
+    entities: [],
+    relationships: []
+  });
+  const [selectedEntityId, setSelectedEntityId] = useState<string>('mkr-honda');
   const [entityFilter, setEntityFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const selectedEntity = GRAPH_ENTITIES.find(e => e.id === selectedEntityId) || GRAPH_ENTITIES[0];
-
   useEffect(() => {
-    const pageCanonicalUrl = getAbsolutePageUrl('/graph');
-    const schemas = generateKnowledgeGraphJsonLd(GRAPH_ENTITIES, GRAPH_RELATIONSHIPS);
-    injectSeoGeoMetadata({
-      title: 'Automotive Knowledge Graph - Grafo Ontologico Verificato | AIP',
-      description: 'Mappa interattiva e verficata delle relazioni tra ingegneri, designer, motori e vetture storiche nel patrimonio automotive.',
-      canonicalUrl: pageCanonicalUrl,
-      ogType: 'website',
-      keywords: ['Knowledge Graph Automotive', 'Ingegneri', 'Designer', 'Motori', 'Ontologia Vetture']
-    }, schemas);
+    let cancelled = false;
+    async function loadGraph() {
+      try {
+        const hierarchy = await catalogueRepository.getHierarchy();
+        if (cancelled) return;
+        const entities: GraphEntity[] = [];
+        const relationships: GraphRelationship[] = [];
+
+        hierarchy.makers.forEach(maker => {
+          entities.push({ id: maker.id, name: maker.canonical_name || maker.official_name || maker.slug, type: 'MANUFACTURER', slug: maker.slug, attributes: { Country: maker.country_code || '' } });
+        });
+        hierarchy.models.forEach(model => {
+          entities.push({ id: model.id, name: model.canonical_name || (model as any).model_name || model.slug, type: 'MODEL', slug: model.slug, attributes: { Maker: model.maker_id } });
+          relationships.push({ id: `rel-${model.id}-${model.maker_id}`, subject_entity_id: model.id, predicate: 'MANUFACTURED_BY', object_entity_id: model.maker_id, confidence_score: 1.0 });
+        });
+        hierarchy.generations.forEach(gen => {
+          entities.push({ id: gen.id, name: gen.canonical_name || (gen as any).generation_name || gen.slug, type: 'GENERATION', slug: gen.slug, attributes: { Model: gen.model_id } });
+          relationships.push({ id: `rel-${gen.id}-${gen.model_id}`, subject_entity_id: gen.id, predicate: 'PART_OF_MODEL', object_entity_id: gen.model_id, confidence_score: 1.0 });
+        });
+        hierarchy.variants.forEach(v => {
+          entities.push({ id: v.id, name: `${v.manufacturer_name} ${v.variant_name}`, type: 'VARIANT', slug: v.slug, attributes: { Year: String(v.model_year_from || '') } });
+          relationships.push({ id: `rel-${v.id}-${v.generation_id}`, subject_entity_id: v.id, predicate: 'PART_OF_GENERATION', object_entity_id: v.generation_id, confidence_score: 1.0 });
+        });
+
+        setGraphData({ entities, relationships });
+        if (entities.length > 0) {
+          setSelectedEntityId(entities[0].id);
+        }
+
+        const pageCanonicalUrl = getAbsolutePageUrl('/graph');
+        const schemas = generateKnowledgeGraphJsonLd(entities, relationships);
+        injectSeoGeoMetadata({
+          title: 'Automotive Knowledge Graph - Grafo Ontologico Verificato | AIP',
+          description: 'Mappa interattiva e verficata delle relazioni tra ingegneri, designer, motori e vetture storiche nel patrimonio automotive.',
+          canonicalUrl: pageCanonicalUrl,
+          ogType: 'website',
+          keywords: ['Knowledge Graph Automotive', 'Ingegneri', 'Designer', 'Motori', 'Ontologia Vetture']
+        }, schemas);
+      } catch (e) {
+        console.error('Failed to load knowledge graph:', e);
+      }
+    }
+    loadGraph();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const { entities: GRAPH_ENTITIES, relationships: GRAPH_RELATIONSHIPS } = graphData;
+  const selectedEntity = GRAPH_ENTITIES.find(e => e.id === selectedEntityId) || GRAPH_ENTITIES[0];
 
   // Incoming and outgoing edges for selected entity
   const outgoingEdges = GRAPH_RELATIONSHIPS.filter(r => r.subject_entity_id === selectedEntityId);
@@ -124,7 +142,7 @@ export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({ locale, 
           </div>
 
           <div className="flex flex-wrap gap-1 text-[11px]">
-            {['All', 'Variant', 'Designer', 'Engineer', 'Engine', 'Factory', 'Event'].map(type => (
+            {['All', 'MANUFACTURER', 'MODEL', 'GENERATION', 'VARIANT'].map(type => (
               <button
                 key={type}
                 onClick={() => setEntityFilter(type)}
@@ -167,20 +185,22 @@ export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({ locale, 
         <div className="lg:col-span-8 bg-[#121520] p-6 rounded-2xl border border-[#23293a] space-y-6">
           
           {/* Entity Profile Card */}
-          <div className="flex items-start justify-between border-b border-[#202636] pb-4">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-[#181d2b] rounded-xl border border-[#2a324a]">
-                {getEntityIcon(selectedEntity.type)}
-              </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-blue-400 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
-                  {selectedEntity.type}
-                </span>
-                <h2 className="text-2xl font-extrabold text-white mt-1">{selectedEntity.name}</h2>
-                <p className="text-xs text-slate-400">{selectedEntity.subtitle}</p>
+          {selectedEntity && (
+            <div className="flex items-start justify-between border-b border-[#202636] pb-4">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-[#181d2b] rounded-xl border border-[#2a324a]">
+                  {getEntityIcon(selectedEntity.type)}
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-blue-400 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+                    {selectedEntity.type}
+                  </span>
+                  <h2 className="text-2xl font-extrabold text-white mt-1">{selectedEntity.name}</h2>
+                  <p className="text-xs text-slate-400">{selectedEntity.subtitle}</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Connected Relational Edges */}
           <div className="space-y-4">
@@ -192,7 +212,7 @@ export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({ locale, 
               {outgoingEdges.map(edge => (
                 <div key={edge.id} className="bg-[#171a26] p-3.5 rounded-xl border border-[#242c3f] space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-white">{selectedEntity.name}</span>
+                    <span className="font-bold text-white">{selectedEntity?.name}</span>
                     <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-300 font-mono-numbers font-bold text-[10px] border border-red-500/30">
                       {edge.predicate}
                     </span>
@@ -208,7 +228,7 @@ export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({ locale, 
                   </p>
                   <div className="flex items-center space-x-2 text-[10px] text-emerald-400">
                     <CheckCircle2 className="w-3 h-3" />
-                    <span>Verified with Confidence Score {edge.confidence_score}%</span>
+                    <span>Verified with Confidence Score {edge.confidence_score * 100}%</span>
                   </div>
                 </div>
               ))}
@@ -225,7 +245,7 @@ export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({ locale, 
                     <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono-numbers font-bold text-[10px] border border-blue-500/30">
                       {edge.predicate}
                     </span>
-                    <span className="font-bold text-white">{selectedEntity.name}</span>
+                    <span className="font-bold text-white">{selectedEntity?.name}</span>
                   </div>
                   <p className="text-xs text-slate-300">
                     {edge.explanation_en || edge.explanation_it}
@@ -246,3 +266,4 @@ export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({ locale, 
     </div>
   );
 };
+export default KnowledgeGraphPage;

@@ -30,7 +30,7 @@ export const ComparePage: React.FC<ComparePageProps> = ({
       let loadedVehicles: VehicleVariant[] = [];
       if (compareIds.length === 0) {
         // Fallback default cars for initial demo if empty
-        const allVars = catalogueRepository.getAllVariants().vehicles;
+        const allVars = (await catalogueRepository.getAllVariants()).vehicles;
         loadedVehicles = allVars.slice(0, 2);
       } else {
         setLoading(true);

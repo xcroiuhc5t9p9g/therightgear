@@ -10,6 +10,29 @@ import {
 
 export type CatalogueSourceType = 'FIXTURE' | 'PERSISTENT';
 
+export class CatalogueConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CatalogueConfigurationError';
+  }
+}
+
+export class CataloguePersistenceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CataloguePersistenceError';
+  }
+}
+
+export class CatalogueIntegrityError extends Error {
+  public errors: CatalogueValidationIssue[];
+  constructor(message: string, errors: CatalogueValidationIssue[] = []) {
+    super(message);
+    this.name = 'CatalogueIntegrityError';
+    this.errors = errors;
+  }
+}
+
 export interface CatalogueValidationIssue {
   severity: 'ERROR' | 'WARNING';
   entityType: 'MAKER' | 'MODEL' | 'GENERATION' | 'VARIANT' | 'ENGINE';
@@ -34,36 +57,41 @@ export interface CatalogueValidationResult {
 export interface ICatalogueProvider {
   readonly providerType: CatalogueSourceType;
 
+  // Readiness / Health
+  isReady(): Promise<boolean>;
+  assertReady(): Promise<void>;
+
   // Makers
-  getMakers(): Maker[];
-  getMakerById(id: string): Maker | null;
-  getMakerBySlug(slug: string): Maker | null;
+  getMakers(): Promise<Maker[]>;
+  getMakerById(id: string): Promise<Maker | null>;
+  getMakerBySlug(slug: string): Promise<Maker | null>;
 
   // Models
-  getModels(): Model[];
-  getModelsByMaker(makerIdOrSlug: string): Model[];
-  getModelById(id: string): Model | null;
-  getModelBySlug(makerSlug: string, modelSlug: string): Model | null;
-  getModelByIdOrSlug(idOrSlug: string): Model | null;
+  getModels(): Promise<Model[]>;
+  getModelsByMaker(makerIdOrSlug: string): Promise<Model[]>;
+  getModelById(id: string): Promise<Model | null>;
+  getModelBySlug(makerSlug: string, modelSlug: string): Promise<Model | null>;
+  getModelByIdOrSlug(idOrSlug: string): Promise<Model | null>;
 
   // Generations
-  getGenerations(): Generation[];
-  getGenerationsByModel(modelIdOrSlug: string): Generation[];
-  getGenerationById(id: string): Generation | null;
-  getGenerationBySlug(slug: string): Generation | null;
-  getGenerationByIdOrSlug(idOrSlug: string): Generation | null;
+  getGenerations(): Promise<Generation[]>;
+  getGenerationsByModel(modelIdOrSlug: string): Promise<Generation[]>;
+  getGenerationById(id: string): Promise<Generation | null>;
+  getGenerationBySlug(slug: string): Promise<Generation | null>;
+  getGenerationByIdOrSlug(idOrSlug: string): Promise<Generation | null>;
 
   // Variants
-  getVariants(): VehicleVariant[];
-  getVariantsByGeneration(generationIdOrSlug: string): VehicleVariant[];
-  getVariantById(id: string): VehicleVariant | null;
-  getVariantBySlug(slug: string): VehicleVariant | null;
-  getVariantByIdOrSlug(idOrSlug: string): VehicleVariant | null;
+  getVariants(): Promise<VehicleVariant[]>;
+  getVariantsByGeneration(generationIdOrSlug: string): Promise<VehicleVariant[]>;
+  getVariantsByModel(modelIdOrSlug: string): Promise<VehicleVariant[]>;
+  getVariantById(id: string): Promise<VehicleVariant | null>;
+  getVariantBySlug(slug: string): Promise<VehicleVariant | null>;
+  getVariantByIdOrSlug(idOrSlug: string): Promise<VehicleVariant | null>;
 
   // Engines
-  getCanonicalEngines(): CanonicalEngine[];
-  getCanonicalEngineById(id: string): CanonicalEngine | null;
-  getCanonicalEngineBySlug(slug: string): CanonicalEngine | null;
+  getCanonicalEngines(): Promise<CanonicalEngine[]>;
+  getCanonicalEngineById(id: string): Promise<CanonicalEngine | null>;
+  getCanonicalEngineBySlug(slug: string): Promise<CanonicalEngine | null>;
 }
 
 export interface ResolvedGenerationContext {

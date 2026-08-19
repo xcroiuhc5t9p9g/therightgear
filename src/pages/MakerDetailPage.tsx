@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, User } from 'lucide-react';
 import { catalogueRepository } from '../services/catalogueRepository';
+import { Maker, Model } from '../types';
 
 interface MakerDetailPageProps {
   makerSlug: string;
@@ -8,9 +9,69 @@ interface MakerDetailPageProps {
 }
 
 export const MakerDetailPage: React.FC<MakerDetailPageProps> = ({ makerSlug, onNavigate }) => {
-  const maker = useMemo(() => catalogueRepository.getMakerBySlug(makerSlug), [makerSlug]);
-  const models = useMemo(() => maker ? catalogueRepository.getModelsByMaker(maker.slug) : [], [maker]);
-  const relatedPeople = useMemo(() => maker ? catalogueRepository.getPeopleByMaker(maker.slug) : [], [maker]);
+  const [maker, setMaker] = useState<Maker | null>(null);
+  const [models, setModels] = useState<Model[]>([]);
+  const [generationCounts, setGenerationCounts] = useState<Record<string, number>>({});
+  const [relatedPeople, setRelatedPeople] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMaker() {
+      setLoading(true);
+      try {
+        const mk = await catalogueRepository.getMakerBySlug(makerSlug);
+        if (!mk) {
+          if (!cancelled) {
+            setMaker(null);
+            setModels([]);
+            setGenerationCounts({});
+            setRelatedPeople([]);
+          }
+          return;
+        }
+
+        const [mds, people, allGenerations] = await Promise.all([
+          catalogueRepository.getModelsByMaker(mk.slug),
+          catalogueRepository.getPeopleByMaker(mk.slug),
+          catalogueRepository.getGenerations()
+        ]);
+
+        const counts: Record<string, number> = {};
+        mds.forEach(m => {
+          counts[m.id] = allGenerations.filter(g => g.model_id === m.id).length;
+        });
+
+        if (!cancelled) {
+          setMaker(mk);
+          setModels(mds);
+          setGenerationCounts(counts);
+          setRelatedPeople(people);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setMaker(null);
+          setModels([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+    loadMaker();
+    return () => {
+      cancelled = true;
+    };
+  }, [makerSlug]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4 font-mono text-sm text-trg-gray-500">
+        Loading Manufacturer...
+      </div>
+    );
+  }
 
   if (!maker) {
     return (
@@ -176,7 +237,7 @@ export const MakerDetailPage: React.FC<MakerDetailPageProps> = ({ makerSlug, onN
             {/* Rows */}
             <div className="divide-y divide-gray-100">
               {models.map(model => {
-                const generationCount = catalogueRepository.getGenerationsByModel(model.id).length;
+                const generationCount = generationCounts[model.id] ?? 0;
                 return (
                   <a
                     key={model.id}
@@ -226,3 +287,4 @@ export const MakerDetailPage: React.FC<MakerDetailPageProps> = ({ makerSlug, onN
     </div>
   );
 };
+export default MakerDetailPage;

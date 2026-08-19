@@ -72,7 +72,7 @@ export function App() {
   const [compareIds, setCompareIds] = useState<string[]>([]);
 
   // URL Path Synchronizer for SEO / Clean URLs
-  const parseLocation = () => {
+  const parseLocation = async () => {
     if (typeof window === 'undefined') return;
     const path = window.location.pathname.toLowerCase();
     const parts = path.split('/').filter(Boolean);
@@ -112,13 +112,19 @@ export function App() {
     } else if (parts[0] === 'cars' && parts[1]) {
       if (parts.length === 2) {
         // Check if parts[1] is a variant slug first
-        const matchedVariant = catalogueRepository.getAllVariants().vehicles.find(v => v.slug === parts[1] || v.id === parts[1]);
+        const allRes = await catalogueRepository.getAllVariants();
+        const matchedVariant = allRes.vehicles.find(v => v.slug === parts[1] || v.id === parts[1]);
         if (matchedVariant) {
           setCurrentPage('detail');
           setSelectedVehicleSlug(matchedVariant.slug);
-          const gen = catalogueRepository.getGenerations().find(g => g.id === matchedVariant.generation_id);
-          const model = catalogueRepository.getModels().find(m => m.id === gen?.model_id);
-          const maker = catalogueRepository.getMakers().find(mk => mk.id === matchedVariant.manufacturer_id);
+          const [gens, models, makers] = await Promise.all([
+            catalogueRepository.getGenerations(),
+            catalogueRepository.getModels(),
+            catalogueRepository.getMakers()
+          ]);
+          const gen = gens.find(g => g.id === matchedVariant.generation_id);
+          const model = models.find(m => m.id === gen?.model_id);
+          const maker = makers.find(mk => mk.id === matchedVariant.manufacturer_id);
           const makerSlug = maker?.slug || matchedVariant.manufacturer_name.toLowerCase().replace(/\s+/g, '-');
           const modelSlug = model?.slug || matchedVariant.model_name.toLowerCase().replace(/\s+/g, '-');
           const genSlug = gen?.slug || 'gen';
@@ -131,9 +137,9 @@ export function App() {
           setCurrentPage('explore');
           setSearchQuery(parts[1]);
         }
-            } else if (parts.length === 3) {
+      } else if (parts.length === 3) {
         // /cars/:makerSlug/:modelSlug
-        const model = catalogueRepository.getModelBySlug(parts[1], parts[2]);
+        const model = await catalogueRepository.getModelBySlug(parts[1], parts[2]);
         if (model) {
           setCurrentPage('model');
           setSelectedMakerSlug(parts[1]);
@@ -149,17 +155,23 @@ export function App() {
       } else if (parts.length >= 5) {
         // /cars/:makerSlug/:modelSlug/:generationSlug/:variantSlug
         setCurrentPage('detail');
-        const matchedVariant = catalogueRepository.getVariantBySlug(parts[4]);
+        const matchedVariant = await catalogueRepository.getVariantBySlug(parts[4]);
         setSelectedVehicleSlug(matchedVariant ? matchedVariant.slug : parts[4]);
       }
     } else if (parts[0] === 'vehicle' && parts[1]) {
       setCurrentPage('detail');
       setSelectedVehicleSlug(parts[1]);
-      const matchedVariant = catalogueRepository.getAllVariants().vehicles.find(v => v.slug === parts[1] || v.id === parts[1]);
+      const allRes = await catalogueRepository.getAllVariants();
+      const matchedVariant = allRes.vehicles.find(v => v.slug === parts[1] || v.id === parts[1]);
       if (matchedVariant) {
-        const gen = catalogueRepository.getGenerations().find(g => g.id === matchedVariant.generation_id);
-        const model = catalogueRepository.getModels().find(m => m.id === gen?.model_id);
-        const maker = catalogueRepository.getMakers().find(mk => mk.id === matchedVariant.manufacturer_id);
+        const [gens, models, makers] = await Promise.all([
+          catalogueRepository.getGenerations(),
+          catalogueRepository.getModels(),
+          catalogueRepository.getMakers()
+        ]);
+        const gen = gens.find(g => g.id === matchedVariant.generation_id);
+        const model = models.find(m => m.id === gen?.model_id);
+        const maker = makers.find(mk => mk.id === matchedVariant.manufacturer_id);
         const makerSlug = maker?.slug || matchedVariant.manufacturer_name.toLowerCase().replace(/\s+/g, '-');
         const modelSlug = model?.slug || matchedVariant.model_name.toLowerCase().replace(/\s+/g, '-');
         const genSlug = gen?.slug || 'gen';
@@ -278,7 +290,7 @@ export function App() {
     });
   };
 
-  const handleNavigate = (page: string, params?: any) => {
+  const handleNavigate = async (page: string, params?: any) => {
     let slug = '';
     if (typeof params === 'string') {
       slug = params;
@@ -310,11 +322,17 @@ export function App() {
          setSelectedVehicleSlug(slugParts[slugParts.length - 1]);
       } else {
         setSelectedVehicleSlug(slug);
-        const variant = catalogueRepository.getAllVariants().vehicles.find(v => v.slug === slug || v.id === slug);
+        const allRes = await catalogueRepository.getAllVariants();
+        const variant = allRes.vehicles.find(v => v.slug === slug || v.id === slug);
         if (variant) {
-          const gen = catalogueRepository.getGenerations().find(g => g.id === variant.generation_id);
-          const model = catalogueRepository.getModels().find(m => m.id === gen?.model_id);
-          const maker = catalogueRepository.getMakers().find(mk => mk.id === variant.manufacturer_id);
+          const [gens, models, makers] = await Promise.all([
+            catalogueRepository.getGenerations(),
+            catalogueRepository.getModels(),
+            catalogueRepository.getMakers()
+          ]);
+          const gen = gens.find(g => g.id === variant.generation_id);
+          const model = models.find(m => m.id === gen?.model_id);
+          const maker = makers.find(mk => mk.id === variant.manufacturer_id);
           const makerSlug = maker?.slug || variant.manufacturer_name.toLowerCase().replace(/\s+/g, '-');
           const modelSlug = model?.slug || variant.model_name.toLowerCase().replace(/\s+/g, '-');
           const genSlug = gen?.slug || 'gen';

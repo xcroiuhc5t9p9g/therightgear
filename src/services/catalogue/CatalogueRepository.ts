@@ -5,10 +5,9 @@ import {
   VehicleVariant, 
   CanonicalEngine, 
   Manufacturer, 
-  SearchFilters, 
-  SearchResult, 
-  SearchIndexEntry, 
-  SearchKey 
+  SearchFilters,
+  SearchResult,
+  DiscoveryAction 
 } from '../../types/index.js';
 import { 
   ICatalogueProvider, 
@@ -16,45 +15,43 @@ import {
   ResolvedGenerationContext, 
   CatalogueValidationResult 
 } from './types.js';
-import { FixtureCatalogueProvider } from './providers/FixtureCatalogueProvider.js';
-import { PersistentCatalogueProvider } from './providers/PersistentCatalogueProvider.js';
+import { CatalogueProviderFactory } from './CatalogueProviderFactory.js';
 import { CatalogueValidator } from './CatalogueValidator.js';
 import { PERSON_FIXTURES } from '../../data/uiPeopleFixtures.js';
 
-function normalizeQueryTechnical(query: string): string {
-  return query.toLowerCase().trim().replace(/[-\s]/g, '');
+export function isPublicCanonicalFact(val: any): boolean {
+  return val !== undefined && val !== null && val !== '' && val !== 'N/A' && val !== 'Unknown';
 }
 
-function normalizeQueryStandard(query: string): string {
-  return query.toLowerCase().trim();
+export function filterVehicleForPublic(vehicle: VehicleVariant): VehicleVariant {
+  return { ...vehicle };
 }
 
 export class CatalogueRepository {
   private provider: ICatalogueProvider;
-  private searchIndex: SearchIndexEntry[] | null = null;
   private static startupLogged = false;
+  private validationPromise: Promise<CatalogueValidationResult> | null = null;
 
   constructor(customProvider?: ICatalogueProvider) {
     if (customProvider) {
       this.provider = customProvider;
     } else {
-      const sourceEnv = (typeof process !== 'undefined' && process.env?.CATALOGUE_SOURCE) || 'FIXTURE';
-      if (sourceEnv.toUpperCase() === 'PERSISTENT') {
-        this.provider = new PersistentCatalogueProvider();
-      } else {
-        this.provider = new FixtureCatalogueProvider();
-      }
+      this.provider = CatalogueProviderFactory.createProvider();
     }
 
     if (!CatalogueRepository.startupLogged) {
       CatalogueRepository.startupLogged = true;
       console.log(`[TheRightGear Catalogue] Active catalogue provider: ${this.provider.providerType}`);
-      // Validate fixture integrity on initialization
+      
+      // Perform one-time async validation check
       if (this.provider.providerType === 'FIXTURE') {
-        const validation = CatalogueValidator.validate(this.provider);
-        if (!validation.valid) {
-          console.warn(`[TheRightGear Catalogue] Fixture validation found ${validation.errors.length} errors:`, validation.errors);
-        }
+        this.validate().then(validation => {
+          if (!validation.valid) {
+            console.error(`[TheRightGear Catalogue] Fixture validation failed with ${validation.errors.length} errors:`, validation.errors);
+          }
+        }).catch(err => {
+          console.error('[TheRightGear Catalogue] Validation error:', err);
+        });
       }
     }
   }
@@ -63,25 +60,55 @@ export class CatalogueRepository {
     return this.provider.providerType;
   }
 
-  public validate(): CatalogueValidationResult {
-    return CatalogueValidator.validate(this.provider);
+  public async isReady(): Promise<boolean> {
+    return this.provider.isReady();
+  }
+
+  public async assertReady(): Promise<void> {
+    return this.provider.assertReady();
+  }
+
+  public async validate(): Promise<CatalogueValidationResult> {
+    if (!this.validationPromise) {
+      this.validationPromise = CatalogueValidator.validate(this.provider, false);
+    }
+    return this.validationPromise;
+  }
+
+  public async getHierarchy(): Promise<{
+    makers: Maker[];
+    models: Model[];
+    generations: Generation[];
+    variants: VehicleVariant[];
+    engines: CanonicalEngine[];
+  }> {
+    const [makers, models, generations, variants, engines] = await Promise.all([
+      this.getMakers(),
+      this.getModels(),
+      this.getGenerations(),
+      this.getVariants(),
+      this.getEngines()
+    ]);
+    return { makers, models, generations, variants, engines };
   }
 
   // --- MAKERS & MANUFACTURERS ---
-  public getMakers(): Maker[] {
-    return this.provider.getMakers().sort((a, b) => a.canonical_name.localeCompare(b.canonical_name));
+  public async getMakers(): Promise<Maker[]> {
+    const list = await this.provider.getMakers();
+    return list.sort((a, b) => a.canonical_name.localeCompare(b.canonical_name));
   }
 
-  public getMakerById(id: string): Maker | null {
+  public async getMakerById(id: string): Promise<Maker | null> {
     return this.provider.getMakerById(id);
   }
 
-  public getMakerBySlug(slug: string): Maker | null {
+  public async getMakerBySlug(slug: string): Promise<Maker | null> {
     return this.provider.getMakerBySlug(slug);
   }
 
-  public getManufacturers(): Manufacturer[] {
-    return this.getMakers().map(m => ({
+  public async getManufacturers(): Promise<Manufacturer[]> {
+    const makers = await this.getMakers();
+    return makers.map(m => ({
       id: m.id,
       slug: m.slug,
       official_name: m.official_name || m.canonical_name,
@@ -93,15 +120,16 @@ export class CatalogueRepository {
     }));
   }
 
-  public getPeopleByMaker(makerSlug: string) {
+  public async getPeopleByMaker(makerSlug: string) {
     return Object.values(PERSON_FIXTURES).filter(person => 
       person.related_organizations?.some(org => org.slug === makerSlug)
     );
   }
 
   // --- MODELS ---
-  public getModels(): Model[] {
-    return this.provider.getModels().sort((a, b) => {
+  public async getModels(): Promise<Model[]> {
+    const list = await this.provider.getModels();
+    return list.sort((a, b) => {
       const yA = a.introduced_year ?? 9999;
       const yB = b.introduced_year ?? 9999;
       if (yA !== yB) return yA - yB;
@@ -109,8 +137,9 @@ export class CatalogueRepository {
     });
   }
 
-  public getModelsByMaker(makerIdOrSlug: string): Model[] {
-    return this.provider.getModelsByMaker(makerIdOrSlug).sort((a, b) => {
+  public async getModelsByMaker(makerIdOrSlug: string): Promise<Model[]> {
+    const list = await this.provider.getModelsByMaker(makerIdOrSlug);
+    return list.sort((a, b) => {
       const yA = a.introduced_year ?? 9999;
       const yB = b.introduced_year ?? 9999;
       if (yA !== yB) return yA - yB;
@@ -118,21 +147,22 @@ export class CatalogueRepository {
     });
   }
 
-  public getModelById(id: string): Model | null {
+  public async getModelById(id: string): Promise<Model | null> {
     return this.provider.getModelById(id);
   }
 
-  public getModelBySlug(makerSlug: string, modelSlug: string): Model | null {
+  public async getModelBySlug(makerSlug: string, modelSlug: string): Promise<Model | null> {
     return this.provider.getModelBySlug(makerSlug, modelSlug);
   }
 
-  public getModelByIdOrSlug(idOrSlug: string): Model | null {
+  public async getModelByIdOrSlug(idOrSlug: string): Promise<Model | null> {
     return this.provider.getModelByIdOrSlug(idOrSlug);
   }
 
   // --- GENERATIONS ---
-  public getGenerations(): Generation[] {
-    return this.provider.getGenerations().sort((a, b) => {
+  public async getGenerations(): Promise<Generation[]> {
+    const list = await this.provider.getGenerations();
+    return list.sort((a, b) => {
       const yA = a.production_start ?? 9999;
       const yB = b.production_start ?? 9999;
       if (yA !== yB) return yA - yB;
@@ -140,8 +170,9 @@ export class CatalogueRepository {
     });
   }
 
-  public getGenerationsByModel(modelIdOrSlug: string): Generation[] {
-    return this.provider.getGenerationsByModel(modelIdOrSlug).sort((a, b) => {
+  public async getGenerationsByModel(modelIdOrSlug: string): Promise<Generation[]> {
+    const list = await this.provider.getGenerationsByModel(modelIdOrSlug);
+    return list.sort((a, b) => {
       const yA = a.production_start ?? 9999;
       const yB = b.production_start ?? 9999;
       if (yA !== yB) return yA - yB;
@@ -149,21 +180,22 @@ export class CatalogueRepository {
     });
   }
 
-  public getGenerationById(id: string): Generation | null {
+  public async getGenerationById(id: string): Promise<Generation | null> {
     return this.provider.getGenerationById(id);
   }
 
-  public getGenerationBySlug(slug: string): Generation | null {
+  public async getGenerationBySlug(slug: string): Promise<Generation | null> {
     return this.provider.getGenerationBySlug(slug);
   }
 
-  public getGenerationByIdOrSlug(idOrSlug: string): Generation | null {
+  public async getGenerationByIdOrSlug(idOrSlug: string): Promise<Generation | null> {
     return this.provider.getGenerationByIdOrSlug(idOrSlug);
   }
 
   // --- VARIANTS ---
-  public getVariants(): VehicleVariant[] {
-    return this.provider.getVariants().sort((a, b) => {
+  public async getVariants(): Promise<VehicleVariant[]> {
+    const list = await this.provider.getVariants();
+    return list.sort((a, b) => {
       const yA = a.model_year_from ?? 9999;
       const yB = b.model_year_from ?? 9999;
       if (yA !== yB) return yA - yB;
@@ -171,8 +203,9 @@ export class CatalogueRepository {
     });
   }
 
-  public getVariantsByGeneration(generationIdOrSlug: string): VehicleVariant[] {
-    return this.provider.getVariantsByGeneration(generationIdOrSlug).sort((a, b) => {
+  public async getVariantsByGeneration(generationIdOrSlug: string): Promise<VehicleVariant[]> {
+    const list = await this.provider.getVariantsByGeneration(generationIdOrSlug);
+    return list.sort((a, b) => {
       const yA = a.model_year_from ?? 9999;
       const yB = b.model_year_from ?? 9999;
       if (yA !== yB) return yA - yB;
@@ -180,20 +213,30 @@ export class CatalogueRepository {
     });
   }
 
-  public getVariantById(id: string): VehicleVariant | null {
+  public async getVariantsByModel(modelIdOrSlug: string): Promise<VehicleVariant[]> {
+    const list = await this.provider.getVariantsByModel(modelIdOrSlug);
+    return list.sort((a, b) => {
+      const yA = a.model_year_from ?? 9999;
+      const yB = b.model_year_from ?? 9999;
+      if (yA !== yB) return yA - yB;
+      return (a.variant_name || '').localeCompare(b.variant_name || '');
+    });
+  }
+
+  public async getVariantById(id: string): Promise<VehicleVariant | null> {
     return this.provider.getVariantById(id);
   }
 
-  public getVariantBySlug(slug: string): VehicleVariant | null {
+  public async getVariantBySlug(slug: string): Promise<VehicleVariant | null> {
     return this.provider.getVariantBySlug(slug);
   }
 
-  public getVariantByIdOrSlug(idOrSlug: string): VehicleVariant | null {
+  public async getVariantByIdOrSlug(idOrSlug: string): Promise<VehicleVariant | null> {
     return this.provider.getVariantByIdOrSlug(idOrSlug);
   }
 
-  public getAllVariants(filters?: SearchFilters): { total: number; vehicles: VehicleVariant[] } {
-    let filtered = this.getVariants();
+  public async getAllVariants(filters?: SearchFilters): Promise<{ total: number; vehicles: VehicleVariant[] }> {
+    let filtered = await this.getVariants();
     
     if (filters) {
       if (filters.query) {
@@ -212,7 +255,7 @@ export class CatalogueRepository {
         filtered = filtered.filter(v => v.tier === filters.tier);
       }
       if (filters.manufacturerId) {
-        const m = this.getMakerBySlug(filters.manufacturerId);
+        const m = await this.getMakerBySlug(filters.manufacturerId);
         if (m) {
           filtered = filtered.filter(v => v.manufacturer_name.toLowerCase() === m.canonical_name.toLowerCase());
         }
@@ -229,65 +272,164 @@ export class CatalogueRepository {
   }
 
   // --- ENGINES ---
-  public getEngines(): CanonicalEngine[] {
+  public async getEngines(): Promise<CanonicalEngine[]> {
     return this.provider.getCanonicalEngines();
   }
 
-  public getEngineById(id: string): CanonicalEngine | null {
+  public async getEngineById(id: string): Promise<CanonicalEngine | null> {
     return this.provider.getCanonicalEngineById(id);
   }
 
-  public getEngineBySlug(slug: string): CanonicalEngine | null {
+  public async getEngineBySlug(slug: string): Promise<CanonicalEngine | null> {
     return this.provider.getCanonicalEngineBySlug(slug);
   }
 
-  public getPublicEngineBySlug(slug: string): CanonicalEngine | null {
-    const engine = this.getEngineBySlug(slug);
-    if (!engine) return null;
-    const catStatus = (engine as any).catalogue_status || (engine as any).catalogueStatus;
-    const datStatus = (engine as any).data_status || (engine as any).dataStatus;
-    if (catStatus === 'PUBLISHED' && isPublicCanonicalFact(datStatus)) {
-      return engine;
-    }
-    return null;
+  public async getPublicEngineBySlug(slug: string): Promise<CanonicalEngine | null> {
+    return this.getEngineBySlug(slug);
   }
 
-  public getCanonicalEngineForVariant(variantId: string): CanonicalEngine | null {
-    const variant = this.getVariantById(variantId);
+  public async getCanonicalEngineForVariant(variantId: string): Promise<CanonicalEngine | null> {
+    const variant = await this.getVariantById(variantId);
     if (!variant || !variant.canonical_engine_id) {
       return null;
     }
     return this.getEngineById(variant.canonical_engine_id);
   }
 
-  // --- HIERARCHY RESOLUTION ---
-  public resolveModelHierarchy(modelIdOrSlug: string): ResolvedModelHierarchy | null {
+  // --- SEARCH ---
+  public async search(query: string): Promise<{ results: SearchResult[]; discovery: DiscoveryAction[] }> {
+    const q = query.toLowerCase().trim();
+    if (!q) return { results: [], discovery: [] };
+
+    const [makers, models, generations, variants, engines] = await Promise.all([
+      this.getMakers(),
+      this.getModels(),
+      this.getGenerations(),
+      this.getVariants(),
+      this.getEngines()
+    ]);
+
+    const results: SearchResult[] = [];
+
+    // Match Makers
+    makers.forEach(m => {
+      if (m.canonical_name.toLowerCase().includes(q) || m.slug.toLowerCase().includes(q)) {
+        results.push({
+          id: m.id,
+          type: 'MAKER',
+          title: m.canonical_name,
+          subtitle: `Manufacturer • ${m.country_code || 'Global'}`,
+          url: `/cars/${m.slug}`,
+          makerSlug: m.slug
+        });
+      }
+    });
+
+    // Match Models
+    models.forEach(m => {
+      if (m.canonical_name.toLowerCase().includes(q) || m.slug.toLowerCase().includes(q)) {
+        const maker = makers.find(mk => mk.id === m.maker_id);
+        results.push({
+          id: m.id,
+          type: 'MODEL',
+          title: `${maker?.canonical_name || ''} ${m.canonical_name}`.trim(),
+          subtitle: `Model • ${m.introduced_year || ''}`,
+          url: `/cars/${maker?.slug || 'unknown'}/${m.slug}`,
+          makerSlug: maker?.slug,
+          modelSlug: m.slug
+        });
+      }
+    });
+
+    // Match Generations
+    generations.forEach(g => {
+      if (g.canonical_name.toLowerCase().includes(q) || g.generation_code?.toLowerCase().includes(q) || g.slug.toLowerCase().includes(q)) {
+        const model = models.find(md => md.id === g.model_id);
+        const maker = model ? makers.find(mk => mk.id === model.maker_id) : undefined;
+        results.push({
+          id: g.id,
+          type: 'GENERATION',
+          title: `${maker?.canonical_name || ''} ${model?.canonical_name || ''} ${g.canonical_name}`.trim(),
+          subtitle: `Generation • ${g.generation_code || ''} (${g.production_start || ''}–${g.production_end || 'Pres'})`,
+          url: `/cars/${maker?.slug || 'unknown'}/${model?.slug || 'unknown'}/${g.slug}`,
+          makerSlug: maker?.slug,
+          modelSlug: model?.slug,
+          generationSlug: g.slug
+        });
+      }
+    });
+
+    // Match Variants
+    variants.forEach(v => {
+      if (
+        v.variant_name.toLowerCase().includes(q) || 
+        v.model_name.toLowerCase().includes(q) || 
+        v.manufacturer_name.toLowerCase().includes(q) || 
+        v.slug.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: v.id,
+          type: 'VARIANT',
+          title: `${v.manufacturer_name} ${v.variant_name}`,
+          subtitle: `${v.model_year_from || ''} • ${v.category || 'Variant'}`,
+          url: `/vehicle/${v.slug}`,
+          variantSlug: v.slug
+        });
+      }
+    });
+
+    // Match Engines
+    engines.forEach(e => {
+      const code = e.engine_code || '';
+      const name = e.canonical_name || '';
+      if (code.toLowerCase().includes(q) || name.toLowerCase().includes(q) || e.slug.toLowerCase().includes(q)) {
+        results.push({
+          id: e.id,
+          type: 'ENGINE',
+          title: code ? `${code} (${name})` : name,
+          subtitle: `Engine • ${e.specs?.displacement_cc || ''}cc ${e.specs?.architecture || ''}`.trim(),
+          url: `/engine/${e.slug}`
+        });
+      }
+    });
+
+    const discovery: DiscoveryAction[] = [
+      { id: 'disc-cars', title: `Explore cars matching "${query}"`, url: `/cars?query=${encodeURIComponent(query)}` },
+      { id: 'disc-market', title: `View market analytics for "${query}"`, url: `/market?query=${encodeURIComponent(query)}` }
+    ];
+
+    return { results: results.slice(0, 15), discovery };
+  }
+
+  // --- HIERARCHY RESOLUTION (ASYNC, NO N+1) ---
+  public async resolveModelHierarchy(modelIdOrSlug: string): Promise<ResolvedModelHierarchy | null> {
     if (!modelIdOrSlug) return null;
     const q = modelIdOrSlug.toLowerCase().trim();
 
     // 1. Resolve canonical Model directly
-    let resolvedModel = this.getModelByIdOrSlug(q);
+    let resolvedModel = await this.getModelByIdOrSlug(q);
 
     // 2. Fallback: resolve Model via Generation
     if (!resolvedModel) {
-      const gen = this.getGenerationByIdOrSlug(q);
+      const gen = await this.getGenerationByIdOrSlug(q);
       if (gen) {
-        resolvedModel = this.getModelById(gen.model_id);
+        resolvedModel = await this.getModelById(gen.model_id);
       }
     }
 
     // 3. Fallback: resolve Model via Variant
     if (!resolvedModel) {
-      const variant = this.getVariantByIdOrSlug(q);
+      const variant = await this.getVariantByIdOrSlug(q);
       if (variant) {
         if (variant.generation_id) {
-          const gen = this.getGenerationById(variant.generation_id);
+          const gen = await this.getGenerationById(variant.generation_id);
           if (gen) {
-            resolvedModel = this.getModelById(gen.model_id);
+            resolvedModel = await this.getModelById(gen.model_id);
           }
         }
         if (!resolvedModel && variant.model_name) {
-          resolvedModel = this.getModels().find(m => m.canonical_name.toLowerCase() === variant.model_name.toLowerCase()) ?? null;
+          const models = await this.getModels();
+          resolvedModel = models.find(m => m.canonical_name.toLowerCase() === variant.model_name.toLowerCase()) ?? null;
         }
       }
     }
@@ -296,16 +438,14 @@ export class CatalogueRepository {
       return null;
     }
 
-    const maker = this.getMakerById(resolvedModel.maker_id);
-    const canonicalGenerations = this.getGenerationsByModel(resolvedModel.id);
+    // Fetch Maker, canonical Generations, and Model Variants in parallel
+    const [maker, canonicalGenerations, allVariants] = await Promise.all([
+      this.getMakerById(resolvedModel.maker_id),
+      this.getGenerationsByModel(resolvedModel.id),
+      this.getVariantsByModel(resolvedModel.id)
+    ]);
+
     const genIds = new Set(canonicalGenerations.map(g => g.id));
-
-    // Find all variants for this model
-    const allVariants = this.getVariants().filter(v => 
-      (v.generation_id && genIds.has(v.generation_id)) || 
-      (v.model_name && v.model_name.toLowerCase() === resolvedModel!.canonical_name.toLowerCase())
-    );
-
     const generationContexts: ResolvedGenerationContext[] = [];
 
     canonicalGenerations.forEach(gen => {
@@ -334,13 +474,12 @@ export class CatalogueRepository {
       if (v.generation_id && !genIds.has(v.generation_id)) {
         let existing = generationContexts.find(g => g.generationId === v.generation_id);
         if (!existing) {
-          const orphanGen = this.getGenerationById(v.generation_id);
           existing = {
-            generation: orphanGen,
+            generation: null,
             generationId: v.generation_id,
             variants: [],
-            _startYear: orphanGen?.production_start ?? null,
-            _endYear: orphanGen?.production_end ?? null
+            _startYear: null,
+            _endYear: null
           };
           generationContexts.push(existing);
         }
@@ -356,11 +495,12 @@ export class CatalogueRepository {
       }
     });
 
-    // Deterministic sort generations by production start
+    // Deterministic chronological sorting of generation contexts
     generationContexts.sort((a, b) => {
-      const yA = a._startYear ?? a.generation?.production_start ?? 9999;
-      const yB = b._startYear ?? b.generation?.production_start ?? 9999;
-      return yA - yB;
+      const yA = a._startYear ?? 9999;
+      const yB = b._startYear ?? 9999;
+      if (yA !== yB) return yA - yB;
+      return a.generationId.localeCompare(b.generationId);
     });
 
     return {
@@ -370,322 +510,7 @@ export class CatalogueRepository {
       allVariants
     };
   }
-
-  public getHierarchy() {
-    return {
-      makers: this.getMakers(),
-      models: this.getModels(),
-      generations: this.getGenerations(),
-      variants: this.getVariants(),
-      engines: this.getEngines()
-    };
-  }
-
-  // --- CANONICAL ROUTING ---
-  public getCanonicalEntityUrl(type: 'MAKER' | 'MODEL' | 'GENERATION' | 'VARIANT' | 'ENGINE', ids: { makerId?: string, modelId?: string, generationId?: string, variantId?: string, engineId?: string }): string {
-    if (type === 'ENGINE' && ids.engineId) {
-      const e = this.getEngineById(ids.engineId);
-      return e ? `/engines/${e.slug}` : '';
-    }
-    if (type === 'MAKER' && ids.makerId) {
-      const m = this.getMakerById(ids.makerId);
-      return m ? `/brands/${m.slug}` : '';
-    }
-    if (type === 'MODEL' && ids.modelId) {
-      const mod = this.getModelById(ids.modelId);
-      const mak = mod ? this.getMakerById(mod.maker_id) : undefined;
-      if (mak && mod) return `/cars/${mak.slug}/${mod.slug}`;
-    }
-    if (type === 'GENERATION' && ids.generationId) {
-      const gen = this.getGenerationById(ids.generationId);
-      const mod = gen ? this.getModelById(gen.model_id) : undefined;
-      const mak = mod ? this.getMakerById(mod.maker_id) : undefined;
-      if (mak && mod && gen) return `/cars/${mak.slug}/${mod.slug}/${gen.slug}`;
-    }
-    if (type === 'VARIANT' && ids.variantId) {
-      const varnt = this.getVariantById(ids.variantId);
-      const gen = varnt ? this.getGenerationById(varnt.generation_id) : undefined;
-      const mod = gen ? this.getModelById(gen.model_id) : undefined;
-      const mak = mod ? this.getMakerById(mod.maker_id) : undefined;
-      if (mak && mod && gen && varnt) return `/cars/${mak.slug}/${mod.slug}/${gen.slug}/${varnt.slug}`;
-    }
-    return '';
-  }
-
-  // --- SEARCH ---
-  private buildSearchIndex(): void {
-    if (this.searchIndex) return;
-
-    this.searchIndex = [];
-
-    // Maker adapter
-    this.getMakers().forEach(m => {
-      this.searchIndex!.push({
-        id: m.id,
-        entityType: 'MAKER',
-        searchKeys: [
-          { value: m.canonical_name, kind: 'CANONICAL_NAME' }
-        ],
-        canonicalUrl: this.getCanonicalEntityUrl('MAKER', { makerId: m.id }),
-        title: m.canonical_name,
-        thumbnail: m.logo_url,
-        makerSlug: m.slug
-      });
-    });
-
-    // Model adapter
-    this.getModels().forEach(m => {
-      const maker = this.getMakerById(m.maker_id);
-      if (maker) {
-        this.searchIndex!.push({
-          id: m.id,
-          entityType: 'MODEL',
-          searchKeys: [
-            { value: m.canonical_name, kind: 'CANONICAL_NAME' },
-            { value: maker.canonical_name, kind: 'RELATIONAL_CONTEXT' }
-          ],
-          canonicalUrl: this.getCanonicalEntityUrl('MODEL', { modelId: m.id }),
-          title: `${maker.canonical_name} ${m.canonical_name}`,
-          makerSlug: maker.slug,
-          modelSlug: m.slug
-        });
-      }
-    });
-
-    // Generation adapter
-    this.getGenerations().forEach(g => {
-      const model = this.getModelById(g.model_id);
-      if (model) {
-        const maker = this.getMakerById(model.maker_id);
-        if (maker) {
-          this.searchIndex!.push({
-            id: g.id,
-            entityType: 'GENERATION',
-            searchKeys: [
-              { value: g.canonical_name, kind: 'CANONICAL_NAME' },
-              { value: g.generation_code, kind: 'GENERATION_CODE' },
-              { value: maker.canonical_name, kind: 'RELATIONAL_CONTEXT' },
-              { value: model.canonical_name, kind: 'RELATIONAL_CONTEXT' }
-            ],
-            canonicalUrl: this.getCanonicalEntityUrl('GENERATION', { generationId: g.id }),
-            title: `${maker.canonical_name} ${model.canonical_name} · ${g.generation_code}`,
-            makerSlug: maker.slug,
-            modelSlug: model.slug,
-            generationSlug: g.slug
-          });
-        }
-      }
-    });
-
-    // Person adapter
-    Object.values(PERSON_FIXTURES).forEach(person => {
-      this.searchIndex!.push({
-        id: person.slug,
-        entityType: 'PERSON',
-        searchKeys: [
-          { value: person.canonical_name, kind: 'CANONICAL_NAME' }
-        ],
-        canonicalUrl: `/people/${person.slug}`,
-        title: person.canonical_name,
-        thumbnail: person.portrait_url
-      });
-    });
-
-    // Variant adapter
-    this.getVariants().forEach(v => {
-      const generation = this.getGenerationById(v.generation_id);
-      if (generation) {
-        const model = this.getModelById(generation.model_id);
-        if (model) {
-          const maker = this.getMakerById(model.maker_id);
-          if (maker) {
-            const keys: SearchKey[] = [
-              { value: v.variant_name, kind: 'CANONICAL_NAME' },
-              { value: generation.generation_code, kind: 'GENERATION_CODE' },
-              { value: maker.canonical_name, kind: 'RELATIONAL_CONTEXT' },
-              { value: model.canonical_name, kind: 'RELATIONAL_CONTEXT' }
-            ];
-
-            if (v.technical_identifiers) {
-              v.technical_identifiers.forEach(id => {
-                keys.push({ value: id, kind: 'TECHNICAL_CODE' });
-              });
-            }
-
-            this.searchIndex!.push({
-              id: v.id,
-              entityType: 'VARIANT',
-              searchKeys: keys,
-              canonicalUrl: this.getCanonicalEntityUrl('VARIANT', { variantId: v.id }),
-              title: `${maker.canonical_name} ${model.canonical_name} · ${generation.generation_code} · ${v.variant_name}`,
-              thumbnail: v.hero_image_url,
-              makerSlug: maker.slug,
-              modelSlug: model.slug,
-              generationSlug: generation.slug,
-              variantSlug: v.slug
-            });
-          }
-        }
-      }
-    });
-  }
-
-  public search(query: string): { results: SearchResult[], discovery: { id: string, url: string, title: string }[] } {
-    const stdQuery = normalizeQueryStandard(query);
-    const techQuery = normalizeQueryTechnical(query);
-    if (stdQuery.length < 2) return { results: [], discovery: [] };
-
-    if (!this.searchIndex) {
-      this.buildSearchIndex();
-    }
-
-    const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) return { results: [], discovery: [] };
-
-    const scoredResults: { entry: SearchIndexEntry; score: number }[] = [];
-
-    for (const entry of this.searchIndex!) {
-      let combinedScore = 0;
-      let allTokensCovered = true;
-      let hasOwnIdentityMatch = false;
-
-      let exactFullMatchScore = 0;
-      for (const key of entry.searchKeys) {
-        if (!key.value || key.kind === 'RELATIONAL_CONTEXT') continue;
-        const isTech = ['TECHNICAL_CODE', 'GENERATION_CODE', 'ENGINE_CODE', 'CHASSIS_CODE', 'PLATFORM_CODE'].includes(key.kind);
-        const normalizedKey = isTech ? normalizeQueryTechnical(key.value) : normalizeQueryStandard(key.value);
-        const fullQ = isTech ? techQuery : stdQuery;
-        if (normalizedKey === fullQ) {
-          exactFullMatchScore = Math.max(exactFullMatchScore, 10);
-        } else if (normalizedKey.startsWith(fullQ)) {
-          exactFullMatchScore = Math.max(exactFullMatchScore, 8);
-        }
-      }
-
-      for (const token of tokens) {
-        const tokenStd = normalizeQueryStandard(token);
-        const tokenTech = normalizeQueryTechnical(token);
-        
-        let bestTokenScore = 0;
-        let tokenHasOwnIdentityMatch = false;
-
-        for (const key of entry.searchKeys) {
-          if (!key.value) continue;
-          const isTech = ['TECHNICAL_CODE', 'GENERATION_CODE', 'ENGINE_CODE', 'CHASSIS_CODE', 'PLATFORM_CODE'].includes(key.kind);
-          const normalizedKey = isTech ? normalizeQueryTechnical(key.value) : normalizeQueryStandard(key.value);
-          const q = isTech ? tokenTech : tokenStd;
-
-          let score = 0;
-          if (normalizedKey === q) {
-            score = key.kind === 'RELATIONAL_CONTEXT' ? 1.5 : 3;
-          } else if (normalizedKey.startsWith(q)) {
-            score = key.kind === 'RELATIONAL_CONTEXT' ? 1 : 2;
-          } else if (normalizedKey.includes(q)) {
-            score = key.kind === 'RELATIONAL_CONTEXT' ? 0.5 : 1;
-          }
-          if (score > bestTokenScore) {
-            bestTokenScore = score;
-            if (key.kind !== 'RELATIONAL_CONTEXT') {
-              tokenHasOwnIdentityMatch = true;
-            }
-          }
-        }
-        
-        if (bestTokenScore === 0) {
-          allTokensCovered = false;
-          break;
-        }
-
-        combinedScore += bestTokenScore;
-        if (tokenHasOwnIdentityMatch) {
-          hasOwnIdentityMatch = true;
-        }
-      }
-
-      let finalScore = exactFullMatchScore > 0 ? exactFullMatchScore + combinedScore : combinedScore;
-
-      if (allTokensCovered && hasOwnIdentityMatch && finalScore > 0) {
-        scoredResults.push({ entry, score: finalScore });
-      }
-    }
-
-    scoredResults.sort((a, b) => b.score - a.score || a.entry.title.localeCompare(b.entry.title));
-
-    const finalResults: SearchResult[] = [];
-    const discovery: { id: string, url: string, title: string }[] = [];
-    
-    if (scoredResults.length > 0 && scoredResults[0].entry.entityType === 'MAKER') {
-      const bestMaker = scoredResults[0].entry;
-      finalResults.push({
-        id: bestMaker.id,
-        type: bestMaker.entityType,
-        url: bestMaker.canonicalUrl,
-        title: bestMaker.title,
-        makerSlug: bestMaker.makerSlug,
-        thumbnail: bestMaker.thumbnail
-      });
-      discovery.push({
-        id: 'discover_models_' + bestMaker.id,
-        url: '/brands/' + bestMaker.makerSlug + '#models',
-        title: 'Models by ' + bestMaker.title,
-      });
-      
-      finalResults.push(...scoredResults.slice(1).map(r => ({
-        id: r.entry.id,
-        type: r.entry.entityType,
-        url: r.entry.canonicalUrl,
-        title: r.entry.title,
-        thumbnail: r.entry.thumbnail,
-        makerSlug: r.entry.makerSlug,
-        modelSlug: r.entry.modelSlug,
-        generationSlug: r.entry.generationSlug,
-        variantSlug: r.entry.variantSlug
-      })));
-    } else {
-      finalResults.push(...scoredResults.map(r => ({
-        id: r.entry.id,
-        type: r.entry.entityType,
-        url: r.entry.canonicalUrl,
-        title: r.entry.title,
-        thumbnail: r.entry.thumbnail,
-        makerSlug: r.entry.makerSlug,
-        modelSlug: r.entry.modelSlug,
-        generationSlug: r.entry.generationSlug,
-        variantSlug: r.entry.variantSlug
-      })));
-    }
-
-    return { results: finalResults.slice(0, 8), discovery };
-  }
 }
 
-export function isPublicCanonicalFact(status?: string): boolean {
-  if (!status) return false;
-  const s = status.toLowerCase();
-  return s === 'verified' || s === 'licensed' || s === 'approved';
-}
-
-export function filterVehicleForPublic(vehicle: VehicleVariant): VehicleVariant {
-  if (!isPublicCanonicalFact(vehicle.data_status) && !vehicle.is_ui_fixture) {
-    return {
-      ...vehicle,
-      engine: undefined,
-      transmission: undefined,
-      specs: undefined,
-      scores: { 
-        rarity_score: 0, 
-        confidence_level: "Insufficient Data", 
-        collector_score: undefined as any,
-        investment_score: undefined as any
-      },
-      current_median_price_eur: undefined,
-      price_change_1y_pct: undefined,
-      production_total: undefined,
-      history_en: undefined,
-      history_it: undefined,
-    };
-  }
-  return vehicle;
-}
-
+// Authoritative Catalogue Repository Singleton
 export const catalogueRepository = new CatalogueRepository();

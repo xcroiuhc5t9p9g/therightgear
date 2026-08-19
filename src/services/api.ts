@@ -10,7 +10,8 @@ export async function fetchHealth() {
     if (!res.ok) throw new Error('Health check failed');
     return await res.json();
   } catch (e) {
-    return { status: 'offline', version: '0.2', catalog_count: catalogueRepository.getAllVariants().total };
+    const all = await catalogueRepository.getAllVariants();
+    return { status: 'offline', version: '0.2', catalog_count: all.total };
   }
 }
 
@@ -20,7 +21,7 @@ export async function fetchMakers(): Promise<Maker[]> {
     if (!res.ok) throw new Error('Failed to fetch brands');
     return await res.json();
   } catch (e) {
-    return catalogueRepository.getMakers();
+    return await catalogueRepository.getMakers();
   }
 }
 
@@ -30,7 +31,8 @@ export async function fetchManufacturers(): Promise<Manufacturer[]> {
     if (!res.ok) throw new Error('Failed to fetch manufacturers');
     return await res.json();
   } catch (e) {
-    return catalogueRepository.getMakers().map(m => ({
+    const makers = await catalogueRepository.getMakers();
+    return makers.map(m => ({
       id: m.id,
       slug: m.slug,
       official_name: m.canonical_name || m.official_name || m.slug,
@@ -64,7 +66,7 @@ export async function fetchVehicles(filters?: SearchFilters): Promise<{ total: n
     if (!res.ok) throw new Error('Failed to fetch vehicles');
     return await res.json();
   } catch (e) {
-    return catalogueRepository.getAllVariants(filters);
+    return await catalogueRepository.getAllVariants(filters);
   }
 }
 
@@ -74,7 +76,8 @@ export async function fetchVehicleBySlug(slug: string): Promise<VehicleVariant |
     if (!res.ok) throw new Error('Vehicle not found');
     return await res.json();
   } catch (e) {
-    return catalogueRepository.getVariantBySlug(slug) || unifiedVehicleStore.getByIdOrSlug(slug) || null;
+    const variant = await catalogueRepository.getVariantBySlug(slug);
+    return variant || unifiedVehicleStore.getByIdOrSlug(slug) || null;
   }
 }
 
@@ -205,5 +208,3 @@ export async function extractVehicleDataFromWeb(query: string, provider: string 
     };
   }
 }
-
-

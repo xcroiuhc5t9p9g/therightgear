@@ -7,8 +7,6 @@ import {
   VideoAsset,
   ProductionRecord
 } from '../types';
-import { catalogueRepository } from '../services/catalogueRepository';
-
 // -------------------------------------------------------------
 // DEMO DATA FLAG & SOURCE ATTRIBUTION
 // -------------------------------------------------------------
@@ -276,11 +274,10 @@ export function getVehicleFamilyNavigation(modelSlugOrId: string = 'bmw-m3'): Ve
   }
 
   // Generic Fallback for Ferrari F40 / others
-  const foundInCatalog = catalogueRepository.getVariantBySlug(modelSlugOrId) || catalogueRepository.getAllVariants().vehicles.find(v => v.id === modelSlugOrId);
-  const mName = foundInCatalog ? foundInCatalog.manufacturer_name : 'Ferrari';
-  const mSlug = mName.toLowerCase().replace(/\s+/g, '-');
-  const modelName = foundInCatalog ? foundInCatalog.model_name : 'F40';
-  const modelSlug = modelName.toLowerCase().replace(/\s+/g, '-');
+  const mName = 'Ferrari';
+  const mSlug = 'ferrari';
+  const modelName = 'F40';
+  const modelSlug = 'f40';
 
   return {
     manufacturer: {
@@ -292,26 +289,26 @@ export function getVehicleFamilyNavigation(modelSlugOrId: string = 'bmw-m3'): Ve
       id: `model-${modelSlug}`,
       name: modelName,
       slug: modelSlug,
-      years: foundInCatalog ? `${foundInCatalog.model_year_from}–${foundInCatalog.model_year_to || 'Presente'}` : '1987–1992',
-      category: foundInCatalog?.category || 'Supercar'
+      years: '1987–1992',
+      category: 'Supercar'
     },
     generations: [
       {
         id: `gen-${modelSlug}`,
         code: 'Gen 1',
         name: `${modelName} Series`,
-        years: foundInCatalog ? `${foundInCatalog.model_year_from}–${foundInCatalog.model_year_to || 'Presente'}` : '1987–1992',
+        years: '1987–1992',
         slug: 'series-1',
         variants: [
           {
-            id: foundInCatalog?.id || 'v-ferrari-f40',
-            slug: foundInCatalog?.slug || 'ferrari-f40',
-            name: foundInCatalog?.variant_name || `${modelName} Standard`,
-            years: foundInCatalog ? `${foundInCatalog.model_year_from}–${foundInCatalog.model_year_to || ''}` : '1987–1992',
-            limitedEdition: foundInCatalog?.limited_edition || true,
-            productionTotal: foundInCatalog?.production_total || 1311,
+            id: 'v-ferrari-f40',
+            slug: 'ferrari-f40',
+            name: `${modelName} Standard`,
+            years: '1987–1992',
+            limitedEdition: true,
+            productionTotal: 1311,
             active: true,
-            powerHp: foundInCatalog?.engine.power_hp || 478
+            powerHp: 478
           }
         ]
       }

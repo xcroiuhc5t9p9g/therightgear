@@ -1,140 +1,140 @@
 import { Maker, Model, Generation, VehicleVariant, CanonicalEngine } from '../../../types/index.js';
-import { ICatalogueProvider } from '../types.js';
+import { ICatalogueProvider, CataloguePersistenceError } from '../types.js';
 
-export class CataloguePersistenceError extends Error {
-  public readonly code: string;
-  constructor(code: string, message: string) {
-    super(`[CataloguePersistenceError] ${code}: ${message}`);
-    this.code = code;
-    this.name = 'CataloguePersistenceError';
-  }
-}
-
+/**
+ * Strict Production Persistent Catalogue Provider Boundary.
+ * 
+ * In accordance with DATA-14 / DATA-14R:
+ * - This provider represents the future database/persistence datastore.
+ * - When configured without an active backend connection, it MUST throw `CataloguePersistenceError`.
+ * - It MUST NEVER silently return empty arrays or fall back to test fixtures.
+ */
 export class PersistentCatalogueProvider implements ICatalogueProvider {
   public readonly providerType = 'PERSISTENT' as const;
-  private isConfigured: boolean;
 
-  constructor() {
-    // Check if canonical persistent storage is configured (e.g. database credentials)
-    this.isConfigured = false;
+  // Readiness
+  public async isReady(): Promise<boolean> {
+    return false;
   }
 
-  private assertAvailable(): void {
-    if (!this.isConfigured) {
-      throw new CataloguePersistenceError(
-        'CATALOGUE_SOURCE_UNAVAILABLE',
-        'Persistent catalogue storage is not configured or currently unavailable. Refusing silent fallback to fixtures.'
-      );
-    }
+  public async assertReady(): Promise<void> {
+    throw new CataloguePersistenceError(
+      'Persistent catalogue datastore is not configured. Server-side database integration is required for CATALOGUE_SOURCE=PERSISTENT.'
+    );
   }
 
   // --- MAKERS ---
-  public getMakers(): Maker[] {
-    this.assertAvailable();
+  public async getMakers(): Promise<Maker[]> {
+    await this.assertReady();
     return [];
   }
 
-  public getMakerById(id: string): Maker | null {
-    this.assertAvailable();
+  public async getMakerById(id: string): Promise<Maker | null> {
+    await this.assertReady();
     return null;
   }
 
-  public getMakerBySlug(slug: string): Maker | null {
-    this.assertAvailable();
+  public async getMakerBySlug(slug: string): Promise<Maker | null> {
+    await this.assertReady();
     return null;
   }
 
   // --- MODELS ---
-  public getModels(): Model[] {
-    this.assertAvailable();
+  public async getModels(): Promise<Model[]> {
+    await this.assertReady();
     return [];
   }
 
-  public getModelsByMaker(makerIdOrSlug: string): Model[] {
-    this.assertAvailable();
+  public async getModelsByMaker(makerIdOrSlug: string): Promise<Model[]> {
+    await this.assertReady();
     return [];
   }
 
-  public getModelById(id: string): Model | null {
-    this.assertAvailable();
+  public async getModelById(id: string): Promise<Model | null> {
+    await this.assertReady();
     return null;
   }
 
-  public getModelBySlug(makerSlug: string, modelSlug: string): Model | null {
-    this.assertAvailable();
+  public async getModelBySlug(makerSlug: string, modelSlug: string): Promise<Model | null> {
+    await this.assertReady();
     return null;
   }
 
-  public getModelByIdOrSlug(idOrSlug: string): Model | null {
-    this.assertAvailable();
+  public async getModelByIdOrSlug(idOrSlug: string): Promise<Model | null> {
+    await this.assertReady();
     return null;
   }
 
   // --- GENERATIONS ---
-  public getGenerations(): Generation[] {
-    this.assertAvailable();
+  public async getGenerations(): Promise<Generation[]> {
+    await this.assertReady();
     return [];
   }
 
-  public getGenerationsByModel(modelIdOrSlug: string): Generation[] {
-    this.assertAvailable();
+  public async getGenerationsByModel(modelIdOrSlug: string): Promise<Generation[]> {
+    await this.assertReady();
     return [];
   }
 
-  public getGenerationById(id: string): Generation | null {
-    this.assertAvailable();
+  public async getGenerationById(id: string): Promise<Generation | null> {
+    await this.assertReady();
     return null;
   }
 
-  public getGenerationBySlug(slug: string): Generation | null {
-    this.assertAvailable();
+  public async getGenerationBySlug(slug: string): Promise<Generation | null> {
+    await this.assertReady();
     return null;
   }
 
-  public getGenerationByIdOrSlug(idOrSlug: string): Generation | null {
-    this.assertAvailable();
+  public async getGenerationByIdOrSlug(idOrSlug: string): Promise<Generation | null> {
+    await this.assertReady();
     return null;
   }
 
   // --- VARIANTS ---
-  public getVariants(): VehicleVariant[] {
-    this.assertAvailable();
+  public async getVariants(): Promise<VehicleVariant[]> {
+    await this.assertReady();
     return [];
   }
 
-  public getVariantsByGeneration(generationIdOrSlug: string): VehicleVariant[] {
-    this.assertAvailable();
+  public async getVariantsByGeneration(generationIdOrSlug: string): Promise<VehicleVariant[]> {
+    await this.assertReady();
     return [];
   }
 
-  public getVariantById(id: string): VehicleVariant | null {
-    this.assertAvailable();
+  public async getVariantsByModel(modelIdOrSlug: string): Promise<VehicleVariant[]> {
+    await this.assertReady();
+    return [];
+  }
+
+  public async getVariantById(id: string): Promise<VehicleVariant | null> {
+    await this.assertReady();
     return null;
   }
 
-  public getVariantBySlug(slug: string): VehicleVariant | null {
-    this.assertAvailable();
+  public async getVariantBySlug(slug: string): Promise<VehicleVariant | null> {
+    await this.assertReady();
     return null;
   }
 
-  public getVariantByIdOrSlug(idOrSlug: string): VehicleVariant | null {
-    this.assertAvailable();
+  public async getVariantByIdOrSlug(idOrSlug: string): Promise<VehicleVariant | null> {
+    await this.assertReady();
     return null;
   }
 
   // --- ENGINES ---
-  public getCanonicalEngines(): CanonicalEngine[] {
-    this.assertAvailable();
+  public async getCanonicalEngines(): Promise<CanonicalEngine[]> {
+    await this.assertReady();
     return [];
   }
 
-  public getCanonicalEngineById(id: string): CanonicalEngine | null {
-    this.assertAvailable();
+  public async getCanonicalEngineById(id: string): Promise<CanonicalEngine | null> {
+    await this.assertReady();
     return null;
   }
 
-  public getCanonicalEngineBySlug(slug: string): CanonicalEngine | null {
-    this.assertAvailable();
+  public async getCanonicalEngineBySlug(slug: string): Promise<CanonicalEngine | null> {
+    await this.assertReady();
     return null;
   }
 }

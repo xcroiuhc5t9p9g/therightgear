@@ -1,18 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Car, 
   Award, 
   Gauge, 
-  TrendingUp, 
-  Heart, 
-  Scale, 
   ChevronRight, 
   Layers, 
   Zap, 
-  Sparkles,
-  CheckCircle2,
-  ShieldAlert,
-  ArrowUpRight
+  Sparkles
 } from 'lucide-react';
 import { catalogueRepository } from '../services/catalogueRepository';
 import { VehicleVariant } from '../types';
@@ -36,6 +30,25 @@ export const ModelTemplatesShowcase: React.FC<ModelTemplatesShowcaseProps> = ({
   compareIds
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [vehicles, setVehicles] = useState<VehicleVariant[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await catalogueRepository.getAllVariants();
+        if (!cancelled) {
+          setVehicles(res.vehicles);
+        }
+      } catch (e) {
+        console.error('Failed to load variants in showcase:', e);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const categories = [
     { id: 'All', label: 'All Template Models', icon: Layers },
@@ -45,7 +58,7 @@ export const ModelTemplatesShowcase: React.FC<ModelTemplatesShowcaseProps> = ({
     { id: 'Youngtimer', label: 'Youngtimer Legends', icon: Gauge },
   ];
 
-  const filteredVehicles = catalogueRepository.getAllVariants().vehicles.filter(v => {
+  const filteredVehicles = vehicles.filter(v => {
     if (selectedCategory === 'All') return true;
     return v.category === selectedCategory;
   });
@@ -112,3 +125,4 @@ export const ModelTemplatesShowcase: React.FC<ModelTemplatesShowcaseProps> = ({
     </section>
   );
 };
+export default ModelTemplatesShowcase;

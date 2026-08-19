@@ -66,13 +66,10 @@ function loadInitialVehicles(): VehicleVariant[] {
   } catch (e) {
     console.error('Error loading vehicles from localStorage:', e);
   }
-  if (!list || list.length === 0) {
-    list = catalogueRepository.getAllVariants().vehicles;
-  }
 
   // Ensure default in_primo_piano values exist if none were explicitly set
   const hasInPrimoPiano = list.some(v => v.in_primo_piano === true);
-  if (!hasInPrimoPiano) {
+  if (!hasInPrimoPiano && list.length > 0) {
     list = list.map((v, idx) => ({
       ...v,
       // Mark Hero tier vehicles or first 6 vehicles in primo piano
@@ -91,6 +88,24 @@ class UnifiedVehicleStore {
   constructor() {
     this.vehicles = loadInitialVehicles();
     this.slides = loadInitialSlides();
+    this.initAsync();
+  }
+
+  private async initAsync() {
+    if (this.vehicles.length === 0) {
+      try {
+        const res = await catalogueRepository.getAllVariants();
+        if (res && res.vehicles && res.vehicles.length > 0) {
+          this.vehicles = res.vehicles.map((v, idx) => ({
+            ...v,
+            in_primo_piano: v.tier === 'Hero' || idx < 6
+          }));
+          this.save();
+        }
+      } catch (e) {
+        console.error('Failed to initialize unifiedVehicleStore from catalogue:', e);
+      }
+    }
   }
 
   private save() {
@@ -367,9 +382,14 @@ class UnifiedVehicleStore {
     return { importedCount: count, errors };
   }
 
-  public resetToDefault() {
-    this.vehicles = catalogueRepository.getAllVariants().vehicles;
-    this.save();
+  public async resetToDefault() {
+    try {
+      const res = await catalogueRepository.getAllVariants();
+      this.vehicles = res.vehicles;
+      this.save();
+    } catch (e) {
+      console.error('Failed to reset unifiedVehicleStore to defaults:', e);
+    }
   }
 }
 

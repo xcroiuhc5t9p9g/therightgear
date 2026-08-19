@@ -26,48 +26,57 @@ export class FixtureCatalogueProvider implements ICatalogueProvider {
     this.engines = TEST_CANONICAL_ENGINES.map(e => ({ ...e }));
   }
 
+  // --- READINESS ---
+  public async isReady(): Promise<boolean> {
+    return true;
+  }
+
+  public async assertReady(): Promise<void> {
+    // Fixtures are always in-memory ready
+  }
+
   // --- MAKERS ---
-  public getMakers(): Maker[] {
+  public async getMakers(): Promise<Maker[]> {
     return this.makers.map(m => ({ ...m }));
   }
 
-  public getMakerById(id: string): Maker | null {
+  public async getMakerById(id: string): Promise<Maker | null> {
     const found = this.makers.find(m => m.id === id);
     return found ? { ...found } : null;
   }
 
-  public getMakerBySlug(slug: string): Maker | null {
+  public async getMakerBySlug(slug: string): Promise<Maker | null> {
     const s = slug.toLowerCase();
     const found = this.makers.find(m => m.slug.toLowerCase() === s || m.id.toLowerCase() === s);
     return found ? { ...found } : null;
   }
 
   // --- MODELS ---
-  public getModels(): Model[] {
+  public async getModels(): Promise<Model[]> {
     return this.models.map(m => ({ ...m }));
   }
 
-  public getModelsByMaker(makerIdOrSlug: string): Model[] {
-    const maker = this.getMakerBySlug(makerIdOrSlug);
+  public async getModelsByMaker(makerIdOrSlug: string): Promise<Model[]> {
+    const maker = await this.getMakerBySlug(makerIdOrSlug);
     const makerId = maker ? maker.id : makerIdOrSlug;
     return this.models
       .filter(m => m.maker_id === makerId || m.maker_id === `m-${makerIdOrSlug}`)
       .map(m => ({ ...m }));
   }
 
-  public getModelById(id: string): Model | null {
+  public async getModelById(id: string): Promise<Model | null> {
     const found = this.models.find(m => m.id === id);
     return found ? { ...found } : null;
   }
 
-  public getModelBySlug(makerSlug: string, modelSlug: string): Model | null {
-    const makerModels = this.getModelsByMaker(makerSlug);
+  public async getModelBySlug(makerSlug: string, modelSlug: string): Promise<Model | null> {
+    const makerModels = await this.getModelsByMaker(makerSlug);
     const ms = modelSlug.toLowerCase();
     const found = makerModels.find(m => m.slug.toLowerCase() === ms || m.id.toLowerCase() === ms);
     return found ? { ...found } : null;
   }
 
-  public getModelByIdOrSlug(idOrSlug: string): Model | null {
+  public async getModelByIdOrSlug(idOrSlug: string): Promise<Model | null> {
     const q = idOrSlug.toLowerCase();
     const found = this.models.find(m => 
       m.id === idOrSlug || 
@@ -79,82 +88,102 @@ export class FixtureCatalogueProvider implements ICatalogueProvider {
   }
 
   // --- GENERATIONS ---
-  public getGenerations(): Generation[] {
+  public async getGenerations(): Promise<Generation[]> {
     return this.generations.map(g => ({ ...g }));
   }
 
-  public getGenerationsByModel(modelIdOrSlug: string): Generation[] {
-    const model = this.getModelByIdOrSlug(modelIdOrSlug);
+  public async getGenerationsByModel(modelIdOrSlug: string): Promise<Generation[]> {
+    const model = await this.getModelByIdOrSlug(modelIdOrSlug);
     const modelId = model ? model.id : modelIdOrSlug;
     return this.generations
       .filter(g => g.model_id === modelId || g.model_id.endsWith(modelIdOrSlug))
       .map(g => ({ ...g }));
   }
 
-  public getGenerationById(id: string): Generation | null {
+  public async getGenerationById(id: string): Promise<Generation | null> {
     const found = this.generations.find(g => g.id === id);
     return found ? { ...found } : null;
   }
 
-  public getGenerationBySlug(slug: string): Generation | null {
+  public async getGenerationBySlug(slug: string): Promise<Generation | null> {
     const s = slug.toLowerCase();
     const found = this.generations.find(g => g.slug.toLowerCase() === s || g.id.toLowerCase() === s);
     return found ? { ...found } : null;
   }
 
-  public getGenerationByIdOrSlug(idOrSlug: string): Generation | null {
+  public async getGenerationByIdOrSlug(idOrSlug: string): Promise<Generation | null> {
     const q = idOrSlug.toLowerCase();
     const found = this.generations.find(g => 
       g.id === idOrSlug || 
       g.id.toLowerCase() === q || 
-      g.slug.toLowerCase() === q
+      g.slug.toLowerCase() === q ||
+      g.canonical_name.toLowerCase() === q
     );
     return found ? { ...found } : null;
   }
 
   // --- VARIANTS ---
-  public getVariants(): VehicleVariant[] {
+  public async getVariants(): Promise<VehicleVariant[]> {
     return this.variants.map(v => ({ ...v }));
   }
 
-  public getVariantsByGeneration(generationIdOrSlug: string): VehicleVariant[] {
-    const gen = this.getGenerationByIdOrSlug(generationIdOrSlug);
+  public async getVariantsByGeneration(generationIdOrSlug: string): Promise<VehicleVariant[]> {
+    const gen = await this.getGenerationByIdOrSlug(generationIdOrSlug);
     const genId = gen ? gen.id : generationIdOrSlug;
     return this.variants
-      .filter(v => v.generation_id === genId || v.generation_id.endsWith(generationIdOrSlug))
+      .filter(v => v.generation_id === genId || v.generation_id === generationIdOrSlug)
       .map(v => ({ ...v }));
   }
 
-  public getVariantById(id: string): VehicleVariant | null {
+  public async getVariantsByModel(modelIdOrSlug: string): Promise<VehicleVariant[]> {
+    const model = await this.getModelByIdOrSlug(modelIdOrSlug);
+    const modelId = model ? model.id : modelIdOrSlug;
+    const modelGens = await this.getGenerationsByModel(modelId);
+    const genIds = new Set(modelGens.map(g => g.id));
+    const modelName = model?.canonical_name.toLowerCase();
+
+    return this.variants
+      .filter(v => 
+        (v.generation_id && genIds.has(v.generation_id)) ||
+        (modelName && v.model_name && v.model_name.toLowerCase() === modelName)
+      )
+      .map(v => ({ ...v }));
+  }
+
+  public async getVariantById(id: string): Promise<VehicleVariant | null> {
     const found = this.variants.find(v => v.id === id);
     return found ? { ...found } : null;
   }
 
-  public getVariantBySlug(slug: string): VehicleVariant | null {
+  public async getVariantBySlug(slug: string): Promise<VehicleVariant | null> {
     const s = slug.toLowerCase();
     const found = this.variants.find(v => v.slug.toLowerCase() === s || v.id.toLowerCase() === s);
     return found ? { ...found } : null;
   }
 
-  public getVariantByIdOrSlug(idOrSlug: string): VehicleVariant | null {
-    const s = idOrSlug.toLowerCase();
-    const found = this.variants.find(v => v.id === idOrSlug || v.id.toLowerCase() === s || v.slug.toLowerCase() === s);
+  public async getVariantByIdOrSlug(idOrSlug: string): Promise<VehicleVariant | null> {
+    const q = idOrSlug.toLowerCase();
+    const found = this.variants.find(v => 
+      v.id === idOrSlug || 
+      v.id.toLowerCase() === q || 
+      v.slug.toLowerCase() === q
+    );
     return found ? { ...found } : null;
   }
 
   // --- ENGINES ---
-  public getCanonicalEngines(): CanonicalEngine[] {
+  public async getCanonicalEngines(): Promise<CanonicalEngine[]> {
     return this.engines.map(e => ({ ...e }));
   }
 
-  public getCanonicalEngineById(id: string): CanonicalEngine | null {
+  public async getCanonicalEngineById(id: string): Promise<CanonicalEngine | null> {
     const found = this.engines.find(e => e.id === id);
     return found ? { ...found } : null;
   }
 
-  public getCanonicalEngineBySlug(slug: string): CanonicalEngine | null {
+  public async getCanonicalEngineBySlug(slug: string): Promise<CanonicalEngine | null> {
     const s = slug.toLowerCase();
-    const found = this.engines.find(e => e.slug.toLowerCase() === s);
+    const found = this.engines.find(e => e.slug.toLowerCase() === s || e.id.toLowerCase() === s);
     return found ? { ...found } : null;
   }
 }

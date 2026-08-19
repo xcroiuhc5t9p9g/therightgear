@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Store, Building2, ShieldCheck, Mail, Phone, MapPin, ExternalLink, Plus, CheckCircle } from 'lucide-react';
 import { catalogueRepository } from '../services/catalogueRepository';
 import { DealerListing, UserRole } from '../types';
@@ -16,9 +16,25 @@ export const DealerMarketplacePage: React.FC<DealerMarketplacePageProps> = ({
   onNavigate
 }) => {
   const t = translations[locale];
-  
-  // Extract all dealer listings from cars
-  const allListings: DealerListing[] = catalogueRepository.getAllVariants().vehicles.flatMap(v => v.listings || []);
+  const [allListings, setAllListings] = useState<DealerListing[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadListings() {
+      try {
+        const res = await catalogueRepository.getAllVariants();
+        if (!cancelled) {
+          setAllListings(res.vehicles.flatMap(v => v.listings || []));
+        }
+      } catch (e) {
+        console.error('Failed to load dealer listings:', e);
+      }
+    }
+    loadListings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const [contactModalListing, setContactModalListing] = useState<DealerListing | null>(null);
   const [inquirySent, setInquirySent] = useState(false);

@@ -100,9 +100,14 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
         setActiveVarId(filteredData.id);
 
         // Inject SEO / GEO Schema.org and OpenGraph metadata dynamically
-        const gen = catalogueRepository.getGenerations().find(g => g.id === data.generation_id);
-        const model = catalogueRepository.getModels().find(m => m.id === gen?.model_id);
-        const maker = catalogueRepository.getMakers().find(mk => mk.id === data.manufacturer_id);
+        const [allGens, allModels, allMakers] = await Promise.all([
+          catalogueRepository.getGenerations(),
+          catalogueRepository.getModels(),
+          catalogueRepository.getMakers()
+        ]);
+        const gen = allGens.find(g => g.id === data.generation_id);
+        const model = allModels.find(m => m.id === gen?.model_id);
+        const maker = allMakers.find(mk => mk.id === data.manufacturer_id);
         const makerSlug = maker?.slug || data.manufacturer_name.toLowerCase().replace(/\s+/g, '-');
         const modelSlug = model?.slug || data.model_name.toLowerCase().replace(/\s+/g, '-');
         const genSlug = gen?.slug || 'gen';
@@ -136,7 +141,7 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
     setAiLoading(false);
   };
 
-  const handleHierarchySelect = (level: 'model' | 'generation' | 'variant', genId?: string, varId?: string) => {
+  const handleHierarchySelect = async (level: 'model' | 'generation' | 'variant', genId?: string, varId?: string) => {
     setCurrentLevel('variant');
     
     let targetGenId = genId || activeGenId;
@@ -160,7 +165,11 @@ export const VehicleDetailPage: React.FC<VehicleDetailPageProps> = ({
     if (targetGenId) setActiveGenId(targetGenId);
     if (targetVarId) {
       setActiveVarId(targetVarId);
-      const matchingVehicle = catalogueRepository.getVariantBySlug(targetVarId) || catalogueRepository.getAllVariants().vehicles.find(v => v.id === targetVarId);
+      const [bySlug, allRes] = await Promise.all([
+        catalogueRepository.getVariantBySlug(targetVarId),
+        catalogueRepository.getAllVariants()
+      ]);
+      const matchingVehicle = bySlug || allRes.vehicles.find(v => v.id === targetVarId);
       if (matchingVehicle) {
         const filtered = filterVehicleForPublic(matchingVehicle);
         setVehicle(filtered);
