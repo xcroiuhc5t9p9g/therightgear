@@ -316,6 +316,37 @@ async function runBmwM3SeedPipelineTestSuite() {
     assert(err instanceof CatalogueIntegrityError, 'Unapproved score injection rejected with CatalogueIntegrityError');
   }
 
+  // Section 31 Test: DATA-16R3 Source Quality Validation
+  // 31a. Generic Homepage used for technical fields must be flagged
+  const bundleWithGenericHomepage: any = JSON.parse(JSON.stringify(BMW_M3_FOUNDATION_SEED));
+  bundleWithGenericHomepage.sources[1].referenceUrl = 'https://www.bmwgroup-classic.com';
+  const genericHomeAudit = seedEngine.auditBundleIntegrity(bundleWithGenericHomepage);
+  assert(genericHomeAudit.isAuditClean === false, 'Generic homepage used for technical specifications fails audit');
+  assert(
+    genericHomeAudit.provenanceStructureErrors.some((e: string) => e.includes('generic root homepage')),
+    'Audit flags generic root homepage as technical document substitute'
+  );
+
+  // 31b. Malformed URL must be flagged
+  const bundleWithMalformedUrl: any = JSON.parse(JSON.stringify(BMW_M3_FOUNDATION_SEED));
+  bundleWithMalformedUrl.sources[0].referenceUrl = 'not-a-valid-url';
+  const malformedUrlAudit = seedEngine.auditBundleIntegrity(bundleWithMalformedUrl);
+  assert(malformedUrlAudit.isAuditClean === false, 'Malformed URL fails audit');
+  assert(
+    malformedUrlAudit.provenanceStructureErrors.some((e: string) => e.includes('malformed referenceUrl')),
+    'Audit flags malformed URL'
+  );
+
+  // 31c. Unverified document reference must be flagged
+  const bundleWithUnverifiedDocRef: any = JSON.parse(JSON.stringify(BMW_M3_FOUNDATION_SEED));
+  bundleWithUnverifiedDocRef.sources[0].documentRef = 'BMW AG Order Spec Ref BMW E30-M3-TECH-8691';
+  const unverifiedDocAudit = seedEngine.auditBundleIntegrity(bundleWithUnverifiedDocRef);
+  assert(unverifiedDocAudit.isAuditClean === false, 'Unverified document reference fails audit');
+  assert(
+    unverifiedDocAudit.provenanceStructureErrors.some((e: string) => e.includes('unverifiable document reference')),
+    'Audit flags unverified document reference'
+  );
+
   // --- 3. DRY-RUN PLANNING ON EMPTY DATABASE ---
   console.log('\nTEST GROUP 3: Dry-Run Planning & Safety Enforcements');
   const initialPlan = await seedEngine.planSeed(BMW_M3_FOUNDATION_SEED);

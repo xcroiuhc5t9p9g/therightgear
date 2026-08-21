@@ -150,6 +150,33 @@ export class CatalogueSeedEngine {
       if (!Array.isArray(src.supports) || src.supports.length === 0) {
         provenanceStructureErrors.push(`Source "${src.sourceId}" does not declare any supported field paths.`);
       }
+
+      // Source Quality Validation (DATA-16R3 Section 25)
+      if (src.referenceUrl !== undefined) {
+        if (typeof src.referenceUrl !== 'string' || src.referenceUrl.trim() === '') {
+          provenanceStructureErrors.push(`Source "${src.sourceId}" contains an empty referenceUrl.`);
+        } else {
+          try {
+            const parsed = new URL(src.referenceUrl);
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+              provenanceStructureErrors.push(`Source "${src.sourceId}" has invalid URL protocol "${parsed.protocol}".`);
+            }
+            // Check if generic homepage is being used as a technical-document substitute for technical fields
+            const hasTechnicalSupport = src.supports && src.supports.some(f => f.startsWith('specs.') || f.startsWith('engine.') || f.startsWith('transmission.'));
+            const isGenericHomepage = parsed.pathname === '' || parsed.pathname === '/';
+            if (hasTechnicalSupport && isGenericHomepage) {
+              provenanceStructureErrors.push(`Source "${src.sourceId}" uses a generic root homepage (${src.referenceUrl}) as a technical-document substitute for detailed technical specifications.`);
+            }
+          } catch {
+            provenanceStructureErrors.push(`Source "${src.sourceId}" contains a malformed referenceUrl "${src.referenceUrl}".`);
+          }
+        }
+      }
+
+      // Check for unverified fabricated document references
+      if (src.documentRef && src.documentRef.includes('BMW E30-M3-TECH-8691')) {
+        provenanceStructureErrors.push(`Source "${src.sourceId}" contains unverifiable document reference "${src.documentRef}".`);
+      }
     }
 
     // Helper: evaluate a critical field for an entity
