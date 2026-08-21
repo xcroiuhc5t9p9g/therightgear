@@ -9,7 +9,10 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "catalogue:seed:bmw-m3": "tsx scripts/seedBmwM3Foundation.ts",
+    "test:seed:bmw-m3": "tsx scripts/testBmwM3SeedPipeline.ts",
+    "test:catalogue:persistent": "tsx scripts/testPersistentCatalogue.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
