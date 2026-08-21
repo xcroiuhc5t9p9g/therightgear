@@ -1396,7 +1396,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   }
 
   if (err?.name === 'CatalogueIntegrityError') {
-    return res.status(500).json({
+    return res.status(503).json({
       success: false,
       error: 'CATALOGUE_INTEGRITY_ERROR',
       message: 'Catalogue structural validation encountered fatal errors.'

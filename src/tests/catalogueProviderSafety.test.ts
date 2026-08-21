@@ -227,6 +227,104 @@ export async function runCatalogueProviderSafetyTestSuite() {
       details: test8Details
     });
 
+    // TEST 9: Fixture Structural Integrity Failure (Fail-Fast Readiness / assertReady / Data Access)
+    console.log('Test 9: Testing Fixture Structural Error Fail-Fast on broken fixture provider...');
+    class BrokenFixtureProvider extends FixtureCatalogueProvider {
+      public override async getModels() {
+        const models = await super.getModels();
+        // Introduce broken parent reference: model referencing non-existent maker
+        return [
+          ...models,
+          {
+            id: 'broken_model_orphan',
+            maker_id: 'non_existent_maker_id_999',
+            slug: 'broken-model-orphan',
+            canonical_name: 'Broken Model Orphan',
+            introduced_year: 2020,
+            catalogue_status: 'PUBLISHED' as const
+          }
+        ];
+      }
+    }
+
+    let test9Passed = false;
+    let test9Details = '';
+    try {
+      const brokenRepo = new CatalogueRepository(new BrokenFixtureProvider());
+      const isReady = await brokenRepo.isReady();
+      if (isReady !== false) {
+        test9Details = 'Broken fixture repo isReady() returned true instead of false';
+      } else {
+        try {
+          await brokenRepo.assertReady();
+          test9Details = 'Broken fixture assertReady() succeeded instead of throwing CatalogueIntegrityError';
+        } catch (assertErr: any) {
+          if (assertErr instanceof CatalogueIntegrityError) {
+            try {
+              await brokenRepo.getVariants();
+              test9Details = 'getVariants() returned data on broken fixture instead of throwing CatalogueIntegrityError';
+            } catch (dataErr: any) {
+              if (dataErr instanceof CatalogueIntegrityError) {
+                test9Passed = true;
+                test9Details = `Caught expected CatalogueIntegrityError on isReady(false), assertReady(), and getVariants() (${assertErr.errors.length} structural error(s))`;
+              } else {
+                test9Details = `getVariants() threw unexpected error: ${dataErr.name}`;
+              }
+            }
+          } else {
+            test9Details = `assertReady() threw unexpected error: ${assertErr.name}`;
+          }
+        }
+      }
+    } catch (e: any) {
+      test9Details = `Test 9 failed with unexpected exception: ${e.message}`;
+    }
+    results.push({
+      testName: 'Test 9: Fixture Structural Error Fail-Fast (Readiness & Data Access Blocked)',
+      passed: test9Passed,
+      details: test9Details
+    });
+
+    // TEST 10: Non-Fatal Warnings Do Not Prevent Fixture Readiness
+    console.log('Test 10: Testing that warnings in fixture validation remain non-fatal...');
+    class WarningOnlyFixtureProvider extends FixtureCatalogueProvider {
+      public override async getVariants() {
+        const variants = await super.getVariants();
+        // Introduce a non-fatal warning (variant referencing non-existent engine is classified as WARNING)
+        if (variants.length > 0) {
+          const modified = variants.map((v, idx) => idx === 0 ? { ...v, canonical_engine_id: 'non_existent_engine_warning' } : v);
+          return modified;
+        }
+        return variants;
+      }
+    }
+
+    let test10Passed = false;
+    let test10Details = '';
+    try {
+      const warningRepo = new CatalogueRepository(new WarningOnlyFixtureProvider());
+      const isReady = await warningRepo.isReady();
+      if (isReady) {
+        await warningRepo.assertReady();
+        const vars = await warningRepo.getVariants();
+        if (vars.length > 0) {
+          test10Passed = true;
+          test10Details = `Warning-only fixture successfully ready and accessible with ${vars.length} variants`;
+        } else {
+          test10Details = 'Warning-only fixture returned empty variants';
+        }
+      } else {
+        test10Details = 'Warning-only fixture failed isReady() check';
+      }
+    } catch (e: any) {
+      test10Details = `Warning-only fixture threw fatal error: ${e.message}`;
+    }
+    results.push({
+      testName: 'Test 10: Non-Fatal Warnings Do Not Prevent Fixture Readiness',
+      passed: test10Passed,
+      details: test10Details
+    });
+
   } finally {
     // Restore environment
     process.env.NODE_ENV = originalNodeEnv;

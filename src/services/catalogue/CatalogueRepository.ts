@@ -13,7 +13,8 @@ import {
   ICatalogueProvider, 
   ResolvedModelHierarchy, 
   ResolvedGenerationContext, 
-  CatalogueValidationResult 
+  CatalogueValidationResult,
+  CatalogueIntegrityError
 } from './types.js';
 import { CatalogueProviderFactory } from './CatalogueProviderFactory.js';
 import { CatalogueValidator } from './CatalogueValidator.js';
@@ -31,6 +32,7 @@ export class CatalogueRepository {
   private provider: ICatalogueProvider;
   private static startupLogged = false;
   private validationPromise: Promise<CatalogueValidationResult> | null = null;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor(customProvider?: ICatalogueProvider) {
     if (customProvider) {
@@ -42,18 +44,13 @@ export class CatalogueRepository {
     if (!CatalogueRepository.startupLogged) {
       CatalogueRepository.startupLogged = true;
       console.log(`[TheRightGear Catalogue] Active catalogue provider: ${this.provider.providerType}`);
-      
-      // Perform one-time async validation check
-      if (this.provider.providerType === 'FIXTURE') {
-        this.validate().then(validation => {
-          if (!validation.valid) {
-            console.error(`[TheRightGear Catalogue] Fixture validation failed with ${validation.errors.length} errors:`, validation.errors);
-          }
-        }).catch(err => {
-          console.error('[TheRightGear Catalogue] Validation error:', err);
-        });
-      }
     }
+
+    // Trigger async initialization / validation promise immediately
+    this.initializationPromise = this.initialize();
+    this.initializationPromise.catch(err => {
+      console.error('[TheRightGear Catalogue] Catalogue initialization error:', err?.message || err);
+    });
   }
 
   public getProviderType(): string {
@@ -61,16 +58,55 @@ export class CatalogueRepository {
   }
 
   public async isReady(): Promise<boolean> {
-    return this.provider.isReady();
+    try {
+      await this.assertReady();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   public async assertReady(): Promise<void> {
-    return this.provider.assertReady();
+    if (!this.initializationPromise) {
+      this.initializationPromise = this.initialize();
+    }
+    await this.initializationPromise;
+  }
+
+  private async initialize(): Promise<void> {
+    // 1. Assert underlying provider readiness
+    await this.provider.assertReady();
+
+    // 2. For FIXTURE provider, validate structural integrity and fail-fast on errors
+    if (this.provider.providerType === 'FIXTURE') {
+      const validation = await this.validate();
+      if (!validation.valid && validation.errors.length > 0) {
+        throw new CatalogueIntegrityError(
+          `Catalogue fixture validation failed with ${validation.errors.length} structural error(s).`,
+          validation.errors
+        );
+      }
+    }
   }
 
   public async validate(): Promise<CatalogueValidationResult> {
     if (!this.validationPromise) {
-      this.validationPromise = CatalogueValidator.validate(this.provider, false);
+      this.validationPromise = (async () => {
+        const result = await CatalogueValidator.validate(this.provider, false);
+        if (result.warnings.length > 0) {
+          console.warn(
+            `[TheRightGear Catalogue] Fixture validation produced ${result.warnings.length} warning(s):`,
+            result.warnings.map(w => `[${w.entityType} ${w.entityId}] ${w.message}`)
+          );
+        }
+        if (!result.valid && result.errors.length > 0) {
+          console.error(
+            `[TheRightGear Catalogue] Fixture validation failed with ${result.errors.length} error(s):`,
+            result.errors.map(e => `[${e.entityType} ${e.entityId}] ${e.message}`)
+          );
+        }
+        return result;
+      })();
     }
     return this.validationPromise;
   }
@@ -94,15 +130,18 @@ export class CatalogueRepository {
 
   // --- MAKERS & MANUFACTURERS ---
   public async getMakers(): Promise<Maker[]> {
+    await this.assertReady();
     const list = await this.provider.getMakers();
     return list.sort((a, b) => a.canonical_name.localeCompare(b.canonical_name));
   }
 
   public async getMakerById(id: string): Promise<Maker | null> {
+    await this.assertReady();
     return this.provider.getMakerById(id);
   }
 
   public async getMakerBySlug(slug: string): Promise<Maker | null> {
+    await this.assertReady();
     return this.provider.getMakerBySlug(slug);
   }
 
@@ -121,6 +160,7 @@ export class CatalogueRepository {
   }
 
   public async getPeopleByMaker(makerSlug: string) {
+    await this.assertReady();
     return Object.values(PERSON_FIXTURES).filter(person => 
       person.related_organizations?.some(org => org.slug === makerSlug)
     );
@@ -128,6 +168,7 @@ export class CatalogueRepository {
 
   // --- MODELS ---
   public async getModels(): Promise<Model[]> {
+    await this.assertReady();
     const list = await this.provider.getModels();
     return list.sort((a, b) => {
       const yA = a.introduced_year ?? 9999;
@@ -138,6 +179,7 @@ export class CatalogueRepository {
   }
 
   public async getModelsByMaker(makerIdOrSlug: string): Promise<Model[]> {
+    await this.assertReady();
     const list = await this.provider.getModelsByMaker(makerIdOrSlug);
     return list.sort((a, b) => {
       const yA = a.introduced_year ?? 9999;
@@ -148,19 +190,23 @@ export class CatalogueRepository {
   }
 
   public async getModelById(id: string): Promise<Model | null> {
+    await this.assertReady();
     return this.provider.getModelById(id);
   }
 
   public async getModelBySlug(makerSlug: string, modelSlug: string): Promise<Model | null> {
+    await this.assertReady();
     return this.provider.getModelBySlug(makerSlug, modelSlug);
   }
 
   public async getModelByIdOrSlug(idOrSlug: string): Promise<Model | null> {
+    await this.assertReady();
     return this.provider.getModelByIdOrSlug(idOrSlug);
   }
 
   // --- GENERATIONS ---
   public async getGenerations(): Promise<Generation[]> {
+    await this.assertReady();
     const list = await this.provider.getGenerations();
     return list.sort((a, b) => {
       const yA = a.production_start ?? 9999;
@@ -171,6 +217,7 @@ export class CatalogueRepository {
   }
 
   public async getGenerationsByModel(modelIdOrSlug: string): Promise<Generation[]> {
+    await this.assertReady();
     const list = await this.provider.getGenerationsByModel(modelIdOrSlug);
     return list.sort((a, b) => {
       const yA = a.production_start ?? 9999;
@@ -181,19 +228,23 @@ export class CatalogueRepository {
   }
 
   public async getGenerationById(id: string): Promise<Generation | null> {
+    await this.assertReady();
     return this.provider.getGenerationById(id);
   }
 
   public async getGenerationBySlug(slug: string): Promise<Generation | null> {
+    await this.assertReady();
     return this.provider.getGenerationBySlug(slug);
   }
 
   public async getGenerationByIdOrSlug(idOrSlug: string): Promise<Generation | null> {
+    await this.assertReady();
     return this.provider.getGenerationByIdOrSlug(idOrSlug);
   }
 
   // --- VARIANTS ---
   public async getVariants(): Promise<VehicleVariant[]> {
+    await this.assertReady();
     const list = await this.provider.getVariants();
     return list.sort((a, b) => {
       const yA = a.model_year_from ?? 9999;
@@ -204,6 +255,7 @@ export class CatalogueRepository {
   }
 
   public async getVariantsByGeneration(generationIdOrSlug: string): Promise<VehicleVariant[]> {
+    await this.assertReady();
     const list = await this.provider.getVariantsByGeneration(generationIdOrSlug);
     return list.sort((a, b) => {
       const yA = a.model_year_from ?? 9999;
@@ -214,6 +266,7 @@ export class CatalogueRepository {
   }
 
   public async getVariantsByModel(modelIdOrSlug: string): Promise<VehicleVariant[]> {
+    await this.assertReady();
     const list = await this.provider.getVariantsByModel(modelIdOrSlug);
     return list.sort((a, b) => {
       const yA = a.model_year_from ?? 9999;
@@ -224,18 +277,22 @@ export class CatalogueRepository {
   }
 
   public async getVariantById(id: string): Promise<VehicleVariant | null> {
+    await this.assertReady();
     return this.provider.getVariantById(id);
   }
 
   public async getVariantBySlug(slug: string): Promise<VehicleVariant | null> {
+    await this.assertReady();
     return this.provider.getVariantBySlug(slug);
   }
 
   public async getVariantByIdOrSlug(idOrSlug: string): Promise<VehicleVariant | null> {
+    await this.assertReady();
     return this.provider.getVariantByIdOrSlug(idOrSlug);
   }
 
   public async getAllVariants(filters?: SearchFilters): Promise<{ total: number; vehicles: VehicleVariant[] }> {
+    await this.assertReady();
     let filtered = await this.getVariants();
     
     if (filters) {
@@ -273,22 +330,27 @@ export class CatalogueRepository {
 
   // --- ENGINES ---
   public async getEngines(): Promise<CanonicalEngine[]> {
+    await this.assertReady();
     return this.provider.getCanonicalEngines();
   }
 
   public async getEngineById(id: string): Promise<CanonicalEngine | null> {
+    await this.assertReady();
     return this.provider.getCanonicalEngineById(id);
   }
 
   public async getEngineBySlug(slug: string): Promise<CanonicalEngine | null> {
+    await this.assertReady();
     return this.provider.getCanonicalEngineBySlug(slug);
   }
 
   public async getPublicEngineBySlug(slug: string): Promise<CanonicalEngine | null> {
+    await this.assertReady();
     return this.getEngineBySlug(slug);
   }
 
   public async getCanonicalEngineForVariant(variantId: string): Promise<CanonicalEngine | null> {
+    await this.assertReady();
     const variant = await this.getVariantById(variantId);
     if (!variant || !variant.canonical_engine_id) {
       return null;
@@ -298,6 +360,7 @@ export class CatalogueRepository {
 
   // --- SEARCH ---
   public async search(query: string): Promise<{ results: SearchResult[]; discovery: DiscoveryAction[] }> {
+    await this.assertReady();
     const q = query.toLowerCase().trim();
     if (!q) return { results: [], discovery: [] };
 
@@ -308,6 +371,7 @@ export class CatalogueRepository {
       this.getVariants(),
       this.getEngines()
     ]);
+
 
     const results: SearchResult[] = [];
 
@@ -403,6 +467,7 @@ export class CatalogueRepository {
 
   // --- HIERARCHY RESOLUTION (ASYNC, NO N+1) ---
   public async resolveModelHierarchy(modelIdOrSlug: string): Promise<ResolvedModelHierarchy | null> {
+    await this.assertReady();
     if (!modelIdOrSlug) return null;
     const q = modelIdOrSlug.toLowerCase().trim();
 
