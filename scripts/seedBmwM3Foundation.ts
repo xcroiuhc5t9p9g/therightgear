@@ -33,18 +33,25 @@ async function main() {
 
   // 1. Static Data Integrity Audit
   const auditReport = seedEngine.auditBundleIntegrity(BMW_M3_FOUNDATION_SEED);
-  console.log('--- CANONICAL DATA INTEGRITY AUDIT (DATA-16R) ---');
-  console.log(`Total Entities:           ${auditReport.totalEntities}`);
-  console.log(`Supported Critical Facts: ${auditReport.supportedFactsCount}`);
-  console.log(`Derived Facts:            ${auditReport.derivedFactsCount}`);
-  console.log(`Unresolved Facts:         ${auditReport.unresolvedFactsCount}`);
-  console.log(`Unapproved Scores:        ${auditReport.scoresDetectedCount} (MUST BE 0)`);
-  console.log(`Tier 1 Primary Sources:   ${auditReport.tier1SourcesCount}`);
-  console.log(`Tier 2 Registry Sources:  ${auditReport.tier2SourcesCount}`);
-  console.log(`Audit Integrity Status:   ${auditReport.isAuditClean ? 'PASSED (100% Verified)' : 'FAILED'}\n`);
+  console.log('--- CANONICAL DATA INTEGRITY AUDIT (DATA-16R2) ---');
+  console.log(`Total Entities:             ${auditReport.totalEntities}`);
+  console.log(`Supported Critical Facts:   ${auditReport.supportedFactsCount} (backed by explicit entity-linked source provenance)`);
+  console.log(`Derived Facts:              ${auditReport.derivedFactsCount} (power_to_weight_hp_ton with supported inputs)`);
+  console.log(`Unresolved Facts:           ${auditReport.unresolvedFactsCount} (e.g. ongoing model lineage discontinued_year: null)`);
+  console.log(`Unsupported Critical Facts: ${auditReport.unsupportedCriticalFacts.length} (MUST BE 0)`);
+  console.log(`Unapproved Scores:          ${auditReport.scoresDetectedCount} (MUST BE 0)`);
+  console.log(`Tier 1 Primary Sources:     ${auditReport.tier1SourcesCount}`);
+  console.log(`Tier 2 Registry Sources:    ${auditReport.tier2SourcesCount}`);
+  console.log(`Audit Integrity Status:     ${auditReport.isAuditClean ? 'PASSED (100% Provenance Coverage)' : 'FAILED'}\n`);
 
   if (!auditReport.isAuditClean) {
-    console.error('ERROR: Seed bundle failed canonical data integrity audit. Unapproved scores or insufficient primary sources detected.');
+    console.error('ERROR: Seed bundle failed canonical data integrity audit. Violations:');
+    auditReport.unsupportedCriticalFacts.forEach(f => {
+      console.error(`  - Unsupported Fact: ${f.entityId}.${f.fieldPath} (${f.reason})`);
+    });
+    auditReport.provenanceStructureErrors.forEach(err => {
+      console.error(`  - Structure Error: ${err}`);
+    });
     process.exit(1);
   }
 

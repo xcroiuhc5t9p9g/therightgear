@@ -5,7 +5,9 @@ import {
   EntityActionType, 
   SeedExecutionOptions, 
   SeedExecutionResult,
-  BundleIntegrityReport 
+  BundleIntegrityReport,
+  UnsupportedCriticalFact,
+  DerivedFactRecord
 } from './types.js';
 import { CATALOGUE_COLLECTIONS } from '../persistence/constants.js';
 import { getAdminFirestore } from '../persistence/firebaseAdmin.js';
@@ -18,6 +20,27 @@ import {
   validateAndNormalizeEngine 
 } from '../persistence/documentValidators.js';
 import { CatalogueIntegrityError, CataloguePersistenceError } from '../types.js';
+
+/**
+ * Validates if an entity's specific field path is explicitly supported by at least one
+ * source provenance citation in the bundle.
+ */
+export function hasSourceCoverage(
+  sources: CanonicalSeedBundle['sources'],
+  entityId: string,
+  fieldPath: string
+): boolean {
+  if (!sources || !Array.isArray(sources)) return false;
+  return sources.some(source => {
+    if (!Array.isArray(source.entityIds) || !source.entityIds.includes(entityId)) {
+      return false;
+    }
+    if (!Array.isArray(source.supports)) {
+      return false;
+    }
+    return source.supports.includes(fieldPath);
+  });
+}
 
 export class CatalogueSeedEngine {
   private customDb?: any;
@@ -86,10 +109,11 @@ export class CatalogueSeedEngine {
   }
 
   /**
-   * Deeply checks a seed bundle for strict DATA-16R canonical data integrity:
+   * Deeply checks a seed bundle for strict DATA-16R2 canonical data integrity and provenance coverage:
    * 1. Rejects unapproved scores (collector, investment, rarity, etc.)
-   * 2. Verifies provenance presence and Tier hierarchy
-   * 3. Audits supported, derived, and unresolved facts
+   * 2. Rejects populated critical facts that lack explicit entity-linked source provenance
+   * 3. Validates deterministic derivations (e.g. power_to_weight_hp_ton requires supported inputs)
+   * 4. Enforces source provenance structural correctness (entityIds, supports, tier)
    */
   public auditBundleIntegrity(bundle: CanonicalSeedBundle): BundleIntegrityReport {
     let scoresDetectedCount = 0;
@@ -97,7 +121,122 @@ export class CatalogueSeedEngine {
     let derivedFactsCount = 0;
     let unresolvedFactsCount = 0;
 
-    // 1. Audit Variants for scores and facts
+    const unsupportedCriticalFacts: UnsupportedCriticalFact[] = [];
+    const derivedFacts: DerivedFactRecord[] = [];
+    const provenanceStructureErrors: string[] = [];
+
+    // 0. Provenance Structure Checks
+    const bundleEntityIds = new Set<string>([
+      ...bundle.makers.map(m => m.id),
+      ...bundle.models.map(m => m.id),
+      ...bundle.generations.map(g => g.id),
+      ...bundle.variants.map(v => v.id),
+      ...bundle.engines.map(e => e.id)
+    ]);
+
+    for (const src of bundle.sources) {
+      if (!src.sourceId || !src.tier || !src.title || !src.publisher) {
+        provenanceStructureErrors.push(`Source "${src.sourceId || 'unknown'}" is missing required fields (sourceId, tier, title, publisher).`);
+      }
+      if (!Array.isArray(src.entityIds) || src.entityIds.length === 0) {
+        provenanceStructureErrors.push(`Source "${src.sourceId}" does not declare any entityIds.`);
+      } else {
+        for (const eid of src.entityIds) {
+          if (!bundleEntityIds.has(eid)) {
+            provenanceStructureErrors.push(`Source "${src.sourceId}" references unknown entityId "${eid}".`);
+          }
+        }
+      }
+      if (!Array.isArray(src.supports) || src.supports.length === 0) {
+        provenanceStructureErrors.push(`Source "${src.sourceId}" does not declare any supported field paths.`);
+      }
+    }
+
+    // Helper: evaluate a critical field for an entity
+    const auditField = (entityId: string, fieldPath: string, value: any) => {
+      if (value === undefined || value === null) {
+        return; // Empty/null field is not populated
+      }
+      if (Array.isArray(value) && value.length === 0) {
+        return; // Empty array
+      }
+
+      const covered = hasSourceCoverage(bundle.sources, entityId, fieldPath);
+      if (covered) {
+        supportedFactsCount++;
+      } else {
+        unresolvedFactsCount++;
+        unsupportedCriticalFacts.push({
+          entityId,
+          fieldPath,
+          value,
+          reason: 'NO_SOURCE_COVERAGE'
+        });
+      }
+    };
+
+    // 1. Audit Makers
+    for (const mk of bundle.makers) {
+      auditField(mk.id, 'canonical_name', mk.canonical_name);
+      auditField(mk.id, 'official_name', mk.official_name);
+      auditField(mk.id, 'country_code', mk.country_code);
+      auditField(mk.id, 'country_of_origin', mk.country_of_origin);
+      auditField(mk.id, 'founded_year', mk.founded_year);
+      auditField(mk.id, 'active', mk.active);
+      if (mk.website_url) auditField(mk.id, 'website_url', mk.website_url);
+    }
+
+    // 2. Audit Models
+    for (const m of bundle.models) {
+      auditField(m.id, 'canonical_name', m.canonical_name);
+      auditField(m.id, 'category', m.category);
+      auditField(m.id, 'introduced_year', m.introduced_year);
+      auditField(m.id, 'summary_en', m.summary_en);
+      if (m.discontinued_year !== null && m.discontinued_year !== undefined) {
+        auditField(m.id, 'discontinued_year', m.discontinued_year);
+      } else if (m.discontinued_year === null) {
+        // Lineage ongoing / actively produced
+        unresolvedFactsCount++;
+      }
+    }
+
+    // 3. Audit Generations
+    for (const g of bundle.generations) {
+      auditField(g.id, 'generation_code', g.generation_code);
+      auditField(g.id, 'canonical_name', g.canonical_name);
+      auditField(g.id, 'production_start', g.production_start);
+      auditField(g.id, 'production_end', g.production_end);
+      auditField(g.id, 'production_total', g.production_total);
+      if (g.distinctive_features_en && g.distinctive_features_en.length > 0) {
+        auditField(g.id, 'distinctive_features_en', g.distinctive_features_en);
+      }
+    }
+
+    // 4. Audit Canonical Engines
+    for (const e of bundle.engines) {
+      auditField(e.id, 'canonical_name', e.canonical_name);
+      auditField(e.id, 'engine_code', e.engine_code);
+      auditField(e.id, 'family_name', e.family_name);
+      auditField(e.id, 'manufacturer_id', e.manufacturer_id);
+
+      if (e.specs) {
+        auditField(e.id, 'specs.architecture', e.specs.architecture);
+        auditField(e.id, 'specs.cylinders', e.specs.cylinders);
+        auditField(e.id, 'specs.displacement_cc', e.specs.displacement_cc);
+        auditField(e.id, 'specs.aspiration', e.specs.aspiration);
+        auditField(e.id, 'specs.fuel_type', e.specs.fuel_type);
+        auditField(e.id, 'specs.power_kw', e.specs.power_kw);
+        auditField(e.id, 'specs.power_hp', e.specs.power_hp);
+        auditField(e.id, 'specs.torque_nm', e.specs.torque_nm);
+        auditField(e.id, 'specs.bore_mm', e.specs.bore_mm);
+        auditField(e.id, 'specs.stroke_mm', e.specs.stroke_mm);
+        auditField(e.id, 'specs.valves', e.specs.valves);
+        auditField(e.id, 'specs.compression_ratio', e.specs.compression_ratio);
+        auditField(e.id, 'specs.redline_rpm', e.specs.redline_rpm);
+      }
+    }
+
+    // 5. Audit Variants (Scores, Critical Specs, Engine, Transmission, Derivations)
     for (const v of bundle.variants) {
       if (v.scores) {
         const hasScoreValues = 
@@ -109,59 +248,84 @@ export class CatalogueSeedEngine {
         }
       }
 
-      // Audit supported facts
-      if (v.variant_name) supportedFactsCount++;
-      if (v.technical_identifiers && v.technical_identifiers.length > 0) supportedFactsCount++;
-      if (v.production_start_year) supportedFactsCount++;
-      if (v.production_total !== undefined && v.production_total !== null) supportedFactsCount++;
-      if (v.body_style) supportedFactsCount++;
-      if (v.steering_side) supportedFactsCount++;
+      auditField(v.id, 'variant_name', v.variant_name);
+      if (v.technical_identifiers && v.technical_identifiers.length > 0) {
+        auditField(v.id, 'technical_identifiers', v.technical_identifiers);
+      }
+      auditField(v.id, 'category', v.category);
+      auditField(v.id, 'model_year_from', v.model_year_from);
+      auditField(v.id, 'model_year_to', v.model_year_to);
+      auditField(v.id, 'production_start_year', v.production_start_year);
+      auditField(v.id, 'steering_side', v.steering_side);
+      auditField(v.id, 'body_style', v.body_style);
+      auditField(v.id, 'limited_edition', v.limited_edition);
+      auditField(v.id, 'numbered_series', v.numbered_series);
+      auditField(v.id, 'production_total', v.production_total);
+      auditField(v.id, 'canonical_engine_id', v.canonical_engine_id);
+
       if (v.specs) {
-        if (v.specs.kerb_weight_kg) supportedFactsCount++;
-        if (v.specs.top_speed_kph) supportedFactsCount++;
-        if (v.specs.acceleration_0_100) supportedFactsCount++;
-        if (v.specs.power_to_weight_hp_ton) derivedFactsCount++;
+        auditField(v.id, 'specs.kerb_weight_kg', v.specs.kerb_weight_kg);
+        auditField(v.id, 'specs.length_mm', v.specs.length_mm);
+        auditField(v.id, 'specs.width_mm', v.specs.width_mm);
+        auditField(v.id, 'specs.height_mm', v.specs.height_mm);
+        auditField(v.id, 'specs.wheelbase_mm', v.specs.wheelbase_mm);
+        auditField(v.id, 'specs.top_speed_kph', v.specs.top_speed_kph);
+        auditField(v.id, 'specs.acceleration_0_100', v.specs.acceleration_0_100);
+        auditField(v.id, 'specs.fuel_capacity_l', v.specs.fuel_capacity_l);
+
+        // Power to Weight Ratio (Deterministic Derivation)
+        if (v.specs.power_to_weight_hp_ton !== undefined && v.specs.power_to_weight_hp_ton !== null) {
+          const weightSupported = hasSourceCoverage(bundle.sources, v.id, 'specs.kerb_weight_kg');
+          const powerSupported = hasSourceCoverage(bundle.sources, v.id, 'engine.power_hp') || hasSourceCoverage(bundle.sources, v.id, 'engine.power_kw');
+          
+          if (weightSupported && powerSupported) {
+            derivedFactsCount++;
+            derivedFacts.push({
+              entityId: v.id,
+              fieldPath: 'specs.power_to_weight_hp_ton',
+              value: v.specs.power_to_weight_hp_ton,
+              inputFields: ['specs.kerb_weight_kg', 'engine.power_hp'],
+              formula: 'power_hp / (kerb_weight_kg / 1000)'
+            });
+          } else {
+            unresolvedFactsCount++;
+            const missingInputs: string[] = [];
+            if (!weightSupported) missingInputs.push('specs.kerb_weight_kg');
+            if (!powerSupported) missingInputs.push('engine.power_hp/engine.power_kw');
+            unsupportedCriticalFacts.push({
+              entityId: v.id,
+              fieldPath: 'specs.power_to_weight_hp_ton',
+              value: v.specs.power_to_weight_hp_ton,
+              reason: `DERIVATION_INPUT_UNSUPPORTED: Missing supported input(s) [${missingInputs.join(', ')}]`
+            });
+          }
+        }
       }
+
       if (v.engine) {
-        if (v.engine.displacement_cc) supportedFactsCount++;
-        if (v.engine.power_kw) supportedFactsCount++;
-        if (v.engine.power_hp) supportedFactsCount++;
-        if (v.engine.torque_nm) supportedFactsCount++;
+        auditField(v.id, 'engine.architecture', v.engine.architecture);
+        auditField(v.id, 'engine.cylinders', v.engine.cylinders);
+        auditField(v.id, 'engine.displacement_cc', v.engine.displacement_cc);
+        auditField(v.id, 'engine.aspiration', v.engine.aspiration);
+        auditField(v.id, 'engine.fuel_type', v.engine.fuel_type);
+        auditField(v.id, 'engine.power_kw', v.engine.power_kw);
+        auditField(v.id, 'engine.power_hp', v.engine.power_hp);
+        auditField(v.id, 'engine.torque_nm', v.engine.torque_nm);
+        auditField(v.id, 'engine.compression_ratio', v.engine.compression_ratio);
+        auditField(v.id, 'engine.bore_mm', v.engine.bore_mm);
+        auditField(v.id, 'engine.stroke_mm', v.engine.stroke_mm);
+        auditField(v.id, 'engine.valves', v.engine.valves);
+        auditField(v.id, 'engine.redline_rpm', v.engine.redline_rpm);
       }
-    }
 
-    // 2. Audit Engines
-    for (const e of bundle.engines) {
-      if (e.engine_code) supportedFactsCount++;
-      if (e.specs.displacement_cc) supportedFactsCount++;
-      if (e.specs.power_kw) supportedFactsCount++;
-      if (e.specs.power_hp) supportedFactsCount++;
-      if (e.specs.torque_nm) supportedFactsCount++;
-      if (e.specs.bore_mm) supportedFactsCount++;
-      if (e.specs.stroke_mm) supportedFactsCount++;
-    }
-
-    // 3. Audit Generations
-    for (const g of bundle.generations) {
-      if (g.generation_code) supportedFactsCount++;
-      if (g.production_start) supportedFactsCount++;
-      if (g.production_end) supportedFactsCount++;
-      if (g.production_total) supportedFactsCount++;
-    }
-
-    // 4. Audit Models
-    for (const m of bundle.models) {
-      if (m.canonical_name) supportedFactsCount++;
-      if (m.introduced_year) supportedFactsCount++;
-      if (m.discontinued_year === null) unresolvedFactsCount++; // Lineage ongoing
-    }
-
-    // 5. Audit Makers
-    for (const mk of bundle.makers) {
-      if (mk.canonical_name) supportedFactsCount++;
-      if (mk.official_name) supportedFactsCount++;
-      if (mk.founded_year) supportedFactsCount++;
-      if (mk.country_code) supportedFactsCount++;
+      if (v.transmission) {
+        auditField(v.id, 'transmission.name', v.transmission.name);
+        auditField(v.id, 'transmission.type', v.transmission.type);
+        auditField(v.id, 'transmission.gears', v.transmission.gears);
+        auditField(v.id, 'transmission.manufacturer', v.transmission.manufacturer);
+        auditField(v.id, 'transmission.drivetrain', v.transmission.drivetrain);
+        auditField(v.id, 'transmission.differential_type', v.transmission.differential_type);
+      }
     }
 
     const totalEntities = 
@@ -174,7 +338,10 @@ export class CatalogueSeedEngine {
     const tier1Sources = bundle.sources.filter(s => s.tier === 'TIER_1_PRIMARY').length;
     const tier2Sources = bundle.sources.filter(s => s.tier === 'TIER_2_INSTITUTIONAL').length;
 
-    const isAuditClean = scoresDetectedCount === 0 && tier1Sources >= 1;
+    const isAuditClean = 
+      scoresDetectedCount === 0 && 
+      unsupportedCriticalFacts.length === 0 && 
+      provenanceStructureErrors.length === 0;
 
     return {
       bundleId: bundle.bundleId,
@@ -186,7 +353,10 @@ export class CatalogueSeedEngine {
       sourcesCount: bundle.sources.length,
       tier1SourcesCount: tier1Sources,
       tier2SourcesCount: tier2Sources,
-      isAuditClean
+      isAuditClean,
+      unsupportedCriticalFacts,
+      derivedFacts,
+      provenanceStructureErrors
     };
   }
 
@@ -205,9 +375,23 @@ export class CatalogueSeedEngine {
 
     // 1. Audit Bundle Integrity
     const integrityReport = this.auditBundleIntegrity(bundle);
-    if (!integrityReport.isAuditClean && integrityReport.scoresDetectedCount > 0) {
+    if (!integrityReport.isAuditClean) {
+      const reasons: string[] = [];
+      if (integrityReport.scoresDetectedCount > 0) {
+        reasons.push(`unapproved score fields (${integrityReport.scoresDetectedCount}) detected`);
+      }
+      if (integrityReport.unsupportedCriticalFacts.length > 0) {
+        const samples = integrityReport.unsupportedCriticalFacts
+          .slice(0, 5)
+          .map(f => `${f.entityId}.${f.fieldPath} (${f.reason})`)
+          .join(', ');
+        reasons.push(`${integrityReport.unsupportedCriticalFacts.length} unsupported critical fact(s) without source provenance [${samples}${integrityReport.unsupportedCriticalFacts.length > 5 ? '...' : ''}]`);
+      }
+      if (integrityReport.provenanceStructureErrors.length > 0) {
+        reasons.push(`${integrityReport.provenanceStructureErrors.length} provenance structure error(s) [${integrityReport.provenanceStructureErrors.join('; ')}]`);
+      }
       throw new CatalogueIntegrityError(
-        `Seed validation failed: unapproved score fields (${integrityReport.scoresDetectedCount}) detected in canonical bundle "${bundle.bundleId}". Scores without approved methodology are strictly disallowed.`
+        `Seed validation failed for bundle "${bundle.bundleId}": ${reasons.join('; ')}`
       );
     }
 

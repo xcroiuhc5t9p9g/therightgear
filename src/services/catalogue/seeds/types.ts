@@ -15,6 +15,21 @@ export interface SourceProvenance {
   supports?: string[];
 }
 
+export interface UnsupportedCriticalFact {
+  entityId: string;
+  fieldPath: string;
+  value: any;
+  reason: string;
+}
+
+export interface DerivedFactRecord {
+  entityId: string;
+  fieldPath: string;
+  value: any;
+  inputFields: string[];
+  formula?: string;
+}
+
 export interface BundleIntegrityReport {
   bundleId: string;
   totalEntities: number;
@@ -26,6 +41,9 @@ export interface BundleIntegrityReport {
   tier1SourcesCount: number;
   tier2SourcesCount: number;
   isAuditClean: boolean;
+  unsupportedCriticalFacts: UnsupportedCriticalFact[];
+  derivedFacts: DerivedFactRecord[];
+  provenanceStructureErrors: string[];
 }
 
 export interface CanonicalSeedBundle {

@@ -222,17 +222,86 @@ async function runBmwM3SeedPipelineTestSuite() {
     assert(false, 'Engine schema validation failed', err.message);
   }
 
-  // --- 2. DATA INTEGRITY AUDIT & REJECTION OF UNAPPROVED SCORES ---
-  console.log('\nTEST GROUP 2: Data Integrity Auditing & Score Rejection');
+  // --- 2. DATA INTEGRITY AUDIT & PROVENANCE COVERAGE ENFORCEMENT (DATA-16R2) ---
+  console.log('\nTEST GROUP 2: Provenance Coverage & Data Integrity Auditing');
   const mockDb = new MockFirestoreDb();
   const seedEngine = new CatalogueSeedEngine(mockDb);
 
   const integrityAudit = seedEngine.auditBundleIntegrity(BMW_M3_FOUNDATION_SEED);
   assert(integrityAudit.scoresDetectedCount === 0, 'Data integrity audit confirms 0 unapproved scores');
-  assert(integrityAudit.isAuditClean === true, 'Data integrity audit passes clean');
-  assert(integrityAudit.supportedFactsCount > 20, `Audit verified ${integrityAudit.supportedFactsCount} supported critical facts`);
+  assert(integrityAudit.unsupportedCriticalFacts.length === 0, 'Zero unsupported critical facts in foundation seed');
+  assert(integrityAudit.provenanceStructureErrors.length === 0, 'Zero provenance structure errors in source manifest');
+  assert(integrityAudit.isAuditClean === true, 'Data integrity audit passes clean (100% provenance coverage)');
+  assert(integrityAudit.supportedFactsCount > 50, `Audit verified ${integrityAudit.supportedFactsCount} supported critical facts`);
+  assert(integrityAudit.derivedFactsCount === 4, `Audit verified 4 derived facts (power_to_weight_hp_ton across 4 variants)`);
+  assert(integrityAudit.unresolvedFactsCount === 1, `Audit tracks ongoing model lineage (discontinued_year: null) as 1 unresolved fact`);
 
-  // Verify that an injected unapproved score throws CatalogueIntegrityError
+  // Section 25 Test: Unsupported Fact Injection must fail with CatalogueIntegrityError
+  const bundleWithUnsupportedFact: any = JSON.parse(JSON.stringify(BMW_M3_FOUNDATION_SEED));
+  // Remove field support from all sources for 'specs.top_speed_kph' on base coupe
+  bundleWithUnsupportedFact.sources.forEach((s: any) => {
+    if (s.supports) {
+      s.supports = s.supports.filter((f: string) => f !== 'specs.top_speed_kph');
+    }
+  });
+  const unsupportedAudit = seedEngine.auditBundleIntegrity(bundleWithUnsupportedFact);
+  assert(unsupportedAudit.isAuditClean === false, 'Audit fails when populated critical fact lacks source coverage');
+  assert(
+    unsupportedAudit.unsupportedCriticalFacts.some((f: any) => f.fieldPath === 'specs.top_speed_kph'),
+    'Audit specifically flags unsupported critical fact (specs.top_speed_kph)'
+  );
+  try {
+    await seedEngine.planSeed(bundleWithUnsupportedFact);
+    assert(false, 'planSeed should reject bundle with unsupported critical facts');
+  } catch (err) {
+    assert(err instanceof CatalogueIntegrityError, 'planSeed rejected unsupported critical fact with CatalogueIntegrityError');
+  }
+
+  // Section 26 Test: Wrong Entity in Source Provenance must fail
+  const bundleWithWrongEntity: any = JSON.parse(JSON.stringify(BMW_M3_FOUNDATION_SEED));
+  // Remove cabriolet from all sources
+  bundleWithWrongEntity.sources.forEach((s: any) => {
+    if (s.entityIds) {
+      s.entityIds = s.entityIds.filter((id: string) => id !== 'var-bmw-m3-e30-cabriolet');
+    }
+  });
+  const wrongEntityAudit = seedEngine.auditBundleIntegrity(bundleWithWrongEntity);
+  assert(wrongEntityAudit.isAuditClean === false, 'Audit fails when source entityIds does not match entity');
+  assert(
+    wrongEntityAudit.unsupportedCriticalFacts.some((f: any) => f.entityId === 'var-bmw-m3-e30-cabriolet'),
+    'Audit flags facts on entity lacking source citation'
+  );
+
+  // Section 27 Test: Wrong Field Path in Source Provenance must fail
+  const bundleWithWrongField: any = JSON.parse(JSON.stringify(BMW_M3_FOUNDATION_SEED));
+  // Replace 'specs.displacement_cc' with invalid field in all sources
+  bundleWithWrongField.sources.forEach((s: any) => {
+    if (s.supports) {
+      s.supports = s.supports.map((f: string) => f === 'specs.displacement_cc' ? 'specs.wrong_unsupported_field' : f);
+    }
+  });
+  const wrongFieldAudit = seedEngine.auditBundleIntegrity(bundleWithWrongField);
+  assert(wrongFieldAudit.isAuditClean === false, 'Audit fails when source does not support exact field path');
+  assert(
+    wrongFieldAudit.unsupportedCriticalFacts.some((f: any) => f.fieldPath === 'specs.displacement_cc'),
+    'Audit flags missing exact field path specs.displacement_cc'
+  );
+
+  // Section 29 Test: Derived Field Evaluation (power_to_weight_hp_ton requires supported inputs)
+  const bundleWithUnsupportedDerivationInput: any = JSON.parse(JSON.stringify(BMW_M3_FOUNDATION_SEED));
+  // Strip 'specs.kerb_weight_kg' from sources for base coupe
+  bundleWithUnsupportedDerivationInput.sources.forEach((s: any) => {
+    if (s.supports) {
+      s.supports = s.supports.filter((f: string) => f !== 'specs.kerb_weight_kg');
+    }
+  });
+  const derivationAudit = seedEngine.auditBundleIntegrity(bundleWithUnsupportedDerivationInput);
+  assert(
+    derivationAudit.unsupportedCriticalFacts.some((f: any) => f.fieldPath === 'specs.power_to_weight_hp_ton'),
+    'Derived fact fails audit when underlying calculation input lacks provenance'
+  );
+
+  // Section 30 Test: Verify that an injected unapproved score throws CatalogueIntegrityError
   const bundleWithInjectedScore: any = JSON.parse(JSON.stringify(BMW_M3_FOUNDATION_SEED));
   bundleWithInjectedScore.variants[0].scores = {
     collector_score: { overall_score: 95, rarity_weight: 80, historical_relevance: 90, desirability: 90, originality_typical: 85, technical_relevance: 85, brand_recognizability: 90, community_culture: 90 },
