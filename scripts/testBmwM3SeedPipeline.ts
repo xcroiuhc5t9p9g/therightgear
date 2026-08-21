@@ -187,6 +187,19 @@ async function runBmwM3SeedPipelineTestSuite() {
   const noFakeAssets = BMW_M3_FOUNDATION_SEED.variants.every(v => !v.hero_image_url || v.hero_image_url.startsWith('https://'));
   assert(noFakeAssets, 'No invalid or non-existent local image paths in seed variants');
 
+  // DATA-16R3R Regression Test: Evolution II production_total is 500 based on official BMW primary source
+  const evo2Variant = BMW_M3_FOUNDATION_SEED.variants.find(v => v.id === 'var-bmw-m3-e30-evo-2');
+  assert(evo2Variant?.production_total === 500, 'DATA-16R3R: Evolution II production_total is 500 based on official BMW primary source');
+
+  // DATA-16R3R Regression Test: No BMW seed sources contain /en/vehicle-archive/
+  const hasVehicleArchiveUrl = BMW_M3_FOUNDATION_SEED.sources.some(s => s.referenceUrl?.includes('/en/vehicle-archive/'));
+  assert(!hasVehicleArchiveUrl, 'DATA-16R3R: No BMW seed sources contain invalid /en/vehicle-archive/ URLs');
+
+  // DATA-16R3R Regression Test: BMW Classic sources use specific product-description-page URLs
+  const bmwClassicSources = BMW_M3_FOUNDATION_SEED.sources.filter(s => s.referenceUrl?.includes('bmwgroup-classic.com'));
+  const allClassicUseProductPage = bmwClassicSources.length > 0 && bmwClassicSources.every(s => s.referenceUrl?.includes('/en/models/bmw-classics/product-description-page.'));
+  assert(allClassicUseProductPage, 'DATA-16R3R: BMW Classic provenance sources use specific product-description-page URLs');
+
   try {
     BMW_M3_FOUNDATION_SEED.makers.forEach(m => validateAndNormalizeMaker(m, m.id));
     assert(true, 'All Maker entities conform to strict schema');
@@ -319,7 +332,8 @@ async function runBmwM3SeedPipelineTestSuite() {
   // Section 31 Test: DATA-16R3 Source Quality Validation
   // 31a. Generic Homepage used for technical fields must be flagged
   const bundleWithGenericHomepage: any = JSON.parse(JSON.stringify(BMW_M3_FOUNDATION_SEED));
-  bundleWithGenericHomepage.sources[1].referenceUrl = 'https://www.bmwgroup-classic.com';
+  const technicalSource = bundleWithGenericHomepage.sources.find((s: any) => s.sourceId === 'src-bmw-classic-e30-m3');
+  technicalSource.referenceUrl = 'https://www.bmwgroup-classic.com';
   const genericHomeAudit = seedEngine.auditBundleIntegrity(bundleWithGenericHomepage);
   assert(genericHomeAudit.isAuditClean === false, 'Generic homepage used for technical specifications fails audit');
   assert(
