@@ -4,7 +4,8 @@ import {
   EntityPlanItem, 
   EntityActionType, 
   SeedExecutionOptions, 
-  SeedExecutionResult 
+  SeedExecutionResult,
+  BundleIntegrityReport 
 } from './types.js';
 import { CATALOGUE_COLLECTIONS } from '../persistence/constants.js';
 import { getAdminFirestore } from '../persistence/firebaseAdmin.js';
@@ -85,6 +86,111 @@ export class CatalogueSeedEngine {
   }
 
   /**
+   * Deeply checks a seed bundle for strict DATA-16R canonical data integrity:
+   * 1. Rejects unapproved scores (collector, investment, rarity, etc.)
+   * 2. Verifies provenance presence and Tier hierarchy
+   * 3. Audits supported, derived, and unresolved facts
+   */
+  public auditBundleIntegrity(bundle: CanonicalSeedBundle): BundleIntegrityReport {
+    let scoresDetectedCount = 0;
+    let supportedFactsCount = 0;
+    let derivedFactsCount = 0;
+    let unresolvedFactsCount = 0;
+
+    // 1. Audit Variants for scores and facts
+    for (const v of bundle.variants) {
+      if (v.scores) {
+        const hasScoreValues = 
+          v.scores.collector_score || 
+          v.scores.investment_score || 
+          v.scores.rarity_score !== undefined;
+        if (hasScoreValues) {
+          scoresDetectedCount++;
+        }
+      }
+
+      // Audit supported facts
+      if (v.variant_name) supportedFactsCount++;
+      if (v.technical_identifiers && v.technical_identifiers.length > 0) supportedFactsCount++;
+      if (v.production_start_year) supportedFactsCount++;
+      if (v.production_total !== undefined && v.production_total !== null) supportedFactsCount++;
+      if (v.body_style) supportedFactsCount++;
+      if (v.steering_side) supportedFactsCount++;
+      if (v.specs) {
+        if (v.specs.kerb_weight_kg) supportedFactsCount++;
+        if (v.specs.top_speed_kph) supportedFactsCount++;
+        if (v.specs.acceleration_0_100) supportedFactsCount++;
+        if (v.specs.power_to_weight_hp_ton) derivedFactsCount++;
+      }
+      if (v.engine) {
+        if (v.engine.displacement_cc) supportedFactsCount++;
+        if (v.engine.power_kw) supportedFactsCount++;
+        if (v.engine.power_hp) supportedFactsCount++;
+        if (v.engine.torque_nm) supportedFactsCount++;
+      }
+    }
+
+    // 2. Audit Engines
+    for (const e of bundle.engines) {
+      if (e.engine_code) supportedFactsCount++;
+      if (e.specs.displacement_cc) supportedFactsCount++;
+      if (e.specs.power_kw) supportedFactsCount++;
+      if (e.specs.power_hp) supportedFactsCount++;
+      if (e.specs.torque_nm) supportedFactsCount++;
+      if (e.specs.bore_mm) supportedFactsCount++;
+      if (e.specs.stroke_mm) supportedFactsCount++;
+    }
+
+    // 3. Audit Generations
+    for (const g of bundle.generations) {
+      if (g.generation_code) supportedFactsCount++;
+      if (g.production_start) supportedFactsCount++;
+      if (g.production_end) supportedFactsCount++;
+      if (g.production_total) supportedFactsCount++;
+    }
+
+    // 4. Audit Models
+    for (const m of bundle.models) {
+      if (m.canonical_name) supportedFactsCount++;
+      if (m.introduced_year) supportedFactsCount++;
+      if (m.discontinued_year === null) unresolvedFactsCount++; // Lineage ongoing
+    }
+
+    // 5. Audit Makers
+    for (const mk of bundle.makers) {
+      if (mk.canonical_name) supportedFactsCount++;
+      if (mk.official_name) supportedFactsCount++;
+      if (mk.founded_year) supportedFactsCount++;
+      if (mk.country_code) supportedFactsCount++;
+    }
+
+    const totalEntities = 
+      bundle.makers.length + 
+      bundle.models.length + 
+      bundle.generations.length + 
+      bundle.variants.length + 
+      bundle.engines.length;
+
+    const tier1Sources = bundle.sources.filter(s => s.tier === 'TIER_1_PRIMARY').length;
+    const tier2Sources = bundle.sources.filter(s => s.tier === 'TIER_2_INSTITUTIONAL').length;
+
+    const isAuditClean = scoresDetectedCount === 0 && tier1Sources >= 1;
+
+    return {
+      bundleId: bundle.bundleId,
+      totalEntities,
+      supportedFactsCount,
+      derivedFactsCount,
+      unresolvedFactsCount,
+      scoresDetectedCount,
+      sourcesCount: bundle.sources.length,
+      tier1SourcesCount: tier1Sources,
+      tier2SourcesCount: tier2Sources,
+      isAuditClean
+    };
+  }
+
+  /**
    * Generates a comprehensive, dry-run seed plan against the target datastore.
    */
   public async planSeed(bundle: CanonicalSeedBundle): Promise<SeedPlanSummary> {
@@ -97,7 +203,15 @@ export class CatalogueSeedEngine {
       CONFLICT: 0
     };
 
-    // 1. Pre-validate all entities using document validators
+    // 1. Audit Bundle Integrity
+    const integrityReport = this.auditBundleIntegrity(bundle);
+    if (!integrityReport.isAuditClean && integrityReport.scoresDetectedCount > 0) {
+      throw new CatalogueIntegrityError(
+        `Seed validation failed: unapproved score fields (${integrityReport.scoresDetectedCount}) detected in canonical bundle "${bundle.bundleId}". Scores without approved methodology are strictly disallowed.`
+      );
+    }
+
+    // 2. Pre-validate all entities using document validators
     const validMakers = bundle.makers.map(m => validateAndNormalizeMaker(m, m.id));
     const validModels = bundle.models.map(m => validateAndNormalizeModel(m, m.id));
     const validGenerations = bundle.generations.map(g => validateAndNormalizeGeneration(g, g.id));
@@ -270,7 +384,8 @@ export class CatalogueSeedEngine {
       actionsCount,
       items,
       hasConflicts: actionsCount.CONFLICT > 0,
-      isValid: true
+      isValid: true,
+      integrityReport
     };
   }
 

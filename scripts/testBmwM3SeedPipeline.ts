@@ -171,9 +171,21 @@ async function runBmwM3SeedPipelineTestSuite() {
 
   // --- 1. PROVENANCE MANIFEST AND SCHEMA VALIDATION ---
   console.log('TEST GROUP 1: Source Provenance & Document Schema Validation');
-  assert(BMW_M3_FOUNDATION_SEED.sources.length >= 3, 'Source provenance manifest contains >= 3 citations');
+  assert(BMW_M3_FOUNDATION_SEED.sources.length >= 4, 'Source provenance manifest contains >= 4 specific citations');
   const hasTier1 = BMW_M3_FOUNDATION_SEED.sources.some(s => s.tier === 'TIER_1_PRIMARY');
   assert(hasTier1, 'Source provenance contains Tier 1 primary manufacturer / homologation sources');
+
+  // Verify all sources specify entityIds and supported fields
+  const allSourcesLinkEntities = BMW_M3_FOUNDATION_SEED.sources.every(s => Array.isArray(s.entityIds) && s.entityIds.length > 0);
+  assert(allSourcesLinkEntities, 'All source provenance records declare explicit entityIds linkage');
+
+  // Strict DATA-16R Score Check: NO scores allowed without approved methodology
+  const scoreFree = BMW_M3_FOUNDATION_SEED.variants.every(v => v.scores === null || v.scores === undefined);
+  assert(scoreFree, 'Zero unapproved scores in foundation seed (all variant scores are null/omitted)');
+
+  // Strict Asset Check: No fake local asset paths
+  const noFakeAssets = BMW_M3_FOUNDATION_SEED.variants.every(v => !v.hero_image_url || v.hero_image_url.startsWith('https://'));
+  assert(noFakeAssets, 'No invalid or non-existent local image paths in seed variants');
 
   try {
     BMW_M3_FOUNDATION_SEED.makers.forEach(m => validateAndNormalizeMaker(m, m.id));
@@ -210,11 +222,33 @@ async function runBmwM3SeedPipelineTestSuite() {
     assert(false, 'Engine schema validation failed', err.message);
   }
 
-  // --- 2. DRY-RUN PLANNING ON EMPTY DATABASE ---
-  console.log('\nTEST GROUP 2: Dry-Run Planning & Safety Enforcements');
+  // --- 2. DATA INTEGRITY AUDIT & REJECTION OF UNAPPROVED SCORES ---
+  console.log('\nTEST GROUP 2: Data Integrity Auditing & Score Rejection');
   const mockDb = new MockFirestoreDb();
   const seedEngine = new CatalogueSeedEngine(mockDb);
 
+  const integrityAudit = seedEngine.auditBundleIntegrity(BMW_M3_FOUNDATION_SEED);
+  assert(integrityAudit.scoresDetectedCount === 0, 'Data integrity audit confirms 0 unapproved scores');
+  assert(integrityAudit.isAuditClean === true, 'Data integrity audit passes clean');
+  assert(integrityAudit.supportedFactsCount > 20, `Audit verified ${integrityAudit.supportedFactsCount} supported critical facts`);
+
+  // Verify that an injected unapproved score throws CatalogueIntegrityError
+  const bundleWithInjectedScore: any = JSON.parse(JSON.stringify(BMW_M3_FOUNDATION_SEED));
+  bundleWithInjectedScore.variants[0].scores = {
+    collector_score: { overall_score: 95, rarity_weight: 80, historical_relevance: 90, desirability: 90, originality_typical: 85, technical_relevance: 85, brand_recognizability: 90, community_culture: 90 },
+    investment_score: { overall_score: 90, market_trend: 90, liquidity: 85, supply_scarcity: 90, international_demand: 90, inverse_volatility: 85, inverse_maintenance_cost: 80, comparable_stability: 85 },
+    rarity_score: 85,
+    confidence_level: 'High'
+  };
+  try {
+    await seedEngine.planSeed(bundleWithInjectedScore);
+    assert(false, 'Seed bundle with unapproved scores should have been rejected');
+  } catch (err) {
+    assert(err instanceof CatalogueIntegrityError, 'Unapproved score injection rejected with CatalogueIntegrityError');
+  }
+
+  // --- 3. DRY-RUN PLANNING ON EMPTY DATABASE ---
+  console.log('\nTEST GROUP 3: Dry-Run Planning & Safety Enforcements');
   const initialPlan = await seedEngine.planSeed(BMW_M3_FOUNDATION_SEED);
   assert(initialPlan.totalEntities === 9, 'Initial plan accurately counts 9 total canonical entities (1 Maker, 1 Model, 1 Gen, 4 Variants, 2 Engines)');
   assert(initialPlan.actionsCount.CREATE === 9, 'All 9 entities planned as CREATE on empty datastore');
@@ -233,8 +267,8 @@ async function runBmwM3SeedPipelineTestSuite() {
     assert(err instanceof CatalogueIntegrityError, 'Missing confirmWrite flag rejected with CatalogueIntegrityError');
   }
 
-  // --- 3. PERSISTENT INGESTION & IDEMPOTENCY ---
-  console.log('\nTEST GROUP 3: Ingestion Execution & Idempotency');
+  // --- 4. PERSISTENT INGESTION & IDEMPOTENCY ---
+  console.log('\nTEST GROUP 4: Ingestion Execution & Idempotency');
   const liveResult = await seedEngine.executeSeed(BMW_M3_FOUNDATION_SEED, {
     dryRun: false,
     confirmWrite: true
@@ -255,8 +289,8 @@ async function runBmwM3SeedPipelineTestSuite() {
   assert(secondPlan.actionsCount.NO_OP === 9, 'Second plan detects 100% NO_OP for unchanged entities');
   assert(secondPlan.actionsCount.CREATE === 0 && secondPlan.actionsCount.CONFLICT === 0, 'Zero CREATE or CONFLICT on idempotent re-run');
 
-  // --- 4. CONFLICT DETECTION ---
-  console.log('\nTEST GROUP 4: Conflict & Diff Detection');
+  // --- 5. CONFLICT DETECTION ---
+  console.log('\nTEST GROUP 5: Conflict & Diff Detection');
   // Alter power_hp of S14B25 engine in datastore
   const engineDoc = await mockDb.collection('catalogue_engines').doc('eng-bmw-s14b25').get();
   const engineData = engineDoc.data();
@@ -280,8 +314,8 @@ async function runBmwM3SeedPipelineTestSuite() {
     validateAndNormalizeEngine(BMW_M3_FOUNDATION_SEED.engines.find(e => e.id === 'eng-bmw-s14b25')!, 'eng-bmw-s14b25')
   );
 
-  // --- 5. PERSISTENT PROVIDER & REPOSITORY QUERY VERIFICATION ---
-  console.log('\nTEST GROUP 5: Persistent Provider & Repository End-to-End Query');
+  // --- 6. PERSISTENT PROVIDER & REPOSITORY QUERY VERIFICATION ---
+  console.log('\nTEST GROUP 6: Persistent Provider & Repository End-to-End Query');
   const persistentProvider = new PersistentCatalogueProvider(mockDb as any);
   const repository = new CatalogueRepository(persistentProvider);
 

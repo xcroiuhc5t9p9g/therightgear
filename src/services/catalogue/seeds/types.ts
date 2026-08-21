@@ -11,6 +11,21 @@ export interface SourceProvenance {
   documentRef?: string;
   publishedYear?: number;
   notes?: string;
+  entityIds?: string[];
+  supports?: string[];
+}
+
+export interface BundleIntegrityReport {
+  bundleId: string;
+  totalEntities: number;
+  supportedFactsCount: number;
+  derivedFactsCount: number;
+  unresolvedFactsCount: number;
+  scoresDetectedCount: number;
+  sourcesCount: number;
+  tier1SourcesCount: number;
+  tier2SourcesCount: number;
+  isAuditClean: boolean;
 }
 
 export interface CanonicalSeedBundle {
@@ -54,6 +69,7 @@ export interface SeedPlanSummary {
   items: EntityPlanItem[];
   hasConflicts: boolean;
   isValid: boolean;
+  integrityReport?: BundleIntegrityReport;
 }
 
 export interface SeedExecutionOptions {

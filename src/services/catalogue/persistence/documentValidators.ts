@@ -173,7 +173,7 @@ export function validateAndNormalizeVariant(raw: any, docId: string): VehicleVar
     production_start_year: normalizeNumberOrNull(raw.production_start_year || raw.year_start, 'production_start_year', 'VehicleVariant', id),
     body_style: raw.body_style || 'Coupe',
     category: raw.category || 'GT / Grand Tourer',
-    hero_image_url: raw.hero_image_url || raw.image_url || '/assets/cars/porsche-911-gt3.jpg',
+    hero_image_url: typeof raw.hero_image_url === 'string' && raw.hero_image_url.trim() ? raw.hero_image_url.trim() : undefined,
     data_status: (raw.data_status as DataStatus) || 'verified',
     catalogue_status: (raw.catalogue_status as CatalogueStatus) || 'PUBLISHED',
     is_ui_fixture: !!raw.is_ui_fixture,

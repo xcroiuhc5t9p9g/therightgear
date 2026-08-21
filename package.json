@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
+    "test": "tsx scripts/testPersistentCatalogue.ts && tsx scripts/testBmwM3SeedPipeline.ts",
     "catalogue:seed:bmw-m3": "tsx scripts/seedBmwM3Foundation.ts",
     "test:seed:bmw-m3": "tsx scripts/testBmwM3SeedPipeline.ts",
     "test:catalogue:persistent": "tsx scripts/testPersistentCatalogue.ts"
