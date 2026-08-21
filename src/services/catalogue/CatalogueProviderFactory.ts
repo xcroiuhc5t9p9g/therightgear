@@ -35,9 +35,8 @@ export class CatalogueProviderFactory {
       if (allowProdFixtures) {
         return new FixtureCatalogueProvider();
       }
-      throw new CatalogueConfigurationError(
-        'CATALOGUE_SOURCE must be explicitly configured in production (e.g. CATALOGUE_SOURCE=PERSISTENT). Unconfigured production startup aborted.'
-      );
+      // In production, default directly to the canonical Persistent provider
+      return new PersistentCatalogueProvider();
     }
 
     // In development and test environments, default explicitly to Fixture provider
